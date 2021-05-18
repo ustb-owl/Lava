@@ -154,7 +154,7 @@ SSAPtr Module::CreateLoad(const SSAPtr &ptr) {
   auto load = AddInst<LoadInst>(ptr);
 
   // set load type
-  auto load_type = ptr->type()->GetDereferenceType();
+  auto load_type = ptr->type()->GetDerefedType();
   DBG_ASSERT(load_type != nullptr, "load type is nullptr");
   load->set_type(load_type);
   return load;
@@ -264,7 +264,7 @@ SSAPtr Module::CreatePureBinaryInst(Instruction::BinaryOps opcode,
   // set binary instruction type
   auto s1_type = S1->type();
   if (s1_type->IsPointer()) {
-    bin_inst->set_type(s1_type->GetDereferenceType());
+    bin_inst->set_type(s1_type->GetDerefedType());
   } else {
     bin_inst->set_type(S1->type());
   }

@@ -7,6 +7,7 @@
 
 #include "lib/guard.h"
 #include "lib/strprint.h"
+#include "mid/walker/irbuilder/irbuilder.h"
 
 using namespace lava::define;
 using namespace lava::mid;
@@ -308,133 +309,133 @@ void UserTypeAST::Dump(std::ostream &os) const {
 /*--------------                        Generate IR                        --------------*/
 
 SSAPtr TranslationUnitDecl::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr VariableDecl::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr VariableDefAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr InitListAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr ProtoTypeAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr FunctionDefAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr FuncParamAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr StructDefAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr EnumDefAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr TypeAliasAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr StructElemAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr StructElemDefAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr EnumElemAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr CompoundStmt::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr IfElseStmt::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr WhileStmt::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr ControlAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr BinaryStmt::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr CastStmt::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr UnaryStmt::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr IndexAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr CallStmt::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr AccessAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr IntAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr CharAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr StringAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr VariableAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr PrimTypeAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr StructTypeAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr EnumTypeAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr ConstTypeAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr PointerTypeAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }
 
 SSAPtr UserTypeAST::CodeGeneAction(IRBuilder *irbuilder) {
-  return lava::mid::SSAPtr();
+  return irbuilder->visit(this);
 }

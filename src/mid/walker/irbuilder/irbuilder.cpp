@@ -319,6 +319,66 @@ SSAPtr IRBuilder::visit(WhileStmt *node) {
   return nullptr;
 }
 
+SSAPtr IRBuilder::visit(InitListAST *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(StructDefAST *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(EnumDefAST *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(StructElemAST *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(StructElemDefAST *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(TypeAliasAST *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(EnumElemAST *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(CastStmt *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(IndexAST *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(AccessAST *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(StructTypeAST *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(EnumTypeAST *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(ConstTypeAST *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(PointerTypeAST *) {
+  return lava::mid::SSAPtr();
+}
+
+SSAPtr IRBuilder::visit(UserTypeAST *) {
+  return lava::mid::SSAPtr();
+}
+
 SSAPtr IRBuilder::visit(TranslationUnitDecl *node) {
   auto guard = NewEnv();
   for (const auto &it : node->decls()) {
@@ -339,5 +399,6 @@ SSAPtr IRBuilder::LogError(const front::LoggerPtr &log, std::string &message) {
   log->LogError(message);
   return nullptr;
 }
+
 
 }

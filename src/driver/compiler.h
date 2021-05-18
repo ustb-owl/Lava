@@ -50,6 +50,8 @@ public:
   // Emit IR
   void EmitIR() { _irbuilder->EmitIR(); }
 
+  void DumpIR(std::ostream &os) const { _irbuilder->module().Dump(os); }
+
   // setters
   void set_dump_ast(bool dump_ast)   { _dump_ast  = dump_ast;  }
   void set_dump_yuir(bool dump_yuir) { _dump_ir   = dump_yuir; }

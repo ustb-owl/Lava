@@ -819,3 +819,7 @@ bool Parser::ExpectId() {
   }
   return true;
 }
+
+TypePtr Parser::SemaAnalysis(mid::Analyzer &analyzer) {
+  return rootNode->SemaAnalyze(analyzer);
+}

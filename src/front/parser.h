@@ -36,6 +36,9 @@ class Parser {
   void Parse();
   void Parse(define::ASTPtrList &defs);
 
+  // semantic analysis
+  define::TypePtr SemaAnalysis(mid::Analyzer &analyzer);
+
   // return root node of ast
   define::ASTPtr &ast() { return rootNode; }
 

@@ -63,7 +63,6 @@ public:
 
   // access value in current user (const)
   const Use &operator[](std::size_t pos) const {
-    DBG_ASSERT(pos < _operands_num, "position out of range");
     return _operands[pos];
   }
 

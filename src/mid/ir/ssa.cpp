@@ -496,7 +496,7 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
     os << std::endl;
   }
 
-  // end of function
+//   end of function
   os << "}\n" << std::endl;
 }
 
@@ -549,7 +549,7 @@ void AllocaInst::Dump(std::ostream &os, IdManager &id_mgr) const {
 
   auto guard = InExpr();
   os << "alloca ";
-  DumpType(os, type()->GetDereferenceType());
+  DumpType(os, type()->GetDerefedType());
   os << std::endl;
 }
 
