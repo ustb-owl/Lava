@@ -409,8 +409,13 @@ ASTPtr Parser::ParseStmt() {
   if (IsTokenChar('{')) {
     // block
     return ParseBlock();
-  }
-  else if (cur_token_ == Token::Keyword) {
+  } else if (IsTokenChar(';')) {
+    // empty statement
+    auto ast = MakeAST<IntAST>(0);
+    // eat ';'
+    NextToken();
+    return ast;
+  } else if (cur_token_ == Token::Keyword) {
     switch (lexer_.key_val()) {
       // if-else
       case Keyword::If: return ParseIfElse();
@@ -491,7 +496,7 @@ ASTPtr Parser::ParseControl() {
     case Keyword::Break: type = Type::Break; break;
     case Keyword::Continue: type = Type::Continue; break;
     case Keyword::Return: type = Type::Return; break;
-    default: assert(false);
+    default: assert(false); type = Type::Break; break;;
   }
   NextToken();
   // get expression (return value)
