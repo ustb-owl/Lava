@@ -14,8 +14,10 @@ int main(int argc, char *argv[]) {
   comp.Open(&ifs);
   comp.Parse();
 
-  auto &rootNode = comp.ast();
-  rootNode->Dump(std::cout);
+//  auto &rootNode = comp.ast();
+//  rootNode->Dump(std::cout);
+
+  comp.EmitIR();
 
   return 0;
 }

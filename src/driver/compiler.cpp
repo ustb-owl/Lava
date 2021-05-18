@@ -19,6 +19,9 @@ void Compiler::Open(std::istream *in) {
 
 void Compiler::Parse() {
   _parser.Parse();
+  if (_irbuilder == nullptr) {
+    _irbuilder = new mid::IRBuilder(_parser.ast());
+  }
 }
 
 }

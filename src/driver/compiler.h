@@ -34,6 +34,10 @@ public:
     Reset();
   }
 
+  ~Compiler() {
+    delete _irbuilder;
+  }
+
   // reset compiler
   void Reset();
 

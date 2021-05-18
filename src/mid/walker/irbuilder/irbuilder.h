@@ -18,6 +18,8 @@ public:
   explicit IRBuilder(ASTPtr &ast)
     : _translation_decl_unit(ast) { _in_func = false; }
 
+  virtual ~IRBuilder() = default;
+
   // get module
   Module &module() { return _module; }
 

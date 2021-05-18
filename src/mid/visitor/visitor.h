@@ -11,6 +11,7 @@ template<typename RETURN_TYPE>
 class Visitor {
 public:
   Visitor() = default;
+  ~Visitor() = default;
 
   virtual RETURN_TYPE visit(IntAST              *) = 0;
   virtual RETURN_TYPE visit(CharAST             *) = 0;
