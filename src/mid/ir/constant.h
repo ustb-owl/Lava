@@ -16,6 +16,8 @@ private:
 public:
   explicit ConstantInt(unsigned int value) : _value(value) {}
 
+  bool IsConst() const override { return true; }
+
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
@@ -32,10 +34,26 @@ private:
 public:
   ConstantString(const std::string &str) : _str(str) {}
 
+  bool IsConst() const override { return true; }
+
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   const std::string &value() const { return _str; }
+};
+
+
+// constant array value ssa
+// operands: elem1, elem2, ...
+class ConstantArray : public User {
+public:
+  explicit ConstantArray(const SSAPtrList &elems) {
+    for (const auto &it : elems) AddValue(it);
+  }
+
+  bool IsConst() const override { return true; }
+
+  void Dump(std::ostream &os, IdManager &id_mgr) const override;
 };
 
 SSAPtr GetZeroValue(define::Type type);
@@ -43,5 +61,4 @@ SSAPtr GetZeroValue(define::Type type);
 SSAPtr GetAllOneValue(define::Type type);
 
 }
-
 #endif //LAVA_CONSTANT_H

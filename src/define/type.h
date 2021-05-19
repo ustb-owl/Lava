@@ -24,8 +24,8 @@ using TypePair = std::pair<std::string, TypePtr>;
 using TypePairList = std::vector<TypePair>;
 
 enum class Type {
-  Void, Bool,
-  Int8, Int32,
+  Void,
+  Int8, Int32, Bool,
   UInt8, UInt32,
 };
 

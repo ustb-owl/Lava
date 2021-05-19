@@ -38,27 +38,27 @@ inline Operator GetBinaryOp(Operator op) {
     case Operator::Equal:       return Operator::Equal;
     case Operator::NotEqual:    return Operator::NotEqual;
     case Operator::SLess:       return Operator::SLess;
-    case Operator::SLessEqual:  return Operator::SLessEqual;
+    case Operator::SLessEq:  return Operator::SLessEq;
     case Operator::SGreat:      return Operator::SGreat;
-    case Operator::SGreatEqual: return Operator::SGreatEqual;
+    case Operator::SGreatEq: return Operator::SGreatEq;
     case Operator::LogicAnd:    return Operator::LogicAnd;
     case Operator::LogicOr:     return Operator::LogicOr;
     case Operator::And:         return Operator::And;
     case Operator::Or:          return Operator::Or;
     case Operator::Xor:         return Operator::Xor;
     case Operator::Shl:         return Operator::Shl;
-    case Operator::Shr:         return Operator::Shr;
+    case Operator::LShr:        return Operator::LShr;
     case Operator::Assign:      return Operator::Assign;
     case Operator::AssAdd:      return Operator::AssAdd;
     case Operator::AssSub:      return Operator::AssSub;
     case Operator::AssMul:      return Operator::AssMul;
-    case Operator::AssDiv:      return Operator::AssDiv;
-    case Operator::AssRem:      return Operator::AssRem;
+    case Operator::AssSDiv:      return Operator::AssSDiv;
+    case Operator::AssSRem:      return Operator::AssSRem;
     case Operator::AssAnd:      return Operator::AssAnd;
     case Operator::AssOr:       return Operator::AssOr;
     case Operator::AssXor:      return Operator::AssXor;
     case Operator::AssShl:      return Operator::AssShl;
-    case Operator::AssShr:      return Operator::AssShr;
+    case Operator::AssLShr:      return Operator::AssLShr;
     default: assert(false);     return Operator::Add;
   }
 }

@@ -367,5 +367,75 @@ SSAPtr Module::CreateICmpInst(define::BinaryStmt::Operator opcode, const SSAPtr 
   return icmp_inst;
 }
 
+SSAPtr Module::CreateCastInst(const SSAPtr &operand, const TypePtr &type) {
+  // type checking
+  const auto &operand_type = operand->type();
+  auto target = type->GetTrivialType();
+  DBG_ASSERT(operand_type->IsIdentical(target) ||
+             operand_type->CanCastTo(target), "can't cast this two type");
+
+  // return is redundant type cast
+  if (operand_type->IsIdentical(target)) return operand;
+
+  Instruction::CastOps op = Instruction::CastOps::CastOpsEnd;
+
+  // get address of array
+  auto operand_tmp = operand;
+  if (operand_type->IsArray()) {
+    operand_tmp = operand->GetAddr();
+    DBG_ASSERT(operand_tmp != nullptr, "can't fetch array address");
+  }
+
+  if ((target->IsArray() || target->IsPointer()) && operand_type->IsInteger()) {
+    op = Instruction::CastOps::PtrToInt;
+  } else if ((operand_type->IsPointer() || operand_type->IsArray()) && target->IsInteger()) {
+    op = Instruction::CastOps::IntToPtr;
+  } else {
+    // 1. trunc to small size
+    // 2. extend to large size (sign or unsigend)
+    if (operand_type->GetSize() > target->GetSize()) {
+      op = Instruction::CastOps::Trunc;
+    } else {
+      if (target->IsUnsigned()) {
+        op = Instruction::CastOps::ZExt;
+      } else {
+        op = Instruction::CastOps::SExt;
+      }
+    }
+  }
+  DBG_ASSERT(op != Instruction::CastOps::CastOpsEnd, "get cast operator failed");
+
+  // create type casting
+  SSAPtr cast;
+  if (operand_tmp->IsConst()) {
+    // create a constant type casting, do not insert as an instruction
+    cast = MakeSSA<CastInst>(op, operand_tmp);
+  } else {
+    // create a non-constant type casting
+    cast = AddInst<CastInst>(op, operand_tmp);
+  }
+
+  cast->set_type(target);
+  return cast;
+}
+
+SSAPtr Module::CreateGlobalVar(bool is_var, const std::string &name, const lava::define::TypePtr &type) {
+  return CreateGlobalVar(is_var, name, type, nullptr);
+}
+
+SSAPtr Module::CreateGlobalVar(bool is_var, const std::string &name, const TypePtr &type, const SSAPtr &init) {
+  DBG_ASSERT(!type->IsVoid(), "global variable shouldn't be void type");
+  auto var_type = type->GetTrivialType();
+  DBG_ASSERT(!init || var_type->IsIdentical(init->type()), "init value type is not allow for global variable");
+  DBG_ASSERT(!init || init->IsConst(), "init value of global variable should be const");
+
+  auto global = MakeSSA<GlobalVariable>(is_var, name, init);
+  global->set_type(MakePointer(var_type, false));
+
+  // add to global variables
+  _global_vars.push_back(global);
+  return global;
+}
+
 
 }

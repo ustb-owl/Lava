@@ -33,8 +33,8 @@ namespace lava::define {
 //  LAnd, LOr,
 //  Equal, NotEqual, Less, LessEq, Great, GreatEq,
 //  Assign,
-//  AssAdd, AssSub, AssMul, AssDiv, AssMod,
-//  AssAnd, AssOr, AssXor, AssShl, AssShr,
+//  AssAdd, AssSub, AssMul, AssSDiv, AssMod,
+//  AssAnd, AssOr, AssXor, AssShl, AssLShr,
 //
 //  // unary operator
 //  Pos, Neg, Not, LNot, Deref, Addr, SizeOf,
@@ -532,13 +532,13 @@ class BinaryStmt : public BaseAST {
       case Operator::AssAdd: return Operator::Add;
       case Operator::AssSub: return Operator::Sub;
       case Operator::AssMul: return Operator::Mul;
-      case Operator::AssDiv: return Operator::SDiv;
-      case Operator::AssRem: return Operator::SRem;
+      case Operator::AssSDiv: return Operator::SDiv;
+      case Operator::AssSRem: return Operator::SRem;
       case Operator::AssAnd: return Operator::And;
       case Operator::AssOr:  return Operator::Or;
       case Operator::AssXor: return Operator::Xor;
       case Operator::AssShl: return Operator::Shl;
-      case Operator::AssShr: return Operator::Shr;
+      case Operator::AssLShr: return Operator::LShr;
       default: assert(false); return Operator::Assign;
     }
   }
@@ -552,6 +552,7 @@ class BinaryStmt : public BaseAST {
   mid::SSAPtr CodeGeneAction(mid::IRBuilder *irbuilder) override;
 
   // setters
+  void set_op(Operator op) { op_ = op; }
   void set_lhs(ASTPtr lhs) { lhs_ = std::move(lhs); }
   void set_rhs(ASTPtr rhs) { rhs_ = std::move(rhs); }
 

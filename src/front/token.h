@@ -15,15 +15,15 @@
 #define LAVA_OPERATORS(e) \
   e(Add, "+", 90) e(Sub, "-", 90) e(Mul, "*", 100) e(SDiv, "/", 100) \
   e(SRem, "%", 100) e(Equal, "==", 60) e(NotEqual, "!=", 60) \
-  e(SLess, "<", 70) e(SLessEqual, "<=", 70) e(SGreat, ">", 70) \
-  e(SGreatEqual, ">=", 70) e(LogicAnd, "&&", 20) e(LogicOr, "||", 10) \
+  e(SLess, "<", 70) e(SLessEq, "<=", 70) e(SGreat, ">", 70) \
+  e(SGreatEq, ">=", 70) e(LogicAnd, "&&", 20) e(LogicOr, "||", 10) \
   e(LogicNot, "!", -1) e(And, "&", 50) e(Or, "|", 30) e(Not, "~", -1) \
-  e(Xor, "^", 40) e(Shl, "<<", 80) e(Shr, ">>", 80) \
+  e(Xor, "^", 40) e(Shl, "<<", 80) e(LShr, ">>", 80) \
   e(Access, ".", -1) e(Arrow, "->", -1) \
   e(Assign, "=", 0) e(AssAdd, "+=", 0) e(AssSub, "-=", 0) \
-  e(AssMul, "*=", 0) e(AssDiv, "/=", 0) e(AssRem, "%=", 0) \
+  e(AssMul, "*=", 0) e(AssSDiv, "/=", 0) e(AssSRem, "%=", 0) \
   e(AssAnd, "&=", 0) e(AssOr, "|=", 0) e(AssXor, "^=", 0) \
-  e(AssShl, "<<=", 0) e(AssShr, ">>=", 0)
+  e(AssShl, "<<=", 0) e(AssLShr, ">>=", 0)
 
 // expand first element to comma-separated list
 #define LAVA_EXPAND_FIRST(i, ...)       i,
@@ -46,7 +46,8 @@ enum class Operator {
   LAVA_OPERATORS(LAVA_EXPAND_FIRST)
 
   // add unsigned operator
-  UDiv, URem, ULess, UGreat, ULessEqual, UGreatEqual,
+  UDiv, URem, ULess, UGreat, ULessEq, UGreatEq, AShr,
+  AssAShr, AssUDiv, AssURem,
 
   // add unary operator
   Pos, Neg, Deref, Addr, SizeOf

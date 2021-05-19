@@ -15,39 +15,49 @@ SSAPtr IRBuilder::visit(StringAST *node) {
 }
 
 SSAPtr IRBuilder::visit(VariableAST *node) {
+  auto context = _module.SetContext(node->logger());
+
   auto var_ssa = _module.GetValues(node->id());
   DBG_ASSERT(var_ssa != nullptr, "variable not found");
+
+  if (!var_ssa->type()->IsFunction()) var_ssa = _module.CreateLoad(var_ssa);
   return var_ssa;
 }
 
 SSAPtr IRBuilder::visit(VariableDecl *node) {
   auto context = _module.SetContext(node->logger());
 
-  // save current insert point
-  auto cur_insert = _module.InsertPoint();
-
-  // update insert at entry
   for (const auto &it : node->defs()) {
     it->CodeGeneAction(this);
   }
-  _module.SetInsertPoint(cur_insert);
+
   return nullptr;
 }
 
 SSAPtr IRBuilder::visit(VariableDefAST *node) {
-  auto variable = _module.CreateAlloca(node->ast_type());
+  auto context = _module.SetContext(node->logger());
+
+  const auto &type = node->ast_type();
+  SSAPtr variable;
+
+  // global variable
+  if (_module.ValueSymTab()->is_root()) {
+    variable = _module.CreateGlobalVar();
+  } else {
+    // local variable
+    variable = _module.CreateAlloca(type);
+    if (node->hasInit()) {
+      auto init_ssa = node->init()->CodeGeneAction(this);
+      DBG_ASSERT(init_ssa != nullptr, "emit init value failed");
+
+      auto last_pos = _module.FuncEntry()->insts().end();
+      _module.SetInsertPoint(_module.FuncEntry(), --last_pos);
+      _module.CreateAssign(variable, init_ssa);
+    }
+  }
 
   auto symtab = _module.ValueSymTab();
   symtab->AddItem(node->id(), variable);
-
-  if (node->hasInit()) {
-    auto init_ssa = node->init()->CodeGeneAction(this);
-    DBG_ASSERT(init_ssa != nullptr, "emit init value failed");
-
-    auto last_pos = _module.FuncEntry()->insts().end();
-    _module.SetInsertPoint(_module.FuncEntry(), --last_pos);
-    _module.CreateAssign(variable, init_ssa);
-  }
 
   return nullptr;
 }

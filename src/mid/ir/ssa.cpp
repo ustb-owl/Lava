@@ -49,34 +49,33 @@ std::string Instruction::GetOpcodeAsString(unsigned int opcode) {
       case Jmp:    return "br";
 
         // Standard binary operators...
-      case Add:  return "add";
-      case Sub:  return "sub";
-      case Mul:  return "mul";
-      case UDiv: return "udiv";
-      case SDiv: return "sdiv";
+      case Add:    return "add";
+      case Sub:    return "sub";
+      case Mul:    return "mul";
+      case UDiv:   return "udiv";
+      case SDiv:   return "sdiv";
 //      case FDiv: return "fdiv";
-      case URem: return "urem";
-      case SRem: return "srem";
+      case URem:   return "urem";
+      case SRem:   return "srem";
 //      case FRem: return "frem";
 
         // Logical operators...
-      case And: return "and";
-      case Or : return "or";
-      case Xor: return "xor";
+      case And:    return "and";
+      case Or :    return "or";
+      case Xor:    return "xor";
 
         // Memory instructions...
-      case Malloc:        return "malloc";
-      case Free:          return "free";
-      case Alloca:        return "alloca";
-      case Load:          return "load";
-      case Store:         return "store";
+      case Malloc: return "malloc";
+      case Free:   return "free";
+      case Alloca: return "alloca";
+      case Load:   return "load";
+      case Store:  return "store";
 //      case GetElementPtr: return "getelementptr";
 
         // Convert instructions...
-      case Trunc:     return "trunc";
-      case ZExt:      return "zext";
-      case SExt:      return "sext";
-
+      case Trunc:  return "trunc";
+      case ZExt:   return "zext";
+      case SExt:   return "sext";
 #if 0
       case FPTrunc:   return "fptrunc";
       case FPExt:     return "fpext";
@@ -85,9 +84,9 @@ std::string Instruction::GetOpcodeAsString(unsigned int opcode) {
       case UIToFP:    return "uitofp";
       case SIToFP:    return "sitofp";
 #endif
-      case IntToPtr:  return "inttoptr";
-      case PtrToInt:  return "ptrtoint";
-      case BitCast:   return "bitcast";
+      case IntToPtr:       return "inttoptr";
+      case PtrToInt:       return "ptrtoint";
+      case BitCast:        return "bitcast";
 
         // Other instructions...
       case ICmp:           return "icmp";
@@ -228,16 +227,16 @@ std::string ICmpInst::opStr() const {
   std::string  op;
   switch (_op) {
 
-    case Operator::Equal:       op = "eq";  break;
-    case Operator::NotEqual:    op = "ne";  break;
-    case Operator::SLess:       op = "slt"; break;
-    case Operator::ULess:       op = "ult"; break;
-    case Operator::SLessEqual:  op = "sle"; break;
-    case Operator::ULessEqual:  op = "ule"; break;
-    case Operator::SGreat:      op = "sgt"; break;
-    case Operator::UGreat:      op = "ugt"; break;
-    case Operator::SGreatEqual: op = "sge"; break;
-    case Operator::UGreatEqual: op = "uge"; break;
+    case Operator::Equal:    op = "eq";  break;
+    case Operator::NotEqual: op = "ne";  break;
+    case Operator::SLess:    op = "slt"; break;
+    case Operator::ULess:    op = "ult"; break;
+    case Operator::SLessEq:  op = "sle"; break;
+    case Operator::ULessEq:  op = "ule"; break;
+    case Operator::SGreat:   op = "sgt"; break;
+    case Operator::UGreat:   op = "ugt"; break;
+    case Operator::SGreatEq: op = "sge"; break;
+    case Operator::UGreatEq: op = "uge"; break;
     default: DBG_ASSERT(0, "compare op is error");
   }
 
@@ -576,6 +575,9 @@ void ConstantString::Dump(std::ostream &os, IdManager &id_mgr) const {
 
 }
 
+void ConstantArray::Dump(std::ostream &os, IdManager &id_mgr) const {
+}
+
 void CallInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   if (PrintPrefix(os, id_mgr, this)) return;
   auto guard = InExpr();
@@ -608,6 +610,10 @@ void ICmpInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << std::endl;
 }
 
+void CastInst::Dump(std::ostream &os, IdManager &id_mgr) const {
+}
 
+void GlobalVariable::Dump(std::ostream &os, IdManager &id_mgr) const {
+}
 
 }

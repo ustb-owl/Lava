@@ -64,6 +64,11 @@ public:
 
   void RemoveFromUser();
 
+  // get address value of current value
+  virtual SSAPtr GetAddr() const { return nullptr; }
+
+  virtual bool IsConst() const { return false; }
+
   // dump the content of SSA value to output stream
   virtual void Dump(std::ostream &os, IdManager &id_mgr) const = 0;
 

@@ -196,24 +196,24 @@ std::optional<std::uint32_t> Evaluator::EvalOn(BinaryStmt &ast) {
   auto slv = static_cast<std::int32_t>(lv);
   auto srv = static_cast<std::int32_t>(rv);
   switch (ast.op()) {
-    case Op::Add: return lv + rv;
-    case Op::Sub: return lv - rv;
-    case Op::Mul: return type->IsUnsigned() ? lv * rv : slv * srv;
-    case Op::SDiv: return type->IsUnsigned() ? lv / rv : slv / srv;
-    case Op::SRem: return type->IsUnsigned() ? lv % rv : slv % srv;
-    case Op::And: return lv & rv;
-    case Op::Or: return lv | rv;
-    case Op::Xor: return lv ^ rv;
-    case Op::Shl: return lv << rv;
-    case Op::Shr: return type->IsUnsigned() ? lv >> rv : slv >> srv;
-    case Op::LogicAnd: return lv && rv;
-    case Op::LogicOr: return lv || rv;
-    case Op::Equal: return lv == rv;
-    case Op::NotEqual: return lv != rv;
-    case Op::SLess: return type->IsUnsigned() ? lv < rv : slv < srv;
-    case Op::SLessEqual: return type->IsUnsigned() ? lv <= rv : slv <= srv;
-    case Op::SGreat: return type->IsUnsigned() ? lv > rv : slv > srv;
-    case Op::SGreatEqual: return type->IsUnsigned() ? lv >= rv : slv >= srv;
+    case Op::Add:         return lv + rv;
+    case Op::Sub:         return lv - rv;
+    case Op::Mul:         return type->IsUnsigned() ? lv * rv : slv * srv;
+    case Op::SDiv:        return type->IsUnsigned() ? lv / rv : slv / srv;
+    case Op::SRem:        return type->IsUnsigned() ? lv % rv : slv % srv;
+    case Op::And:         return lv & rv;
+    case Op::Or:          return lv | rv;
+    case Op::Xor:         return lv ^ rv;
+    case Op::Shl:         return lv << rv;
+    case Op::LShr:        return type->IsUnsigned() ? lv >> rv : slv >> srv;
+    case Op::LogicAnd:    return lv && rv;
+    case Op::LogicOr:     return lv || rv;
+    case Op::Equal:       return lv == rv;
+    case Op::NotEqual:    return lv != rv;
+    case Op::SLess:       return type->IsUnsigned() ? lv < rv : slv < srv;
+    case Op::SLessEq:  return type->IsUnsigned() ? lv <= rv : slv <= srv;
+    case Op::SGreat:      return type->IsUnsigned() ? lv > rv : slv > srv;
+    case Op::SGreatEq: return type->IsUnsigned() ? lv >= rv : slv >= srv;
     default: assert(false); return {};
   }
 }

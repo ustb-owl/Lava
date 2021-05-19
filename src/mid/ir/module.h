@@ -93,9 +93,16 @@ public:
 
   SSAPtr   CreateICmpInst(define::BinaryStmt::Operator opcode, const SSAPtr &lhs, const SSAPtr &rhs);
 
-  FuncPtr GetFunction(const std::string &func_name);
+  SSAPtr   CreateCastInst(const SSAPtr &oprand, const lava::define::TypePtr &type);
+
+  SSAPtr   CreateGlobalVar(bool is_var, const std::string &name, const lava::define::TypePtr &type);
+  SSAPtr   CreateGlobalVar(bool is_var, const std::string &name, const lava::define::TypePtr &type,
+                           const SSAPtr &init);
+
+  FuncPtr  GetFunction(const std::string &func_name);
 
   SSAPtr   GetValues(const std::string &var_name);
+
 
   // setters
   // set current context (logger)

@@ -118,6 +118,7 @@ void DumpNullable(std::ostream &os, const ASTPtr &ast) {
 }  // namespace
 
 /*--------------                        Dump AST                        --------------*/
+namespace lava::define {
 
 void TranslationUnitDecl::Dump(std::ostream &os) const {
   AST(TranslationUnitDecl);
@@ -216,13 +217,13 @@ void ControlAST::Dump(std::ostream &os) const {
 
 void BinaryStmt::Dump(std::ostream &os) const {
   const char *kOp[] = {
-    "Add", "Sub", "Mul", "Div", "Rem",
-    "And", "Or", "Xor", "Shl", "Shr",
-    "LAnd", "LOr",
-    "Equal", "NotEqual", "Less", "LessEq", "Great", "GreatEq",
-    "Assign",
-    "AssAdd", "AssSub", "AssMul", "AssDiv", "AssRem",
-    "AssAnd", "AssOr", "AssXor", "AssShl", "AssShr",
+      "Add", "Sub", "Mul", "Div", "Rem",
+      "And", "Or", "Xor", "Shl", "LShr",
+      "LAnd", "LOr",
+      "Equal", "NotEqual", "Less", "LessEq", "Great", "GreatEq",
+      "Assign",
+      "AssAdd", "AssSub", "AssMul", "AssDiv", "AssRem",
+      "AssAnd", "AssOr", "AssXor", "AssShl", "AssAShr",
   };
   AST(Binary, AST_ENUM_ATTR(op, kOp));
   ATTR(lhs);
@@ -438,4 +439,6 @@ SSAPtr PointerTypeAST::CodeGeneAction(IRBuilder *irbuilder) {
 
 SSAPtr UserTypeAST::CodeGeneAction(IRBuilder *irbuilder) {
   return irbuilder->visit(this);
+}
+
 }

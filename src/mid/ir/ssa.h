@@ -437,15 +437,20 @@ public:
 };
 
 // load from pointer
+// operands: pointer
 // TODO: need extend or trunc for operands
 class LoadInst : public Instruction {
+private:
+  std::weak_ptr<Value> _pointer;
 public:
   LoadInst(const SSAPtr &ptr, const SSAPtr &IB = nullptr)
-      : Instruction(Instruction::MemoryOps::Load, 1, IB) {
+      : Instruction(Instruction::MemoryOps::Load, 1, IB), _pointer(ptr) {
     AddValue(ptr);
   }
 
   bool isInstruction() const override { return true; }
+
+  SSAPtr GetAddr() const override { return _pointer.lock(); }
 
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
@@ -501,6 +506,8 @@ public:
 
   ICmpInst(Operator op, const SSAPtr &lhs, const SSAPtr &rhs, const SSAPtr &IB = nullptr);
 
+  bool isInstruction() const override { return true; }
+
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
@@ -511,6 +518,48 @@ public:
   const SSAPtr       &LHS()   const { return (*this)[0].get(); }
   const SSAPtr       &RHS()   const { return (*this)[1].get(); }
   std::string         opStr() const;
+};
+
+// type casting
+// operands: opr
+class CastInst : public Instruction {
+public:
+  explicit CastInst(CastOps op, const SSAPtr &opr, const SSAPtr &IB = nullptr)
+  : Instruction(op, 1, IB) {
+    AddValue(opr);
+  }
+
+  bool isInstruction() const override { return true; }
+
+  // dump ir
+  void Dump(std::ostream &os, IdManager &id_mgr) const override;
+
+  // getter/setter
+  const SSAPtr &oprand() const { return (*this)[0].get(); }
+};
+
+// global variable definition/declaration
+// operands: initializer
+class GlobalVariable : public User {
+private:
+  bool        _is_var;
+  std::string _name;
+
+public:
+  GlobalVariable(bool is_var, const std::string &name, const SSAPtr &init)
+    : _is_var(is_var), _name(name) {
+    AddValue(init);
+  }
+
+  // dump ir
+  void Dump(std::ostream &os, IdManager &id_mgr) const override;
+
+  // getter/setter
+  bool               isVar()  const { return _is_var;          }
+  const SSAPtr      &init()   const { return (*this)[0].get(); }
+  const std::string &name()   const { return _name;            }
+
+  void set_is_var(bool is_var)      { _is_var = is_var;        }
 };
 
 bool IsCallInst(const SSAPtr &ptr);

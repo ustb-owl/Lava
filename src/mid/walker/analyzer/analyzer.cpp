@@ -30,8 +30,7 @@ inline bool CheckInit(const LoggerPtr &log, const TypePtr &type,
   if (!ret) {
     if (id.empty()) {
       log->LogError("type mismatch when initializing");
-    }
-    else {
+    } else {
       log->LogError("type mismatch when initializing", id);
     }
   }
@@ -74,9 +73,8 @@ TypePtr Analyzer::HandleArray(TypePtr base, const ASTPtrList &arr_lens,
         return LogError(expr->logger(), "incomplete array type", id);
       }
       // make a pointer
-      base = MakePointer(std::move(base), false);
-    }
-    else {
+      base = MakePointer(base, false);
+    } else {
       // try to evaluate current dimension
       auto len = expr->Eval(eval_);
       if (!len || !*len) {
@@ -152,7 +150,7 @@ TypePtr Analyzer::AnalyzeOn(VariableDefAST &ast) {
   }
   // add to environment
   symbols_->AddItem(ast.id(), type);
-  return ast.set_ast_type(std::move(type));
+  return ast.set_ast_type(type);
 }
 
 TypePtr Analyzer::AnalyzeOn(InitListAST &ast) {
@@ -183,8 +181,7 @@ TypePtr Analyzer::AnalyzeOn(InitListAST &ast) {
       // analyze sub list
       expr = sub_list->SemaAnalyze(*this);
       new_exprs.push_back(std::move(sub_list));
-    }
-    else {
+    } else {
       // get expression type
       expr = (*it)->SemaAnalyze(*this);
       new_exprs.push_back(std::move(*it));
@@ -228,14 +225,11 @@ TypePtr Analyzer::AnalyzeOn(ProtoTypeAST &ast) {
   auto it = funcs_.find(ast.id());
   if (it == funcs_.end()) {
     funcs_.insert({ast.id(), {type, !in_func_}});
-  }
-  else if (!it->second.type->IsIdentical(type)) {
+  } else if (!it->second.type->IsIdentical(type)) {
     return LogError(ast.logger(), "conflicted function type", ast.id());
-  }
-  else if (!it->second.is_decl && in_func_) {
+  } else if (!it->second.is_decl && in_func_) {
     return LogError(ast.logger(), "redefinition of function", ast.id());
-  }
-  else if (it->second.is_decl && in_func_) {
+  } else if (it->second.is_decl && in_func_) {
     it->second.is_decl = false;
   }
   return ast.set_ast_type(type);
@@ -427,7 +421,8 @@ TypePtr Analyzer::AnalyzeOn(WhileStmt &ast) {
 TypePtr Analyzer::AnalyzeOn(ControlAST &ast) {
   using Type = ControlAST::Type;
   switch (ast.type()) {
-    case Type::Break: case Type::Continue: {
+    case Type::Break:
+    case Type::Continue: {
       // check if is in a loop
       if (!in_loop_) {
         return LogError(ast.logger(),
@@ -446,7 +441,8 @@ TypePtr Analyzer::AnalyzeOn(ControlAST &ast) {
       }
       break;
     }
-    default: assert(false);
+    default:
+      assert(false);
   }
   return ast.set_ast_type(MakeVoid());
 }
@@ -464,34 +460,44 @@ TypePtr Analyzer::AnalyzeOn(BinaryStmt &ast) {
   // handle by operator
   TypePtr type;
   switch (ast.op()) {
-    case Op::Add: case Op::Sub:
-    case Op::SLess: case Op::SLessEqual: case Op::SGreat: case Op::SGreatEqual: {
+    case Op::Add:
+    case Op::Sub:
+    case Op::SLess:
+    case Op::SLessEq:
+    case Op::SGreat:
+    case Op::SGreatEq: {
       if (lhs->IsPointer() || rhs->IsPointer()) {
         // pointer operation
         if (lhs->IsPointer() && rhs->IsInteger()) {
           type = lhs;
-        }
-        else if (rhs->IsPointer() && lhs->IsInteger() &&
-                 ast.op() != Op::Sub) {
+        } else if (rhs->IsPointer() && lhs->IsInteger() &&
+                   ast.op() != Op::Sub) {
           type = rhs;
-        }
-        else {
+        } else {
           return LogError(ast.logger(), "invalid pointer operation");
         }
         break;
       }
       // fall through
     }
-    case Op::Mul: case Op::SDiv: case Op::SRem:
-    case Op::And: case Op::Or: case Op::Xor:
-    case Op::Shl: case Op::Shr: case Op::LogicAnd: case Op::LogicOr: {
+    case Op::Mul:
+    case Op::SDiv:
+    case Op::SRem:
+    case Op::And:
+    case Op::Or:
+    case Op::Xor:
+    case Op::Shl:
+    case Op::LShr:
+    case Op::LogicAnd:
+    case Op::LogicOr: {
       // int binary operation
       if (lhs->IsInteger() && rhs->IsInteger()) {
         type = GetCommonType(lhs, rhs);
       }
       break;
     }
-    case Op::Equal: case Op::NotEqual: {
+    case Op::Equal:
+    case Op::NotEqual: {
       // binary operation between all types except structures
       if (!lhs->IsStruct() && lhs->IsIdentical(rhs)) {
         if (lhs->IsArray()) {
@@ -507,7 +513,8 @@ TypePtr Analyzer::AnalyzeOn(BinaryStmt &ast) {
       if (lhs->CanAccept(rhs)) type = lhs;
       break;
     }
-    case Op::AssAdd: case Op::AssSub: {
+    case Op::AssAdd:
+    case Op::AssSub: {
       // pointer operation
       if (lhs->IsPointer() && !lhs->IsRightValue() && !lhs->IsConst() &&
           rhs->IsInteger()) {
@@ -516,21 +523,61 @@ TypePtr Analyzer::AnalyzeOn(BinaryStmt &ast) {
       }
       // fall through
     }
-    case Op::AssMul: case Op::AssDiv: case Op::AssRem:
-    case Op::AssAnd: case Op::AssOr: case Op::AssXor:
-    case Op::AssShl: case Op::AssShr: {
+    case Op::AssMul:
+    case Op::AssSDiv:
+    case Op::AssSRem:
+    case Op::AssAnd:
+    case Op::AssOr:
+    case Op::AssXor:
+    case Op::AssShl:
+    case Op::AssAShr: {
       // int binary operation
       if (lhs->IsInteger() && lhs->CanAccept(rhs)) type = lhs;
       break;
     }
-    default: assert(false);
+    default:
+      assert(false);
   }
+
+  // update operator type
+  auto originOp = ast.op();
+  if (originOp == Operator::SDiv    || originOp == Operator::SRem    ||
+      originOp == Operator::AShr    || originOp == Operator::AssAShr ||
+      originOp == Operator::SLess   || originOp == Operator::SGreat  ||
+      originOp == Operator::AssSDiv || originOp == Operator::AssSRem ||
+      originOp == Operator::SLessEq || originOp == Operator::SGreatEq) {
+    // TODO: here
+    if (lhs->IsUnsigned() || rhs->IsUnsigned()) {
+      Operator op = originOp;
+      switch (originOp) {
+        case Operator::SDiv:     op = Operator::UDiv;     break;
+        case Operator::SRem:     op = Operator::URem;     break;
+        case Operator::SLess:    op = Operator::ULess;    break;
+        case Operator::SGreat:   op = Operator::UGreat;   break;
+        case Operator::AssSDiv:  op = Operator::AssUDiv;  break;
+        case Operator::AssSRem:  op = Operator::AssURem;  break;
+        case Operator::SLessEq:  op = Operator::ULessEq;  break;
+        case Operator::SGreatEq: op = Operator::UGreatEq; break;
+        case Operator::AShr: {
+          if (lhs->IsUnsigned()) op = Operator::LShr;
+          break;
+        }
+        case Operator::AssAShr: {
+          if (lhs->IsUnsigned()) op = Operator::AssLShr;
+          break;
+        }
+        default: break;
+      }
+      ast.set_op(op);
+    }
+  }
+
   // check return type
   if (!type) return LogError(ast.logger(), "invalid binary operation");
   if (!BinaryStmt::IsOperatorAssign(ast.op()) && !type->IsRightValue()) {
     type = type->GetValueType(true);
   }
-  return ast.set_ast_type(std::move(type));
+  return ast.set_ast_type(type);
 }
 
 TypePtr Analyzer::AnalyzeOn(CastStmt &ast) {
@@ -554,7 +601,10 @@ TypePtr Analyzer::AnalyzeOn(UnaryStmt &ast) {
   // handle by operator
   TypePtr type;
   switch (ast.op()) {
-    case Op::Pos: case Op::Neg: case Op::Not: case Op::LogicNot: {
+    case Op::Pos:
+    case Op::Neg:
+    case Op::Not:
+    case Op::LogicNot: {
       if (opr->IsInteger()) type = opr;
       break;
     }
@@ -570,14 +620,15 @@ TypePtr Analyzer::AnalyzeOn(UnaryStmt &ast) {
       type = MakePrimType(Type::UInt32, true);
       break;
     }
-    default: assert(false);
+    default:
+      assert(false);
   }
   // check return type
   if (!type) return LogError(ast.logger(), "invalid unary operator");
   if (ast.op() != Op::Deref && !type->IsRightValue()) {
     type = type->GetValueType(true);
   }
-  return ast.set_ast_type(std::move(type));
+  return ast.set_ast_type(type);
 }
 
 TypePtr Analyzer::AnalyzeOn(IndexAST &ast) {
@@ -660,7 +711,7 @@ TypePtr Analyzer::AnalyzeOn(StringAST &ast) {
   // make right value 'const int8*' type
   auto type = MakePrimType(Type::Int8, true);
   type = std::make_shared<ConstType>(std::move(type));
-  return ast.set_ast_type(MakePointer(std::move(type)));
+  return ast.set_ast_type(MakePointer(type));
 }
 
 TypePtr Analyzer::AnalyzeOn(VariableAST &ast) {

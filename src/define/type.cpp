@@ -43,6 +43,7 @@ bool PrimType::IsIdentical(const TypePtr &type) const {
 
 std::size_t PrimType::GetSize() const {
   switch (type_) {
+    case Type::Bool:
     case Type::Int8: case Type::UInt8: return 1;
     case Type::Int32: case Type::UInt32: return 4;
     default: return 0;
