@@ -1,5 +1,14 @@
 # Lava
 
+## build
+
+```shell script
+git clone https://gitlab.eduxiji.net/cafebabe/compiler
+cd compiler && make build && cd build
+cmake .. && make -j8
+./lava a.sy
+```
+
 ## EBNF of the Extended SysY Lang
    
 ```ebnf

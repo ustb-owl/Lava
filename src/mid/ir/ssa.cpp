@@ -44,38 +44,38 @@ Instruction::Instruction(unsigned opcode, unsigned operand_nums,
 std::string Instruction::GetOpcodeAsString(unsigned int opcode) {
     switch (opcode) {
       // Terminators
-      case Br:     return "br";
-      case Ret:    return "ret";
-      case Jmp:    return "br";
+      case Br:             return "br";
+      case Ret:            return "ret";
+      case Jmp:            return "br";
 
         // Standard binary operators...
-      case Add:    return "add";
-      case Sub:    return "sub";
-      case Mul:    return "mul";
-      case UDiv:   return "udiv";
-      case SDiv:   return "sdiv";
+      case Add:            return "add";
+      case Sub:            return "sub";
+      case Mul:            return "mul";
+      case UDiv:           return "udiv";
+      case SDiv:           return "sdiv";
 //      case FDiv: return "fdiv";
-      case URem:   return "urem";
-      case SRem:   return "srem";
+      case URem:           return "urem";
+      case SRem:           return "srem";
 //      case FRem: return "frem";
 
         // Logical operators...
-      case And:    return "and";
-      case Or :    return "or";
-      case Xor:    return "xor";
+      case And:            return "and";
+      case Or :            return "or";
+      case Xor:            return "xor";
 
         // Memory instructions...
-      case Malloc: return "malloc";
-      case Free:   return "free";
-      case Alloca: return "alloca";
-      case Load:   return "load";
-      case Store:  return "store";
+      case Malloc:         return "malloc";
+      case Free:           return "free";
+      case Alloca:         return "alloca";
+      case Load:           return "load";
+      case Store:          return "store";
 //      case GetElementPtr: return "getelementptr";
 
         // Convert instructions...
-      case Trunc:  return "trunc";
-      case ZExt:   return "zext";
-      case SExt:   return "sext";
+      case Trunc:          return "trunc";
+      case ZExt:           return "zext";
+      case SExt:           return "sext";
 #if 0
       case FPTrunc:   return "fptrunc";
       case FPExt:     return "fpext";
