@@ -61,42 +61,25 @@ public:
   // dump ir
   void Dump(std::ostream &os);
 
-  FuncPtr  CreateFunction(const std::string &name, const define::TypePtr &type);
-
-  BlockPtr CreateBlock(const UserPtr &parent);
-
-  BlockPtr CreateBlock(const UserPtr &parent, const std::string &name);
-
-  SSAPtr   CreateJump(const BlockPtr &target);
-
-  SSAPtr   CreateStore(const SSAPtr &V, const SSAPtr &P);
-
-  SSAPtr   CreateArgRef(const SSAPtr &func, std::size_t index, const std::string &arg_name);
-
-  SSAPtr   CreateAlloca(const define::TypePtr &type);
-
-  SSAPtr   CreateReturn(const SSAPtr &value);
-
-  SSAPtr   CreateLoad(const SSAPtr &ptr);
-
-  SSAPtr   CreateBranch(const SSAPtr &cond, const BlockPtr &true_block, const BlockPtr &false_block);
-
-  SSAPtr   CreateBinaryOperator(define::BinaryStmt::Operator opcode, const SSAPtr &S1, const SSAPtr &S2);
-
-  SSAPtr   CreatePureBinaryInst(Instruction::BinaryOps opcode, const SSAPtr &S1, const SSAPtr &S2);
-
-  SSAPtr   CreateAssign(const SSAPtr &S1, const SSAPtr &S2);
-
-  SSAPtr   CreateConstInt(unsigned int value);
-
-  SSAPtr   CreateCallInst(const SSAPtr &callee, const std::vector<SSAPtr>& args);
-
-  SSAPtr   CreateICmpInst(define::BinaryStmt::Operator opcode, const SSAPtr &lhs, const SSAPtr &rhs);
-
-  SSAPtr   CreateCastInst(const SSAPtr &oprand, const lava::define::TypePtr &type);
-
-  SSAPtr   CreateGlobalVar(bool is_var, const std::string &name, const lava::define::TypePtr &type);
-  SSAPtr   CreateGlobalVar(bool is_var, const std::string &name, const lava::define::TypePtr &type,
+  FuncPtr        CreateFunction(const std::string &name, const define::TypePtr &type);
+  BlockPtr       CreateBlock(const UserPtr &parent);
+  BlockPtr       CreateBlock(const UserPtr &parent, const std::string &name);
+  SSAPtr         CreateJump(const BlockPtr &target);
+  SSAPtr         CreateStore(const SSAPtr &V, const SSAPtr &P);
+  SSAPtr         CreateArgRef(const SSAPtr &func, std::size_t index, const std::string &arg_name);
+  SSAPtr         CreateAlloca(const define::TypePtr &type);
+  SSAPtr         CreateReturn(const SSAPtr &value);
+  SSAPtr         CreateLoad(const SSAPtr &ptr);
+  SSAPtr         CreateBranch(const SSAPtr &cond, const BlockPtr &true_block, const BlockPtr &false_block);
+  SSAPtr         CreateBinaryOperator(define::BinaryStmt::Operator opcode, const SSAPtr &S1, const SSAPtr &S2);
+  SSAPtr         CreatePureBinaryInst(Instruction::BinaryOps opcode, const SSAPtr &S1, const SSAPtr &S2);
+  SSAPtr         CreateAssign(const SSAPtr &S1, const SSAPtr &S2);
+  SSAPtr         CreateConstInt(unsigned int value);
+  SSAPtr         CreateCallInst(const SSAPtr &callee, const std::vector<SSAPtr>& args);
+  SSAPtr         CreateICmpInst(define::BinaryStmt::Operator opcode, const SSAPtr &lhs, const SSAPtr &rhs);
+  SSAPtr         CreateCastInst(const SSAPtr &oprand, const lava::define::TypePtr &type);
+  GlobalVarPtr   CreateGlobalVar(bool is_var, const std::string &name, const lava::define::TypePtr &type);
+  GlobalVarPtr   CreateGlobalVar(bool is_var, const std::string &name, const lava::define::TypePtr &type,
                            const SSAPtr &init);
 
   FuncPtr  GetFunction(const std::string &func_name);

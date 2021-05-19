@@ -26,6 +26,8 @@ void Module::Dump(std::ostream &os) {
     it->Dump(os, id_mgr);
   }
 
+  os << std::endl;
+
   // dump functions
   for (const auto &it : _functions) {
     it->Dump(os, id_mgr);
@@ -376,6 +378,7 @@ SSAPtr Module::CreateCastInst(const SSAPtr &operand, const TypePtr &type) {
 
   // return is redundant type cast
   if (operand_type->IsIdentical(target)) return operand;
+  if (operand_type->GetSize() == target->GetSize()) return operand;
 
   Instruction::CastOps op = Instruction::CastOps::CastOpsEnd;
 
@@ -419,11 +422,11 @@ SSAPtr Module::CreateCastInst(const SSAPtr &operand, const TypePtr &type) {
   return cast;
 }
 
-SSAPtr Module::CreateGlobalVar(bool is_var, const std::string &name, const lava::define::TypePtr &type) {
+GlobalVarPtr Module::CreateGlobalVar(bool is_var, const std::string &name, const lava::define::TypePtr &type) {
   return CreateGlobalVar(is_var, name, type, nullptr);
 }
 
-SSAPtr Module::CreateGlobalVar(bool is_var, const std::string &name, const TypePtr &type, const SSAPtr &init) {
+GlobalVarPtr Module::CreateGlobalVar(bool is_var, const std::string &name, const TypePtr &type, const SSAPtr &init) {
   DBG_ASSERT(!type->IsVoid(), "global variable shouldn't be void type");
   auto var_type = type->GetTrivialType();
   DBG_ASSERT(!init || var_type->IsIdentical(init->type()), "init value type is not allow for global variable");

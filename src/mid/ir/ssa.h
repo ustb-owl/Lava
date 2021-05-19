@@ -560,6 +560,7 @@ public:
   const std::string &name()   const { return _name;            }
 
   void set_is_var(bool is_var)      { _is_var = is_var;        }
+  void set_init(const SSAPtr &init) { (*this)[0].set(init);    }
 };
 
 bool IsCallInst(const SSAPtr &ptr);

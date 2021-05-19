@@ -1,4 +1,5 @@
 #include "irbuilder.h"
+#include <iostream>
 
 namespace lava::mid {
 
@@ -42,7 +43,15 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
 
   // global variable
   if (_module.ValueSymTab()->is_root()) {
-    variable = _module.CreateGlobalVar();
+    auto var = _module.CreateGlobalVar(!type->IsConst(), node->id(), type);
+    if (node->hasInit()) {
+      auto &init = node->init();
+      DBG_ASSERT(init->IsLiteral(), "init value of global variable should be const expr");
+      auto init_expr = _module.CreateCastInst(init->CodeGeneAction(this), type);
+      DBG_ASSERT(init_expr != nullptr, "emit init of global variable failed");
+      var->set_init(init_expr);
+    }
+    variable = var;
   } else {
     // local variable
     variable = _module.CreateAlloca(type);

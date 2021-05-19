@@ -53,10 +53,11 @@ std::size_t PrimType::GetSize() const {
 std::string PrimType::GetTypeId() const {
   switch (type_) {
     case Type::Void: return "void";
+    case Type::Bool: return "i1";
+    case Type::UInt8:
     case Type::Int8: return "i8";
+    case Type::UInt32:
     case Type::Int32: return "i32";
-    case Type::UInt8: return "u8";
-    case Type::UInt32: return "u32";
     default: return "";
   }
 }

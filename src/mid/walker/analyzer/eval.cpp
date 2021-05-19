@@ -211,9 +211,9 @@ std::optional<std::uint32_t> Evaluator::EvalOn(BinaryStmt &ast) {
     case Op::Equal:       return lv == rv;
     case Op::NotEqual:    return lv != rv;
     case Op::SLess:       return type->IsUnsigned() ? lv < rv : slv < srv;
-    case Op::SLessEq:  return type->IsUnsigned() ? lv <= rv : slv <= srv;
+    case Op::SLessEq:     return type->IsUnsigned() ? lv <= rv : slv <= srv;
     case Op::SGreat:      return type->IsUnsigned() ? lv > rv : slv > srv;
-    case Op::SGreatEq: return type->IsUnsigned() ? lv >= rv : slv >= srv;
+    case Op::SGreatEq:    return type->IsUnsigned() ? lv >= rv : slv >= srv;
     default: assert(false); return {};
   }
 }

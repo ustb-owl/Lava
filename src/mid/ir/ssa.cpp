@@ -614,6 +614,9 @@ void CastInst::Dump(std::ostream &os, IdManager &id_mgr) const {
 }
 
 void GlobalVariable::Dump(std::ostream &os, IdManager &id_mgr) const {
+   os << "@" << _name << " = global ";
+   DumpWithType(os, id_mgr, init());
+   os << std::endl;
 }
 
 }
