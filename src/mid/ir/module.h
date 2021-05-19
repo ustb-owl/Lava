@@ -14,6 +14,7 @@ namespace lava::mid {
 
 using UserList     = std::vector<UserPtr>;
 using FunctionList = std::vector<FuncPtr>;
+using BreakCont    = std::pair<BlockPtr, BlockPtr>; // pair for storing target block of break & continue
 using ValueEnvPtr  = lib::Nested::NestedMapPtr<std::string, SSAPtr>;
 
 /* Module
@@ -31,6 +32,8 @@ private:
   FunctionList                 _functions;
   SSAPtrList::iterator         _insert_pos;
   std::stack<front::LoggerPtr> _loggers;
+  std::stack<BreakCont>        _break_cont;
+
 
   // create a new SSA with current context (logger)
   template <typename T, typename... Args>
@@ -106,22 +109,23 @@ public:
   }
 
   // getters
-  SSAPtr               &ReturnValue() { return _return_val;   }
-  UserList             &GlobalVars()  { return _global_vars;  }
-  ValueEnvPtr          &ValueSymTab() { return _value_symtab; }
-  FunctionList         &Functions()   { return _functions;    }
-  BlockPtr             &InsertPoint() { return _insert_point; }
-  BlockPtr             &FuncEntry()   { return _func_entry;   }
-  BlockPtr             &FuncExit()    { return _func_exit;    }
-  SSAPtrList::iterator  InsertPos()   { return _insert_pos;   }
+  SSAPtr                &ReturnValue() { return _return_val;   }
+  UserList              &GlobalVars()  { return _global_vars;  }
+  ValueEnvPtr           &ValueSymTab() { return _value_symtab; }
+  FunctionList          &Functions()   { return _functions;    }
+  BlockPtr              &InsertPoint() { return _insert_point; }
+  BlockPtr              &FuncEntry()   { return _func_entry;   }
+  BlockPtr              &FuncExit()    { return _func_exit;    }
+  SSAPtrList::iterator   InsertPos()   { return _insert_pos;   }
+  std::stack<BreakCont> &BreakCont()   { return _break_cont;   }
 
   typedef FunctionList::iterator        iterator;
   typedef FunctionList::const_iterator  const_iterator;
 
-  iterator              begin()       { return _functions.begin(); }
-  iterator              end()         { return _functions.end();   }
-  const_iterator        begin() const { return _functions.begin(); }
-  const_iterator        end()   const { return _functions.end();   }
+  iterator               begin()       { return _functions.begin(); }
+  iterator               end()         { return _functions.end();   }
+  const_iterator         begin() const { return _functions.begin(); }
+  const_iterator         end()   const { return _functions.end();   }
 };
 
 

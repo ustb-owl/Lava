@@ -445,9 +445,9 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << "(";
   if (!_args.empty()) {
     auto args_type = func_type->GetArgsType();
-    auto args_typevalues = args_type.value();
+    auto args_type_values = args_type.value();
     for (std::size_t i = 0; i < _args.size(); i++) {
-      DumpType(os, args_typevalues[i]);
+      DumpType(os, args_type_values[i]);
       os << " ";  // span between type and name
       _args[i]->Dump(os, id_mgr);
 

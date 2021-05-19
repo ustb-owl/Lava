@@ -11,6 +11,7 @@ void Module::reset() {
   _global_vars.clear();
   _value_symtab.reset();
   _functions.clear();
+  DBG_ASSERT(_break_cont.empty(), "break_cont is not empty");
 }
 
 xstl::Guard Module::NewEnv() {

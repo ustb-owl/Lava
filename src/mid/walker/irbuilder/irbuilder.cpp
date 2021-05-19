@@ -111,9 +111,15 @@ SSAPtr IRBuilder::visit(ControlAST *node) {
   switch (node->type()) {
 
     case ControlAST::Type::Break:
+    case ControlAST::Type::Continue: {
+      // generate target
+      const auto &bk_cont = _module.BreakCont().top();
+      auto target = node->type() == ControlAST::Type::Break ? bk_cont.first : bk_cont.second;
+
+      // jump to target block
+      _module.CreateJump(target);
       break;
-    case ControlAST::Type::Continue:
-      break;
+    }
     case ControlAST::Type::Return: {
       if (node->expr()) {
         // generate return value
@@ -170,18 +176,15 @@ SSAPtr IRBuilder::visit(IfElseStmt *node) {
   auto context = _module.SetContext(node->logger());
   auto func = _module.InsertPoint()->parent();
 
-  // create condition block
+  // create if-else blocks
   auto &cond = node->cond();
-  auto cond_block = cond->CodeGeneAction(this);
   auto then_block = _module.CreateBlock(func, "if.then");
   auto else_block = _module.CreateBlock(func, "if.else");
+  auto end_block  = _module.CreateBlock(func, "if.end");
 
-  auto cond_ssa = cond->CodeGeneAction(this);
-  DBG_ASSERT(cond_ssa != nullptr, "emit condition statement failed");
-  _module.CreateBranch(cond_ssa, then_block, else_block);
-
-  // create if end block
-  auto end_block = _module.CreateBlock(func, "if.end");
+  auto cond_block = cond->CodeGeneAction(this);
+  DBG_ASSERT(cond_block != nullptr, "emit condition statement failed");
+  _module.CreateBranch(cond_block, then_block, else_block);
 
   // create then block
   auto &then_ast = node->then();
@@ -343,6 +346,8 @@ SSAPtr IRBuilder::visit(WhileStmt *node) {
   auto while_end = _module.CreateBlock(func, "while.end");
 
   // TODO: handle break/continue
+  // Add to break/continue stack
+  _module.BreakCont().push({while_end, cond_block});
   _module.CreateJump(cond_block);
   _module.SetInsertPoint(cond_block);
   auto cond = node->cond()->CodeGeneAction(this);
@@ -356,8 +361,11 @@ SSAPtr IRBuilder::visit(WhileStmt *node) {
   DBG_ASSERT(body != nullptr, "while body SSA is nullptr");
   _module.CreateJump(cond_block);
 
+  // update insert point to end block
   _module.SetInsertPoint(while_end);
 
+  // pop the top element of break/continue stack
+  _module.BreakCont().pop();
   return nullptr;
 }
 
