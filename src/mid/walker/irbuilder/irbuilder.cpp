@@ -21,7 +21,6 @@ SSAPtr IRBuilder::visit(VariableAST *node) {
   auto var_ssa = _module.GetValues(node->id());
   DBG_ASSERT(var_ssa != nullptr, "variable not found");
 
-  if (!var_ssa->type()->IsFunction()) var_ssa = _module.CreateLoad(var_ssa);
   return var_ssa;
 }
 
@@ -103,28 +102,37 @@ SSAPtr IRBuilder::visit(UnaryStmt *node) {
 
 // TODO:: emit control stmts
 SSAPtr IRBuilder::visit(ControlAST *node) {
-#if 0
   auto context = _module.SetContext(node->logger());
-  if (!node->hasReturnVal()) return nullptr;
 
   // create a new block
   const auto &func = _module.InsertPoint()->parent();
   auto new_block = _module.CreateBlock(func);
 
-  // generate return value
-  auto retval = node->getReturn()->CodeGeneAction(this);
-  DBG_ASSERT(retval != nullptr, "emit return value failed");
+  switch (node->type()) {
 
-  // copy return value
-  auto store_inst = _module.CreateAssign(_module.ReturnValue(), retval);
-  DBG_ASSERT(store_inst != nullptr, "copy return value failed");
+    case ControlAST::Type::Break:
+      break;
+    case ControlAST::Type::Continue:
+      break;
+    case ControlAST::Type::Return: {
+      if (node->expr()) {
+        // generate return value
+        auto retval = node->expr()->CodeGeneAction(this);
+        DBG_ASSERT(retval != nullptr, "emit return value failed");
 
-  auto jump_inst = _module.CreateJump(_module.FuncExit());
-  DBG_ASSERT(jump_inst != nullptr, "emit jump instruction failed");
+        // copy return value
+        auto store_inst = _module.CreateAssign(_module.ReturnValue(), retval);
+        DBG_ASSERT(store_inst != nullptr, "copy return value failed");
+      }
 
+      auto jump_inst = _module.CreateJump(_module.FuncExit());
+      DBG_ASSERT(jump_inst != nullptr, "emit jump instruction failed");
+
+      break;
+    }
+  }
   // set insert point at new block
   _module.SetInsertPoint(new_block);
-#endif
   return nullptr;
 }
 

@@ -234,17 +234,41 @@ static unsigned OpToOpcode(front::Operator op) {
 
 // S1 = S2;
 SSAPtr Module::CreateAssign(const SSAPtr &S1, const SSAPtr &S2) {
-  auto store_inst = AddInst<StoreInst>(S2, S1);
-  DBG_ASSERT(store_inst != nullptr, "emit store inst failed");
-  return store_inst;
+  if (S2->type()->IsConst() || IsBinaryOperator(S2) || IsCallInst(S2)) {
+    // S1 = C ---> store C, s1
+    auto store_inst = AddInst<StoreInst>(S2, S1);
+    DBG_ASSERT(store_inst != nullptr, "emit store inst failed");
+    return store_inst;
+  } else {
+    // S1 = S2 ---> %0 = load s2; store %0, i32* s1
+    auto load_inst = CreateLoad(S2);
+
+    // TODO: add necessary cast here
+    auto store_inst = AddInst<StoreInst>(load_inst, S1);
+    DBG_ASSERT(store_inst != nullptr, "emit store inst failed");
+    return store_inst;
+  }
 }
 
 SSAPtr Module::CreatePureBinaryInst(Instruction::BinaryOps opcode,
                                     const SSAPtr &S1, const SSAPtr &S2) {
+  DBG_ASSERT(opcode >= Instruction::BinaryOps::Add, "opcode is not pure binary operator");
+  SSAPtr load_s1 = nullptr;
+  SSAPtr load_s2 = nullptr;
+  if (!S1->type()->IsConst() && !IsBinaryOperator(S1) && !IsCallInst(S1)) {
+    load_s1 = CreateLoad(S1);
+    DBG_ASSERT(load_s1 != nullptr, "emit load S1 failed");
+  }
 
-  DBG_ASSERT(S1, "lhs ssa is nullptr");
-  DBG_ASSERT(S2, "rhs ssa is nullptr");
-  auto bin_inst = BinaryOperator::Create(opcode, S1, S2);
+  if (!S2->type()->IsConst() && !IsBinaryOperator(S2) && !IsCallInst(S2)) {
+    load_s2 = CreateLoad(S2);
+    DBG_ASSERT(load_s2 != nullptr, "emit load S2 failed");
+  }
+  auto bin_inst = BinaryOperator::Create(opcode,
+                                         ((load_s1 != nullptr) ? load_s1 : S1),
+                                         ((load_s2 != nullptr) ? load_s2 : S2));
+
+  DBG_ASSERT(bin_inst != nullptr, "emit binary instruction failed");
 
   // set binary instruction type
   auto s1_type = S1->type();
@@ -256,7 +280,6 @@ SSAPtr Module::CreatePureBinaryInst(Instruction::BinaryOps opcode,
 
   // add inst into basic block
   _insert_point->AddInstToEnd(bin_inst);
-  DBG_ASSERT(bin_inst != nullptr, "emit binary instruction failed");
   return bin_inst;
 }
 
@@ -272,7 +295,7 @@ SSAPtr Module::CreateBinaryOperator(define::BinaryStmt::Operator op,
   if (opcode == AssignOps::Assign) {
     return CreateAssign(S1, S2);
   } else if (opcode >= AssignOps::AssAdd && opcode <= AssignOps::AssignOpsEnd) {
-    auto bin_inst = CreatePureBinaryInst(static_cast<BinaryOps>(opcode), S1, S2);
+    auto bin_inst = CreatePureBinaryInst(static_cast<BinaryOps>(opcode - Instruction::AssignSpain), S1, S2);
     auto assign_inst = CreateAssign(S1, bin_inst);
     return assign_inst;
   } else if (opcode == OtherOps::ICmp) {

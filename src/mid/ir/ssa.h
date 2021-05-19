@@ -134,6 +134,8 @@ public:
   // TermOps, BinaryOps, MemoryOps, CastOps, OtherOps
   //
 #include "opcode.inc"
+
+  static const int AssignSpain = AssAdd - Add;
 };
 
 //===----------------------------------------------------------------------===//

@@ -18,6 +18,7 @@ int main(int argc, char *argv[]) {
 //  rootNode->Dump(std::cout);
 
   comp.EmitIR();
+  comp.RunPasses();
   comp.DumpIR(std::cout);
 
   return 0;

@@ -266,8 +266,7 @@ std::size_t PointerType::GetSize() const {
 
 std::string PointerType::GetTypeId() const {
   std::ostringstream oss;
-  oss << "$p";
-  oss << base_->GetTypeId();
+  oss << base_->GetTypeId() << "*";
   return oss.str();
 }
 

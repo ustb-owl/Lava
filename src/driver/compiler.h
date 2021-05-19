@@ -11,6 +11,7 @@
 #include "mid/walker/analyzer/analyzer.h"
 #include "mid/walker/analyzer/eval.h"
 #include "mid/walker/irbuilder/irbuilder.h"
+#include "opt/pass_manager.h"
 
 namespace lava::driver {
 
@@ -50,7 +51,11 @@ public:
   // Emit IR
   void EmitIR() { _irbuilder->EmitIR(); }
 
+  // dump IR
   void DumpIR(std::ostream &os) const { _irbuilder->module().Dump(os); }
+
+  // run passes on IR
+  void RunPasses();
 
   // setters
   void set_dump_ast(bool dump_ast)   { _dump_ast  = dump_ast;  }

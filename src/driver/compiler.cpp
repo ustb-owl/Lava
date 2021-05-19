@@ -1,5 +1,6 @@
 #include "compiler.h"
 
+using namespace lava::opt;
 
 namespace lava::driver {
 
@@ -23,6 +24,12 @@ void Compiler::Parse() {
   if (_irbuilder == nullptr) {
     _irbuilder = new mid::IRBuilder(_parser.ast());
   }
+}
+
+void Compiler::RunPasses() {
+  PassManager::Initialize();
+  PassManager::SetModule(_irbuilder->module());
+  PassManager::RunPasses();
 }
 
 }
