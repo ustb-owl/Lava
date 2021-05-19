@@ -131,18 +131,10 @@ BinaryOperator::Create(Instruction::BinaryOps opcode, const SSAPtr &S1,
   auto s1_type = S1->type();
   auto s2_type = S2->type();
   DBG_ASSERT(s1_type->IsPrime(), "S1 is not prime type");
-  DBG_ASSERT(s2_type->IsPrime(), "S2 is not prime type");
   DBG_ASSERT(s1_type->IsInteger(), "binary operator can only being performed on int");
+  DBG_ASSERT(s1_type->GetSize() == s2_type->GetSize(), "S1 has different type with S2");
 
-  // TODO: add necessary cast here
-//  DBG_ASSERT(s1_type == s2_type, "S1 has different type with S2");
-#if 0
-  if (s1_type->IsNotShortThan(s2_type))
-    return std::make_shared<BinaryOperator>(opcode, S1, S2, s1_type, IB);
-  else
-    return std::make_shared<BinaryOperator>(opcode, S1, S2, s2_type, IB);
-#endif
-  return nullptr;
+  return std::make_shared<BinaryOperator>(opcode, S1, S2, s1_type, IB);
 }
 
 BinaryPtr
@@ -151,18 +143,10 @@ BinaryOperator::Create(Instruction::BinaryOps opcode, const SSAPtr &S1,
   auto s1_type = S1->type();
   auto s2_type = S2->type();
   DBG_ASSERT(s1_type->IsPrime(), "S1 is not prime type");
-  DBG_ASSERT(s2_type->IsPrime(), "S2 is not prime type");
   DBG_ASSERT(s1_type->IsInteger(), "binary operator can only being performed on int");
+  DBG_ASSERT(s1_type->IsIdentical(s2_type), "S1 has different type with S2");
 
-  DBG_ASSERT(s1_type == s2_type, "S1 has different type with S2");
-
-#if 0
-  if (s1_type->IsNotShortThan(s2_type))
-    return std::make_shared<BinaryOperator>(opcode, S1, S2, s1_type, IAE);
-  else
-    return std::make_shared<BinaryOperator>(opcode, S1, S2, s2_type, IAE);
-#endif
-  return nullptr;
+  return std::make_shared<BinaryOperator>(opcode, S1, S2, s1_type, IAE);
 }
 
 BinaryPtr BinaryOperator::createNeg(const SSAPtr &Op, const SSAPtr &InsertBefore) {

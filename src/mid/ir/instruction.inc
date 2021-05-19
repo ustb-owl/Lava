@@ -121,7 +121,7 @@ HANDLE_BINARY_INST(16, Xor  , BinaryOperator)
 // Memory operators...
  FIRST_MEMORY_INST(17)
 HANDLE_MEMORY_INST(17, Alloca, AllocaInst)  // Stack management
-HANDLE_MEMORY_INST(18, Load  , LoadInst  )  // Memory manipulation instrs
+HANDLE_MEMORY_INST(18, Load  , LoadInst  )  // Memory manipulation insts
 HANDLE_MEMORY_INST(19, Store , StoreInst )
 HANDLE_MEMORY_INST(20, Malloc, MallocInst)  // TODO: Heap management instructions
 HANDLE_MEMORY_INST(21, Free  , FreeInst  )  // TODO: Heap management instructions

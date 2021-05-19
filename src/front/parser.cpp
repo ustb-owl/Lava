@@ -41,8 +41,8 @@ inline Operator GetBinaryOp(Operator op) {
     case Operator::SLessEq:  return Operator::SLessEq;
     case Operator::SGreat:      return Operator::SGreat;
     case Operator::SGreatEq: return Operator::SGreatEq;
-    case Operator::LogicAnd:    return Operator::LogicAnd;
-    case Operator::LogicOr:     return Operator::LogicOr;
+    case Operator::LAnd:    return Operator::LAnd;
+    case Operator::LOr:     return Operator::LOr;
     case Operator::And:         return Operator::And;
     case Operator::Or:          return Operator::Or;
     case Operator::Xor:         return Operator::Xor;
@@ -594,7 +594,7 @@ ASTPtr Parser::ParseUnary() {
       case Operator::Add:      op = Operator::Pos; break;
       case Operator::Sub:      op = Operator::Neg; break;
       case Operator::Not:      op = Operator::Not; break;
-      case Operator::LogicNot: op = Operator::LogicNot; break;
+      case Operator::LNot: op = Operator::LNot; break;
       case Operator::Mul:      op = Operator::Deref; break;
       case Operator::And:      op = Operator::Addr; break;
       default: return LogError("invalid unary operator");

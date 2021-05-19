@@ -32,7 +32,7 @@ inline std::optional<std::uint32_t> CastToType(std::uint32_t val,
       return type->IsUnsigned() ? static_cast<std::uint8_t>(val)
                                 : static_cast<std::int8_t>(val);
     }
-    else if (type->GetSize() == 4) {
+    else if (type->GetSize() == 32) {
       // i32/u32/ptrs
       return type->IsUnsigned() || type->IsPointer()
                   ? static_cast<std::uint32_t>(val)
@@ -206,8 +206,8 @@ std::optional<std::uint32_t> Evaluator::EvalOn(BinaryStmt &ast) {
     case Op::Xor:         return lv ^ rv;
     case Op::Shl:         return lv << rv;
     case Op::LShr:        return type->IsUnsigned() ? lv >> rv : slv >> srv;
-    case Op::LogicAnd:    return lv && rv;
-    case Op::LogicOr:     return lv || rv;
+    case Op::LAnd:    return lv && rv;
+    case Op::LOr:     return lv || rv;
     case Op::Equal:       return lv == rv;
     case Op::NotEqual:    return lv != rv;
     case Op::SLess:       return type->IsUnsigned() ? lv < rv : slv < srv;
@@ -239,7 +239,7 @@ std::optional<std::uint32_t> Evaluator::EvalOn(UnaryStmt &ast) {
     case Op::Pos: return +val;
     case Op::Neg: return -val;
     case Op::Not: return ~val;
-    case Op::LogicNot: return !val;
+    case Op::LNot: return !val;
     case Op::Deref: return {};
     case Op::Addr: return {};
     case Op::SizeOf: return ast.opr()->ast_type()->GetSize();

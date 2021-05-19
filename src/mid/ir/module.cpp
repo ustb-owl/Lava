@@ -163,105 +163,88 @@ SSAPtr Module::CreateLoad(const SSAPtr &ptr) {
 }
 
 static unsigned OpToOpcode(front::Operator op) {
+  using CastOps   = Instruction::CastOps;
   using OtherOps  = Instruction::OtherOps;
-#if 0
   using BinaryOps = Instruction::BinaryOps;
   using AssignOps = Instruction::AssignOps;
+  using MemoryOps = Instruction::MemoryOps;
   switch (op) {
     /* ----------- unary operator ------------ */
-    case AST::Operator::Not:    return BinaryOps::Xor;
-    case AST::Operator::Neg:    return BinaryOps::Sub;
-    case AST::Operator::LNot:   return BinaryOps::And;  // operand && 1
+    case front::Operator::Not:      return BinaryOps::Xor;
+    case front::Operator::Neg:      return BinaryOps::Sub;
+    case front::Operator::LNot:     return BinaryOps::And;  // operand && 1
 
     /* ----------- binary operator ------------ */
-    case AST::Operator::Add:      return BinaryOps::Add;
-    case AST::Operator::Sub:      return BinaryOps::Sub;
-    case AST::Operator::Mul:      return BinaryOps::Mul;
-    case AST::Operator::SDiv:     return BinaryOps::SDiv;
-    case AST::Operator::UDiv:     return BinaryOps::UDiv;
-    case AST::Operator::SRem:     return BinaryOps::SRem;
-    case AST::Operator::URem:     return BinaryOps::URem;
-    case AST::Operator::And:      return BinaryOps::And;
-    case AST::Operator::Or:       return BinaryOps::Or;
-    case AST::Operator::Xor:      return BinaryOps::Xor;
-    case AST::Operator::Shl:      return BinaryOps::Shl;
-    case AST::Operator::AShr:     return BinaryOps::AShr;
-    case AST::Operator::LShr:     return BinaryOps::LShr;
-    case AST::Operator::LAnd:     return BinaryOps::And;
-    case AST::Operator::LOr:      return BinaryOps::Or;
+    case front::Operator::Add:      return BinaryOps::Add;
+    case front::Operator::Sub:      return BinaryOps::Sub;
+    case front::Operator::Mul:      return BinaryOps::Mul;
+    case front::Operator::SDiv:     return BinaryOps::SDiv;
+    case front::Operator::UDiv:     return BinaryOps::UDiv;
+    case front::Operator::SRem:     return BinaryOps::SRem;
+    case front::Operator::URem:     return BinaryOps::URem;
+    case front::Operator::And:      return BinaryOps::And;
+    case front::Operator::Or:       return BinaryOps::Or;
+    case front::Operator::Xor:      return BinaryOps::Xor;
+    case front::Operator::Shl:      return BinaryOps::Shl;
+    case front::Operator::AShr:     return BinaryOps::AShr;
+    case front::Operator::LShr:     return BinaryOps::LShr;
+    case front::Operator::LAnd:     return BinaryOps::And;
+    case front::Operator::LOr:      return BinaryOps::Or;
 
     /* ----------- compare operator ------------ */
-    case AST::Operator::Equal:    return OtherOps::ICmp;
-    case AST::Operator::NotEqual: return OtherOps::ICmp;
-    case AST::Operator::SLess:    return OtherOps::ICmp;
-    case AST::Operator::ULess:    return OtherOps::ICmp;
-    case AST::Operator::SGreat:   return OtherOps::ICmp;
-    case AST::Operator::UGreat:   return OtherOps::ICmp;
-    case AST::Operator::SLessEq:  return OtherOps::ICmp;
-    case AST::Operator::ULessEq:  return OtherOps::ICmp;
-    case AST::Operator::SGreatEq: return OtherOps::ICmp;
-    case AST::Operator::UGreatEq: return OtherOps::ICmp;
+    case front::Operator::Equal:    return OtherOps::ICmp;
+    case front::Operator::NotEqual: return OtherOps::ICmp;
+    case front::Operator::SLess:    return OtherOps::ICmp;
+    case front::Operator::ULess:    return OtherOps::ICmp;
+    case front::Operator::SGreat:   return OtherOps::ICmp;
+    case front::Operator::UGreat:   return OtherOps::ICmp;
+    case front::Operator::SLessEq:  return OtherOps::ICmp;
+    case front::Operator::ULessEq:  return OtherOps::ICmp;
+    case front::Operator::SGreatEq: return OtherOps::ICmp;
+    case front::Operator::UGreatEq: return OtherOps::ICmp;
 
     /* ----------- assign operator ------------ */
-    case AST::Operator::Assign:   return AssignOps::Assign;
-    case AST::Operator::AssAdd:   return AssignOps::AssAdd;
-    case AST::Operator::AssSub:   return AssignOps::AssSub;
-    case AST::Operator::AssMul:   return AssignOps::AssMul;
-    case AST::Operator::AssSDiv:  return AssignOps::AssSDiv;
-    case AST::Operator::AssUDiv:  return AssignOps::AssUDiv;
-    case AST::Operator::AssSRem:  return AssignOps::AssSRem;
-    case AST::Operator::AssURem:  return AssignOps::AssURem;
-    case AST::Operator::AssAnd:   return AssignOps::AssAnd;
-    case AST::Operator::AssOr:    return AssignOps::AssOr;
-    case AST::Operator::AssXor:   return AssignOps::AssXor;
-    case AST::Operator::AssShl:   return AssignOps::AssShl;
-    case AST::Operator::AssAShr:  return AssignOps::AssAShr;
-    case AST::Operator::AssLShr:  return AssignOps::AssLShr;
-    case AST::Operator::Dam:      return OtherOps::Undef;
+    case front::Operator::Assign:   return AssignOps::Assign;
+    case front::Operator::AssAdd:   return AssignOps::AssAdd;
+    case front::Operator::AssSub:   return AssignOps::AssSub;
+    case front::Operator::AssMul:   return AssignOps::AssMul;
+    case front::Operator::AssSDiv:  return AssignOps::AssSDiv;
+    case front::Operator::AssUDiv:  return AssignOps::AssUDiv;
+    case front::Operator::AssSRem:  return AssignOps::AssSRem;
+    case front::Operator::AssURem:  return AssignOps::AssURem;
+    case front::Operator::AssAnd:   return AssignOps::AssAnd;
+    case front::Operator::AssOr:    return AssignOps::AssOr;
+    case front::Operator::AssXor:   return AssignOps::AssXor;
+    case front::Operator::AssShl:   return AssignOps::AssShl;
+    case front::Operator::AssAShr:  return AssignOps::AssAShr;
+    case front::Operator::AssLShr:  return AssignOps::AssLShr;
+    case front::Operator::Access:
+      break;
+    case front::Operator::Arrow:
+      break;
+    case front::Operator::Pos:
+      break;
+    case front::Operator::Deref:   return MemoryOps::Load;
+    case front::Operator::Addr:    return CastOps::PtrToInt;
+    case front::Operator::SizeOf:
+      break;
   }
-#endif
   return OtherOps::Undef;
 }
 
 // S1 = S2;
 SSAPtr Module::CreateAssign(const SSAPtr &S1, const SSAPtr &S2) {
-  std::shared_ptr<Instruction> inst;
-
-
-  if (S2->type()->IsConst() || IsBinaryOperator(S2) || IsCallInst(S2)) {
-    // S1 = C ---> store C, s1
-    auto store_inst = AddInst<StoreInst>(S2, S1);
-    DBG_ASSERT(store_inst != nullptr, "emit store inst failed");
-    return store_inst;
-  } else {
-    // S1 = S2 ---> %0 = load s2; store %0, i32* s1
-    auto load_inst = CreateLoad(S2);
-
-    // TODO: add necessary cast here
-    auto store_inst = AddInst<StoreInst>(load_inst, S1);
-    DBG_ASSERT(store_inst != nullptr, "emit store inst failed");
-    return store_inst;
-  }
+  auto store_inst = AddInst<StoreInst>(S2, S1);
+  DBG_ASSERT(store_inst != nullptr, "emit store inst failed");
+  return store_inst;
 }
 
 SSAPtr Module::CreatePureBinaryInst(Instruction::BinaryOps opcode,
                                     const SSAPtr &S1, const SSAPtr &S2) {
-  DBG_ASSERT(opcode >= Instruction::BinaryOps::Add, "opcode is not pure binary operator");
-  SSAPtr load_s1 = nullptr;
-  SSAPtr load_s2 = nullptr;
-  if (!S1->type()->IsConst() && !IsBinaryOperator(S1) && !IsCallInst(S1)) {
-    load_s1 = CreateLoad(S1);
-    DBG_ASSERT(load_s1 != nullptr, "emit load S1 failed");
-  }
 
-  if (!S2->type()->IsConst() && !IsBinaryOperator(S2) && !IsCallInst(S2)) {
-    load_s2 = CreateLoad(S2);
-    DBG_ASSERT(load_s1 != nullptr, "emit load S2 failed");
-  }
-
-  auto bin_inst = BinaryOperator::Create(opcode,
-                                         ((load_s1 != nullptr) ? load_s1 : S1),
-                                         ((load_s2 != nullptr) ? load_s2 : S2));
+  DBG_ASSERT(S1, "lhs ssa is nullptr");
+  DBG_ASSERT(S2, "rhs ssa is nullptr");
+  auto bin_inst = BinaryOperator::Create(opcode, S1, S2);
 
   // set binary instruction type
   auto s1_type = S1->type();
@@ -297,7 +280,6 @@ SSAPtr Module::CreateBinaryOperator(define::BinaryStmt::Operator op,
   } else if (opcode >= BinaryOps::Add && opcode <= BinaryOps::BinaryOpsEnd) {
     return CreatePureBinaryInst(static_cast<BinaryOps>(opcode), S1, S2);
   }
-
 
   return nullptr;
 }
@@ -408,15 +390,17 @@ SSAPtr Module::CreateCastInst(const SSAPtr &operand, const TypePtr &type) {
   }
   DBG_ASSERT(op != Instruction::CastOps::CastOpsEnd, "get cast operator failed");
 
+  // TODO: maybe need distinguish const with non-const
   // create type casting
   SSAPtr cast;
-  if (operand_tmp->IsConst()) {
+//  if (operand_tmp->IsConst()) {
     // create a constant type casting, do not insert as an instruction
-    cast = MakeSSA<CastInst>(op, operand_tmp);
-  } else {
+//    cast = MakeSSA<CastInst>(op, operand_tmp);
+//  } else {
     // create a non-constant type casting
     cast = AddInst<CastInst>(op, operand_tmp);
-  }
+//  }
+  DBG_ASSERT(cast != nullptr, "emit cast instruction failed");
 
   cast->set_type(target);
   return cast;

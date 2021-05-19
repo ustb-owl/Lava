@@ -77,7 +77,7 @@ public:
   SSAPtr         CreateConstInt(unsigned int value);
   SSAPtr         CreateCallInst(const SSAPtr &callee, const std::vector<SSAPtr>& args);
   SSAPtr         CreateICmpInst(define::BinaryStmt::Operator opcode, const SSAPtr &lhs, const SSAPtr &rhs);
-  SSAPtr         CreateCastInst(const SSAPtr &oprand, const lava::define::TypePtr &type);
+  SSAPtr         CreateCastInst(const SSAPtr &operand, const lava::define::TypePtr &type);
   GlobalVarPtr   CreateGlobalVar(bool is_var, const std::string &name, const lava::define::TypePtr &type);
   GlobalVarPtr   CreateGlobalVar(bool is_var, const std::string &name, const lava::define::TypePtr &type,
                            const SSAPtr &init);

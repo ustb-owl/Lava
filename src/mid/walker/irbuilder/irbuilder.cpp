@@ -28,9 +28,14 @@ SSAPtr IRBuilder::visit(VariableAST *node) {
 SSAPtr IRBuilder::visit(VariableDecl *node) {
   auto context = _module.SetContext(node->logger());
 
+  // save current insert point
+  auto cur_insert = _module.InsertPoint();
+
   for (const auto &it : node->defs()) {
     it->CodeGeneAction(this);
   }
+
+  _module.SetInsertPoint(cur_insert);
 
   return nullptr;
 }
@@ -76,7 +81,17 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
   DBG_ASSERT(lhs != nullptr, "lhs generate failed");
   auto rhs = node->rhs()->CodeGeneAction(this);
   DBG_ASSERT(rhs != nullptr, "rhs generate failed");
-  auto bin_inst = _module.CreateBinaryOperator(node->op(), lhs, rhs);
+
+  const auto &lty = lhs->type();
+  const auto &rty = rhs->type();
+  SSAPtr LHS = lhs, RHS = rhs;
+  if (lty->IsInteger() && rty->IsInteger()) {
+    const auto &ty = GetCommonType(lty, rty);
+    LHS = _module.CreateCastInst(lhs, ty);
+    RHS = _module.CreateCastInst(rhs, ty);
+  }
+
+  auto bin_inst = _module.CreateBinaryOperator(node->op(), LHS, RHS);
   DBG_ASSERT(bin_inst != nullptr, "binary statement generate failed");
 
   return bin_inst;

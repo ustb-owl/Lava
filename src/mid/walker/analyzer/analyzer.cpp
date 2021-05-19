@@ -488,8 +488,8 @@ TypePtr Analyzer::AnalyzeOn(BinaryStmt &ast) {
     case Op::Xor:
     case Op::Shl:
     case Op::LShr:
-    case Op::LogicAnd:
-    case Op::LogicOr: {
+    case Op::LAnd:
+    case Op::LOr: {
       // int binary operation
       if (lhs->IsInteger() && rhs->IsInteger()) {
         type = GetCommonType(lhs, rhs);
@@ -604,7 +604,7 @@ TypePtr Analyzer::AnalyzeOn(UnaryStmt &ast) {
     case Op::Pos:
     case Op::Neg:
     case Op::Not:
-    case Op::LogicNot: {
+    case Op::LNot: {
       if (opr->IsInteger()) type = opr;
       break;
     }

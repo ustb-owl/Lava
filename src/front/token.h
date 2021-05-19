@@ -16,8 +16,8 @@
   e(Add, "+", 90) e(Sub, "-", 90) e(Mul, "*", 100) e(SDiv, "/", 100) \
   e(SRem, "%", 100) e(Equal, "==", 60) e(NotEqual, "!=", 60) \
   e(SLess, "<", 70) e(SLessEq, "<=", 70) e(SGreat, ">", 70) \
-  e(SGreatEq, ">=", 70) e(LogicAnd, "&&", 20) e(LogicOr, "||", 10) \
-  e(LogicNot, "!", -1) e(And, "&", 50) e(Or, "|", 30) e(Not, "~", -1) \
+  e(SGreatEq, ">=", 70) e(LAnd, "&&", 20) e(LOr, "||", 10) \
+  e(LNot, "!", -1) e(And, "&", 50) e(Or, "|", 30) e(Not, "~", -1) \
   e(Xor, "^", 40) e(Shl, "<<", 80) e(LShr, ">>", 80) \
   e(Access, ".", -1) e(Arrow, "->", -1) \
   e(Assign, "=", 0) e(AssAdd, "+=", 0) e(AssSub, "-=", 0) \
