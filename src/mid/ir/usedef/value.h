@@ -22,12 +22,13 @@ class GlobalVariable;
 class GlobalAlias;
 class ValueSymbolTable;
 class TypeSymbolTable;
-
+class ConstantArray;
 
 // type aliases
 using FuncPtr       = std::shared_ptr<Function>;
 using InstPtr       = std::shared_ptr<Instruction>;
 using BlockPtr      = std::shared_ptr<BasicBlock>;
+using ArrayPtr      = std::shared_ptr<ConstantArray>;
 using BinaryPtr     = std::shared_ptr<BinaryOperator>;
 using GlobalVarPtr  = std::shared_ptr<GlobalVariable>;
 using Blocks        = std::vector<BlockPtr>;

@@ -1,4 +1,5 @@
 #include <memory>
+#include <string>
 #include "module.h"
 #include "constant.h"
 #include "idmanager.h"
@@ -8,6 +9,7 @@ using namespace lava::define;
 namespace lava::mid {
 
 void Module::reset() {
+  _array_id = 0;
   _global_vars.clear();
   _value_symtab.reset();
   _functions.clear();
@@ -66,11 +68,11 @@ SSAPtr Module::GetValues(const std::string &var_name) {
   return _value_symtab->GetItem(var_name);
 }
 
-BlockPtr Module::CreateBlock(const UserPtr &parent) {
+BlockPtr Module::CreateBlock(const FuncPtr &parent) {
   return CreateBlock(parent, "block");
 }
 
-BlockPtr Module::CreateBlock(const UserPtr &parent, const std::string &name) {
+BlockPtr Module::CreateBlock(const FuncPtr &parent, const std::string &name) {
   DBG_ASSERT((parent != nullptr) && parent->type()->IsFunction(),
              "block's parent should be function type");
   auto block = MakeSSA<BasicBlock>(parent, name);
@@ -310,7 +312,7 @@ SSAPtr Module::CreateBinaryOperator(define::BinaryStmt::Operator op,
 
 SSAPtr Module::CreateConstInt(unsigned int value) {
   auto const_int =  MakeSSA<ConstantInt>(value);
-  const_int->set_type(MakeConst(Type::UInt32));
+  const_int->set_type(MakeConst(Type::Int32));
   DBG_ASSERT(const_int != nullptr, "emit const int value failed");
   return const_int;
 }
@@ -446,6 +448,50 @@ GlobalVarPtr Module::CreateGlobalVar(bool is_var, const std::string &name, const
   // add to global variables
   _global_vars.push_back(global);
   return global;
+}
+
+SSAPtr Module::GetZeroValue(define::Type type) {
+  return mid::GetZeroValue(type);
+}
+
+ArrayPtr Module::CreateArray(const SSAPtrList &elems, const TypePtr &type, const std::string &name, bool is_private) {
+  // type checking
+  DBG_ASSERT(type->IsArray() && type->GetLength() == elems.size(), "init values of array are not fit");
+
+  auto array_ty = type->GetTrivialType();
+  for (const auto &it : elems) {
+    DBG_ASSERT(it->IsConst(), "init value should be const");
+    DBG_ASSERT(array_ty->GetDerefedType()->GetSize() == it->type()->GetSize(), "init value type not fit");
+  }
+
+  // create constant array
+  auto const_array = std::make_shared<ConstantArray>(elems, name, is_private);
+  const_array->set_type(MakePointer(array_ty));
+  return const_array;
+}
+
+SSAPtr Module::CreateElemAccess(const SSAPtr &ptr, const SSAPtr &index, const TypePtr &type) {
+  // get proper pointer
+  auto pointer = ptr;
+  if (!pointer->type()->IsPointer()) pointer = pointer->GetAddr();
+
+  // assertion for type checking
+  DBG_ASSERT(pointer->type()->GetDerefedType()->GetLength() &&
+         index->type()->IsInteger(), "check access failed");
+
+  // create access
+  auto acc_type = AccessInst::AccessType::Element;
+  auto access = AddInst<AccessInst>(acc_type, pointer, index);
+  DBG_ASSERT(access != nullptr, "emit access instruction failed");
+
+  // set access type
+  access->set_type(MakePointer(type));
+  return access;
+}
+
+std::string Module::GetArrayName()  {
+  auto func_name = "@__const." + _insert_point->parent()->GetFunctionName();
+  return func_name + "." + std::to_string(_array_id++);
 }
 
 

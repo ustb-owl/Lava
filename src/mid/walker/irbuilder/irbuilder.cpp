@@ -42,6 +42,7 @@ SSAPtr IRBuilder::visit(VariableDecl *node) {
 SSAPtr IRBuilder::visit(VariableDefAST *node) {
   auto context = _module.SetContext(node->logger());
 
+  bool is_array = !node->arr_lens().empty();
   const auto &type = node->ast_type();
   SSAPtr variable;
 
@@ -58,14 +59,24 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
     variable = var;
   } else {
     // local variable
-    variable = _module.CreateAlloca(type);
+
+    // check if it is array
+    if (!is_array) {
+      variable = _module.CreateAlloca(type);
+    }
+
     if (node->hasInit()) {
       auto init_ssa = node->init()->CodeGeneAction(this);
       DBG_ASSERT(init_ssa != nullptr, "emit init value failed");
 
       auto last_pos = _module.FuncEntry()->insts().end();
       _module.SetInsertPoint(_module.FuncEntry(), --last_pos);
-      _module.CreateAssign(variable, init_ssa);
+
+      if (node->arr_lens().empty()) {
+        _module.CreateAssign(variable, init_ssa);
+      } else {
+        variable = init_ssa;
+      }
     }
   }
 
@@ -73,6 +84,93 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
   symtab->AddItem(node->id(), variable);
 
   return nullptr;
+}
+
+SSAPtr IRBuilder::visit(InitListAST *node) {
+  auto context = _module.SetContext(node->logger());
+
+  const auto &type = node->ast_type();
+  auto val = _module.CreateAlloca(type);
+
+  bool is_root = _module.ValueSymTab()->is_root();
+
+  // create an array in rodata if its init list is const literal
+  if (node->IsLiteral()) {
+    ArrayPtr const_array;
+    auto arr_name = _module.GetArrayName();
+
+    // TODO: Need to refine here`
+    if (node->exprs().empty()) {
+      // init array with const zero
+      SSAPtrList exprs;
+      for (std::size_t i = 0; i < type->GetLength(); i++) {
+        auto elem_ty = type->GetElem(i);
+        auto expr = _module.GetZeroValue(elem_ty->GetType());
+        exprs.push_back(std::move(expr));
+      }
+
+      // generate constant array
+      DBG_ASSERT(type->IsArray(), "type is not array");
+      const_array = _module.CreateArray(exprs, type, arr_name, !is_root);
+
+      // add to global symbol table
+      if (is_root) return const_array;
+    } else {
+      // generate all element
+      SSAPtrList exprs;
+      for (std::size_t i = 0; i < type->GetLength(); i++) {
+        auto elem_ty = type->GetElem(i);
+        SSAPtr expr;
+        if (i < node->exprs().size()) {
+          expr = node->exprs()[i]->CodeGeneAction(this);
+          expr = _module.CreateCastInst(expr, elem_ty);
+        } else {
+          expr = _module.GetZeroValue(elem_ty->GetType());
+        }
+        exprs.push_back(std::move(expr));
+      }
+
+      // generate constant array
+      DBG_ASSERT(type->IsArray(), "type is not array");
+      const_array = _module.CreateArray(exprs, type, arr_name, !is_root);
+
+      // add to global symbol table
+      if (is_root) return const_array;
+    }
+
+    // store into global vairable
+    _module.GlobalVars().push_back(const_array);
+
+    /* copy value to stack */
+    auto memcpy_ssa = _module.GetFunction("memcpy");
+    auto elem_ty = type->GetDerefedType();
+    // create parameters
+    auto length = _module.CreateConstInt(type->GetLength());
+    auto dst = _module.CreateElemAccess(val, _module.GetZeroValue(Type::Int32), elem_ty);
+    auto src = _module.CreateElemAccess(const_array, _module.GetZeroValue(Type::Int32), elem_ty);
+    std::vector<SSAPtr> args = {dst, src, length};
+    // emit call instruction
+    auto bt_memset = _module.AddInst<CallInst>(memcpy_ssa, args);
+    bt_memset->set_type(MakeVoid());
+
+    return val;
+  } else {
+    // create a temporary alloca
+
+    // generate zero value
+    auto zero = _module.GetZeroValue(type->GetDerefedType()->GetType());
+    _module.CreateStore(zero, val);
+
+    // generate elements
+    for (std::size_t i = 0; i < node->exprs().size(); i++) {
+      auto ty = type->GetElem(i);
+      auto elem = node->exprs()[i]->CodeGeneAction(this);
+      auto ptr = _module.CreateElemAccess(val, _module.CreateConstInt(i), ty);
+      _module.CreateAssign(ptr, elem);
+    }
+    return val;
+  }
+
 }
 
 SSAPtr IRBuilder::visit(BinaryStmt *node) {
@@ -190,7 +288,6 @@ SSAPtr IRBuilder::visit(IfElseStmt *node) {
   auto &then_ast = node->then();
   _module.SetInsertPoint(then_block);
   auto then_ssa = then_ast->CodeGeneAction(this);
-  DBG_ASSERT(then_ssa != nullptr, "emit then block failed");
   _module.CreateJump(end_block);
 
   // create else block
@@ -198,7 +295,6 @@ SSAPtr IRBuilder::visit(IfElseStmt *node) {
   if (node->hasElse()) {
     auto &else_ast = node->else_then();
     auto else_ssa = else_ast->CodeGeneAction(this);
-    DBG_ASSERT(else_ssa != nullptr, "emit else block failed");
   }
   _module.CreateJump(end_block);
 
@@ -250,6 +346,9 @@ SSAPtr IRBuilder::visit(ProtoTypeAST *node) {
     info = "function exist";
     return LogError(node->logger(), info);
   }
+
+  // return if is just a declaration
+  if (!_in_func) return nullptr;
 
   // create entry block to init the parameters
   auto entry = _module.CreateBlock(func, "entry");
@@ -369,8 +468,32 @@ SSAPtr IRBuilder::visit(WhileStmt *node) {
   return nullptr;
 }
 
-SSAPtr IRBuilder::visit(InitListAST *) {
-  return lava::mid::SSAPtr();
+SSAPtr IRBuilder::visit(IndexAST *node) {
+  auto context = _module.SetContext(node->logger());
+
+  // generate expression & index
+  auto expr = node->expr()->CodeGeneAction(this);
+  DBG_ASSERT(expr != nullptr, "emit expr for accessing failed");
+  auto index = node->index()->CodeGeneAction(this);
+  DBG_ASSERT(index != nullptr, "emit index for accessing failed");
+
+  // get type
+  auto expr_ty = node->expr()->ast_type();
+  auto elem_ty = expr_ty->GetDerefedType();
+
+  SSAPtr ptr;
+  if (expr_ty->IsArray()) {
+    ptr = _module.CreateElemAccess(expr, index, elem_ty);
+  } else {
+    // TODO: access ptr. Have not implemented yet
+    DBG_ASSERT(0, "Access ptr hasn't been implemented yet");
+  }
+
+//   emit load instruction
+//  auto load_elem = _module.CreateLoad(ptr);
+//  DBG_ASSERT(load_elem != nullptr, "emit load instruction for accessing element failed");
+
+  return ptr;
 }
 
 SSAPtr IRBuilder::visit(StructDefAST *) {
@@ -398,10 +521,6 @@ SSAPtr IRBuilder::visit(EnumElemAST *) {
 }
 
 SSAPtr IRBuilder::visit(CastStmt *) {
-  return lava::mid::SSAPtr();
-}
-
-SSAPtr IRBuilder::visit(IndexAST *) {
   return lava::mid::SSAPtr();
 }
 

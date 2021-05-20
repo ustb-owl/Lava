@@ -25,20 +25,9 @@ class IRBuilder;
 
 namespace lava::define {
 
-//
-//enum class Operator {
-//  // binary operator
-//  Add, Sub, Mul, Div, Mod,
-//  And, Or, Xor, Shl, Shr,
-//  LAnd, LOr,
-//  Equal, NotEqual, Less, LessEq, Great, GreatEq,
-//  Assign,
-//  AssAdd, AssSub, AssMul, AssSDiv, AssMod,
-//  AssAnd, AssOr, AssXor, AssShl, AssLShr,
-//
-//  // unary operator
-//  Pos, Neg, Not, LNot, Deref, Addr, SizeOf,
-//};
+class BaseAST;
+using ASTPtr = std::unique_ptr<BaseAST>;
+using ASTPtrList = std::vector<ASTPtr>;
 
 // definition of base class of all ASTs
 class BaseAST {
@@ -58,6 +47,8 @@ class BaseAST {
   virtual std::optional<std::uint32_t> Eval(mid::Evaluator &eval) = 0;
   // generate IR by current AST
   virtual mid::SSAPtr CodeGeneAction(mid::IRBuilder *irbuilder) = 0;
+  // merge two ast
+  virtual void Merge(ASTPtrList &) {};
 
   // setters
   void set_logger(const front::LoggerPtr &logger) { logger_ = logger; }
@@ -81,8 +72,6 @@ private:
   TypePtr ast_type_;
 };
 
-using ASTPtr = std::unique_ptr<BaseAST>;
-using ASTPtrList = std::vector<ASTPtr>;
 
 class Stmt : public BaseAST {
 };
@@ -103,6 +92,13 @@ public:
 
 
   ASTPtrList &decls() { return decls_; }
+
+  void Merge(ASTPtrList &decls) override {
+    decls.insert(decls.end(),
+                 std::make_move_iterator(decls_.begin()),
+                 std::make_move_iterator(decls_.end()));
+    decls_ = std::move(decls);
+  }
 
   void Dump(std::ostream &os) const override;
 
@@ -676,8 +672,8 @@ class CallStmt : public BaseAST {
 //       between '->' (arrow type) and '.' (dot type)
 class AccessAST : public BaseAST {
  public:
-  AccessAST(bool is_arrow, ASTPtr expr, const std::string &id)
-      : is_arrow_(is_arrow), expr_(std::move(expr)), id_(id) {}
+  AccessAST(bool is_arrow, ASTPtr expr, std::string id)
+      : is_arrow_(is_arrow), expr_(std::move(expr)), id_(std::move(id)) {}
 
   bool IsLiteral() const override { return false; }
   bool IsInitList() const override { return false; }

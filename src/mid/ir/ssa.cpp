@@ -5,6 +5,8 @@
 #include "idmanager.h"
 #include "lib/guard.h"
 #include "define/type.h"
+#include "define/builtin.h"
+
 
 namespace lava::mid {
 
@@ -430,6 +432,7 @@ void BasicBlock::Dump(std::ostream &os, IdManager &id_mgr) const {
 }
 
 void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
+  if (define::IsBuiltinFunction(_function_name)) return;
   id_mgr.Reset();
   id_mgr.RecordName(this, _function_name);
   os << "define " ;
@@ -560,6 +563,17 @@ void ConstantString::Dump(std::ostream &os, IdManager &id_mgr) const {
 }
 
 void ConstantArray::Dump(std::ostream &os, IdManager &id_mgr) const {
+  os << _name;
+  if (in_expr) return;
+
+  os << " = " << (_is_private ? "private " : "global constant ");
+  DumpType(os, type()->GetDerefedType());
+  os << " [";
+  for (std::size_t i = 0; i < this->size(); i++) {
+    DumpWithType(os, id_mgr, (*this)[i].get());
+    if (i != this->size() - 1) os << ", ";
+  }
+  os << "]" << std::endl;
 }
 
 void CallInst::Dump(std::ostream &os, IdManager &id_mgr) const {
@@ -601,7 +615,29 @@ void GlobalVariable::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << "@" << _name;
   if (in_expr) return;
   os << " = global ";
-  DumpWithType(os, id_mgr, init());
+  if (init()) {
+    DumpWithType(os, id_mgr, init());
+  } else {
+    DumpType(os, type());
+    os << " ";
+    if (type()->GetDerefedType()->IsArray()) {
+      os << "zeroinitializer";
+    } else {
+      os << "0";
+    }
+  }
+  os << std::endl;
+}
+
+void AccessInst::Dump(std::ostream &os, IdManager &id_mgr) const {
+  if (PrintPrefix(os, id_mgr, this)) return;
+  auto guard = InExpr();
+  os << "getelementptr inbounds ";
+  DumpType(os, ptr()->type()->GetDerefedType());
+  os << ", ";
+  DumpWithType(os, id_mgr, ptr());
+  os << ", ";
+  DumpWithType(os, id_mgr, index());
   os << std::endl;
 }
 

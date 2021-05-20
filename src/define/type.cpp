@@ -228,8 +228,9 @@ bool ArrayType::IsIdentical(const TypePtr &type) const {
 
 std::string ArrayType::GetTypeId() const {
   std::ostringstream oss;
-  oss << '$' << len_ << 'a';
+  oss << "[" << len_ << " x ";
   oss << base_->GetTypeId();
+  oss << "]";
   return oss.str();
 }
 

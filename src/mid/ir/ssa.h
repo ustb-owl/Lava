@@ -3,6 +3,7 @@
 
 #include <utility>
 
+#include "constant.h"
 #include "define/ast.h"
 #include "mid/ir/usedef/user.h"
 
@@ -12,11 +13,11 @@ class BasicBlock : public User {
 private:
   SSAPtrList  _insts;
   std::string _name;    // block name
-  UserPtr     _parent;  // block's parent(function)
+  FuncPtr     _parent;  // block's parent(function)
 
 public:
 
-  BasicBlock(UserPtr parent, std::string name)
+  BasicBlock(FuncPtr parent, std::string name)
       : _name(std::move(name)), _parent(std::move(parent)) {}
 
   bool isInstruction() const override { return false; }
@@ -24,7 +25,7 @@ public:
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
-  void set_parent(const UserPtr &parent) { _parent = parent; }
+  void set_parent(const FuncPtr &parent) { _parent = parent; }
 
   void AddInstToEnd(const SSAPtr &inst) { _insts.emplace_back(inst); }
 
@@ -34,7 +35,7 @@ public:
   SSAPtrList          &insts()        { return _insts;         }
   SSAPtrList::iterator inst_begin()   { return _insts.begin(); }
   SSAPtrList::iterator inst_end()     { return _insts.end();   }
-  const UserPtr       &parent() const { return _parent;        }
+  const FuncPtr      &parent() const { return _parent;        }
   const std::string   &name()   const { return _name;          }
 
 };
@@ -567,6 +568,36 @@ public:
 
 bool IsCallInst(const SSAPtr &ptr);
 bool IsBinaryOperator(const SSAPtr &ptr);
+
+
+// element accessing (load effective address)
+// operands: ptr, index
+class AccessInst : public Instruction {
+public:
+  enum class AccessType { Pointer, Element };
+
+private:
+  AccessType _acc_type;
+
+public:
+  AccessInst(AccessType acc_type, const SSAPtr &ptr, const SSAPtr &index)
+   : Instruction(Instruction::MemoryOps::Access, 2), _acc_type(acc_type) {
+    AddValue(ptr);
+    AddValue(index);
+  }
+
+  bool isInstruction() const override { return true; }
+
+  // dump ir
+  void Dump(std::ostream &os, IdManager &id_mgr) const override;
+
+  // getter/setter
+  AccessType acc_type() const { return _acc_type;        }
+  const SSAPtr &ptr()   const { return (*this)[0].get(); }
+  const SSAPtr &index() const { return (*this)[1].get(); }
+  void set_ptr(const SSAPtr &ptr)   { (*this)[0].set(ptr); }
+  void set_index(const SSAPtr &idx) { (*this)[0].set(idx); }
+};
 
 }
 #endif //LAVA_SSA_H

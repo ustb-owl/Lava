@@ -42,6 +42,9 @@ public:
   // reset compiler
   void Reset();
 
+  // pre-build
+  ASTPtr PreBuild();
+
   // open stream
   void Open(std::istream *in);
 

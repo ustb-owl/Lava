@@ -121,55 +121,56 @@ HANDLE_BINARY_INST(16, LShr , BinaryOperator) // Shift right (logical)
 // Memory operators...
  FIRST_MEMORY_INST(17)
 HANDLE_MEMORY_INST(17, Alloca, AllocaInst)  // Stack management
-HANDLE_MEMORY_INST(18, Load  , LoadInst  )  // Memory manipulation insts
+HANDLE_MEMORY_INST(18, Load  , LoadInst  )  // Memory manipulation instrs
 HANDLE_MEMORY_INST(19, Store , StoreInst )
-HANDLE_MEMORY_INST(20, Malloc, MallocInst)  // TODO: Heap management instructions
-HANDLE_MEMORY_INST(21, Free  , FreeInst  )  // TODO: Heap management instructions
-  LAST_MEMORY_INST(21)
+HANDLE_MEMORY_INST(20, Access, AccessInst)  // GetElementPtr in llvm
+HANDLE_MEMORY_INST(21, Malloc, MallocInst)  // TODO: Heap management instructions
+HANDLE_MEMORY_INST(22, Free  , FreeInst  )  // TODO: Heap management instructions
+  LAST_MEMORY_INST(22)
 
 // Cast operators ...
 // NOTE: The order matters here because CastInst::isEliminableCastPair
 // NOTE: (see Instructions.cpp) encodes a table based on this ordering.
- FIRST_CAST_INST(22)
-HANDLE_CAST_INST(22, Trunc   , TruncInst   )  // Truncate integers
-HANDLE_CAST_INST(23, ZExt    , ZExtInst    )  // Zero extend integers
-HANDLE_CAST_INST(24, SExt    , SExtInst    )  // Sign extend integers
-HANDLE_CAST_INST(25, PtrToInt, PtrToIntInst)  // Pointer -> Integer
-HANDLE_CAST_INST(26, IntToPtr, IntToPtrInst)  // Integer -> Pointer
-HANDLE_CAST_INST(27, BitCast , BitCastInst )  // Type cast
-  LAST_CAST_INST(27)
+ FIRST_CAST_INST(23)
+HANDLE_CAST_INST(23, Trunc   , TruncInst   )  // Truncate integers
+HANDLE_CAST_INST(24, ZExt    , ZExtInst    )  // Zero extend integers
+HANDLE_CAST_INST(25, SExt    , SExtInst    )  // Sign extend integers
+HANDLE_CAST_INST(26, PtrToInt, PtrToIntInst)  // Pointer -> Integer
+HANDLE_CAST_INST(27, IntToPtr, IntToPtrInst)  // Integer -> Pointer
+HANDLE_CAST_INST(28, BitCast , BitCastInst )  // Type cast
+  LAST_CAST_INST(28)
 
 // Other operators...
- FIRST_OTHER_INST(28)
-HANDLE_OTHER_INST(28, ICmp   , ICmpInst   )  // Integer comparison instruction
-HANDLE_OTHER_INST(29, PHI    , PHINode    )  // PHI node instruction
-HANDLE_OTHER_INST(30, Call   , CallInst   )  // Call a function
-HANDLE_OTHER_INST(31, Select , SelectInst )  // select instruction
-HANDLE_OTHER_INST(32, UserOp1, Instruction)  // May be used internally in a pass
-HANDLE_OTHER_INST(33, UserOp2, Instruction)  // Internal to passes only
-HANDLE_OTHER_INST(34, VAArg  , VAArgInst  )  // vaarg instruction
-HANDLE_OTHER_INST(35, ExtractElement, ExtractElementInst)// extract from vector.
-HANDLE_OTHER_INST(36, InsertElement, InsertElementInst)  // insert into vector
-HANDLE_OTHER_INST(37, ShuffleVector, ShuffleVectorInst)  // shuffle two vectors.
-HANDLE_OTHER_INST(38, Undef,   Undef)   // Assign with other operator
-  LAST_OTHER_INST(38)
+ FIRST_OTHER_INST(29)
+HANDLE_OTHER_INST(29, ICmp   , ICmpInst   )  // Integer comparison instruction
+HANDLE_OTHER_INST(30, PHI    , PHINode    )  // PHI node instruction
+HANDLE_OTHER_INST(31, Call   , CallInst   )  // Call a function
+HANDLE_OTHER_INST(32, Select , SelectInst )  // select instruction
+HANDLE_OTHER_INST(33, UserOp1, Instruction)  // May be used internally in a pass
+HANDLE_OTHER_INST(34, UserOp2, Instruction)  // Internal to passes only
+HANDLE_OTHER_INST(35, VAArg  , VAArgInst  )  // vaarg instruction
+HANDLE_OTHER_INST(36, ExtractElement, ExtractElementInst)// extract from vector.
+HANDLE_OTHER_INST(37, InsertElement, InsertElementInst)  // insert into vector
+HANDLE_OTHER_INST(38, ShuffleVector, ShuffleVectorInst)  // shuffle two vectors.
+HANDLE_OTHER_INST(39, Undef,   Undef)   // Assign with other operator
+  LAST_OTHER_INST(39)
 
- FIRST_ASSIGN_INST(38)
-HANDLE_ASSIGN_INST(38, Assign,  BinaryOperator)   // load and store
-HANDLE_ASSIGN_INST(39, AssAdd,  BinaryOperator)   // Assign with add operator
-HANDLE_ASSIGN_INST(40, AssSub,  BinaryOperator)   // Assign with sub operator
-HANDLE_ASSIGN_INST(41, AssMul,  BinaryOperator)   // Assign with mul operator
-HANDLE_ASSIGN_INST(42, AssSDiv, BinaryOperator)   // Assign with sdiv operator
-HANDLE_ASSIGN_INST(43, AssUDiv, BinaryOperator)   // Assign with udiv operator
-HANDLE_ASSIGN_INST(44, AssSRem, BinaryOperator)   // Assign with srem operator
-HANDLE_ASSIGN_INST(45, AssURem, BinaryOperator)   // Assign with urem operator
-HANDLE_ASSIGN_INST(46, AssAnd,  BinaryOperator)   // Assign with and operator
-HANDLE_ASSIGN_INST(47, AssOr,   BinaryOperator)   // Assign with or operator
-HANDLE_ASSIGN_INST(48, AssXor,  BinaryOperator)   // Assign with xor operator
-HANDLE_ASSIGN_INST(49, AssShl,  BinaryOperator)   // Assign with shl operator
-HANDLE_ASSIGN_INST(50, AssAShr, BinaryOperator)   // Assign with ashr operator
-HANDLE_ASSIGN_INST(51, AssLShr, BinaryOperator)   // Assign with lshr operator
-  LAST_ASSIGN_INST(51)
+ FIRST_ASSIGN_INST(40)
+HANDLE_ASSIGN_INST(40, Assign,  BinaryOperator)   // load and store
+HANDLE_ASSIGN_INST(41, AssAdd,  BinaryOperator)   // Assign with add operator
+HANDLE_ASSIGN_INST(42, AssSub,  BinaryOperator)   // Assign with sub operator
+HANDLE_ASSIGN_INST(43, AssMul,  BinaryOperator)   // Assign with mul operator
+HANDLE_ASSIGN_INST(44, AssSDiv, BinaryOperator)   // Assign with sdiv operator
+HANDLE_ASSIGN_INST(45, AssUDiv, BinaryOperator)   // Assign with udiv operator
+HANDLE_ASSIGN_INST(46, AssSRem, BinaryOperator)   // Assign with srem operator
+HANDLE_ASSIGN_INST(47, AssURem, BinaryOperator)   // Assign with urem operator
+HANDLE_ASSIGN_INST(48, AssAnd,  BinaryOperator)   // Assign with and operator
+HANDLE_ASSIGN_INST(49, AssOr,   BinaryOperator)   // Assign with or operator
+HANDLE_ASSIGN_INST(50, AssXor,  BinaryOperator)   // Assign with xor operator
+HANDLE_ASSIGN_INST(51, AssShl,  BinaryOperator)   // Assign with shl operator
+HANDLE_ASSIGN_INST(52, AssAShr, BinaryOperator)   // Assign with ashr operator
+HANDLE_ASSIGN_INST(53, AssLShr, BinaryOperator)   // Assign with lshr operator
+  LAST_ASSIGN_INST(53)
 
 
 #undef  FIRST_TERM_INST

@@ -10,6 +10,8 @@
 #include "define/ast.h"
 #include "define/type.h"
 
+using namespace lava::define;
+
 namespace lava::mid {
 
 using UserList     = std::vector<UserPtr>;
@@ -24,7 +26,7 @@ using ValueEnvPtr  = lib::Nested::NestedMapPtr<std::string, SSAPtr>;
 class Module {
 private:
   SSAPtr                       _return_val;
-  UserList                     _global_vars;
+  SSAPtrList                   _global_vars;
   BlockPtr                     _func_entry;
   BlockPtr                     _func_exit;
   BlockPtr                     _insert_point;
@@ -34,6 +36,8 @@ private:
   std::stack<front::LoggerPtr> _loggers;
   std::stack<BreakCont>        _break_cont;
 
+  int                          _array_id;
+public:
 
   // create a new SSA with current context (logger)
   template <typename T, typename... Args>
@@ -64,30 +68,33 @@ public:
   // dump ir
   void Dump(std::ostream &os);
 
-  FuncPtr        CreateFunction(const std::string &name, const define::TypePtr &type);
-  BlockPtr       CreateBlock(const UserPtr &parent);
-  BlockPtr       CreateBlock(const UserPtr &parent, const std::string &name);
+  FuncPtr        CreateFunction(const std::string &name, const TypePtr &type);
+  BlockPtr       CreateBlock(const FuncPtr &parent);
+  BlockPtr       CreateBlock(const FuncPtr &parent, const std::string &name);
   SSAPtr         CreateJump(const BlockPtr &target);
   SSAPtr         CreateStore(const SSAPtr &V, const SSAPtr &P);
   SSAPtr         CreateArgRef(const SSAPtr &func, std::size_t index, const std::string &arg_name);
-  SSAPtr         CreateAlloca(const define::TypePtr &type);
+  SSAPtr         CreateAlloca(const TypePtr &type);
   SSAPtr         CreateReturn(const SSAPtr &value);
   SSAPtr         CreateLoad(const SSAPtr &ptr);
   SSAPtr         CreateBranch(const SSAPtr &cond, const BlockPtr &true_block, const BlockPtr &false_block);
-  SSAPtr         CreateBinaryOperator(define::BinaryStmt::Operator opcode, const SSAPtr &S1, const SSAPtr &S2);
+  SSAPtr         CreateBinaryOperator(BinaryStmt::Operator opcode, const SSAPtr &S1, const SSAPtr &S2);
   SSAPtr         CreatePureBinaryInst(Instruction::BinaryOps opcode, const SSAPtr &S1, const SSAPtr &S2);
   SSAPtr         CreateAssign(const SSAPtr &S1, const SSAPtr &S2);
   SSAPtr         CreateConstInt(unsigned int value);
   SSAPtr         CreateCallInst(const SSAPtr &callee, const std::vector<SSAPtr>& args);
-  SSAPtr         CreateICmpInst(define::BinaryStmt::Operator opcode, const SSAPtr &lhs, const SSAPtr &rhs);
-  SSAPtr         CreateCastInst(const SSAPtr &operand, const lava::define::TypePtr &type);
-  GlobalVarPtr   CreateGlobalVar(bool is_var, const std::string &name, const lava::define::TypePtr &type);
-  GlobalVarPtr   CreateGlobalVar(bool is_var, const std::string &name, const lava::define::TypePtr &type,
-                           const SSAPtr &init);
+  SSAPtr         CreateICmpInst(BinaryStmt::Operator opcode, const SSAPtr &lhs, const SSAPtr &rhs);
+  SSAPtr         CreateCastInst(const SSAPtr &operand, const TypePtr &type);
+  SSAPtr         CreateElemAccess(const SSAPtr &ptr, const SSAPtr &index, const TypePtr &type);
+  ArrayPtr       CreateArray(const SSAPtrList &elems, const TypePtr &type, const std::string &name, bool is_private);
+  GlobalVarPtr   CreateGlobalVar(bool is_var, const std::string &name, const TypePtr &type);
+  GlobalVarPtr   CreateGlobalVar(bool is_var, const std::string &name, const TypePtr &type, const SSAPtr &init);
 
-  FuncPtr  GetFunction(const std::string &func_name);
+  SSAPtr         GetZeroValue(Type type);
 
-  SSAPtr   GetValues(const std::string &var_name);
+  FuncPtr     GetFunction(const std::string &func_name);
+  SSAPtr      GetValues(const std::string &var_name);
+  std::string GetArrayName();
 
 
   // setters
@@ -110,7 +117,7 @@ public:
 
   // getters
   SSAPtr                &ReturnValue() { return _return_val;   }
-  UserList              &GlobalVars()  { return _global_vars;  }
+  SSAPtrList            &GlobalVars()  { return _global_vars;  }
   ValueEnvPtr           &ValueSymTab() { return _value_symtab; }
   FunctionList          &Functions()   { return _functions;    }
   BlockPtr              &InsertPoint() { return _insert_point; }

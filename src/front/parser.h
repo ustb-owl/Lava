@@ -149,6 +149,7 @@ class Parser {
   bool           ended_;
   Lexer         &lexer_;
   Token          cur_token_;
+
   define::ASTPtr rootNode;
 };
 
