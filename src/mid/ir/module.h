@@ -85,8 +85,8 @@ public:
   SSAPtr         CreateCallInst(const SSAPtr &callee, const std::vector<SSAPtr>& args);
   SSAPtr         CreateICmpInst(BinaryStmt::Operator opcode, const SSAPtr &lhs, const SSAPtr &rhs);
   SSAPtr         CreateCastInst(const SSAPtr &operand, const TypePtr &type);
-  SSAPtr         CreateElemAccess(const SSAPtr &ptr, const SSAPtr &index, const TypePtr &type);
-  ArrayPtr       CreateArray(const SSAPtrList &elems, const TypePtr &type, const std::string &name, bool is_private);
+  SSAPtr         CreateElemAccess(const SSAPtr &ptr, const SSAPtrList &index);
+  ArrayPtr       CreateArray(const SSAPtrList &elems, const TypePtr &type, const std::string &name);
   GlobalVarPtr   CreateGlobalVar(bool is_var, const std::string &name, const TypePtr &type);
   GlobalVarPtr   CreateGlobalVar(bool is_var, const std::string &name, const TypePtr &type, const SSAPtr &init);
 
@@ -96,6 +96,8 @@ public:
   SSAPtr      GetValues(const std::string &var_name);
   std::string GetArrayName();
 
+  // checkers
+  bool IsGlobalVariable(const SSAPtr &var) const;
 
   // setters
   // set current context (logger)

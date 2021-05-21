@@ -47,11 +47,10 @@ public:
 // operands: elem1, elem2, ...
 class ConstantArray : public User {
 private:
-  bool        _is_private;
   std::string _name;
 public:
-  explicit ConstantArray(const SSAPtrList &elems, std::string name, bool is_private)
-  : _is_private(is_private), _name(std::move(name)) {
+  explicit ConstantArray(const SSAPtrList &elems, std::string name)
+  : _name(std::move(name)) {
     for (const auto &it : elems) AddValue(it);
   }
 

@@ -571,7 +571,7 @@ bool IsBinaryOperator(const SSAPtr &ptr);
 
 
 // element accessing (load effective address)
-// operands: ptr, index
+// operands: ptr, index1, index2, ...
 class AccessInst : public Instruction {
 public:
   enum class AccessType { Pointer, Element };
@@ -580,11 +580,7 @@ private:
   AccessType _acc_type;
 
 public:
-  AccessInst(AccessType acc_type, const SSAPtr &ptr, const SSAPtr &index)
-   : Instruction(Instruction::MemoryOps::Access, 2), _acc_type(acc_type) {
-    AddValue(ptr);
-    AddValue(index);
-  }
+  AccessInst(AccessType acc_type, const SSAPtr &ptr, const SSAPtrList &indexs);
 
   bool isInstruction() const override { return true; }
 
@@ -592,11 +588,11 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getter/setter
-  AccessType acc_type() const { return _acc_type;        }
-  const SSAPtr &ptr()   const { return (*this)[0].get(); }
-  const SSAPtr &index() const { return (*this)[1].get(); }
-  void set_ptr(const SSAPtr &ptr)   { (*this)[0].set(ptr); }
-  void set_index(const SSAPtr &idx) { (*this)[0].set(idx); }
+  AccessType acc_type()      const { return _acc_type;        }
+  const SSAPtr &ptr()        const { return (*this)[0].get(); }
+  const SSAPtr &index(int n) const { return (*this)[n].get(); }
+  void set_ptr(const SSAPtr &ptr)          { (*this)[0].set(ptr); }
+  void set_index(const SSAPtr &idx, int n) { (*this)[n].set(idx); }
 };
 
 }

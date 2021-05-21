@@ -245,6 +245,14 @@ ICmpInst::ICmpInst(Operator op, const SSAPtr &lhs, const SSAPtr &rhs, const SSAP
   AddValue(rhs);
 }
 
+AccessInst::AccessInst(AccessType acc_type, const SSAPtr &ptr, const SSAPtrList &indexs)
+    : Instruction(Instruction::MemoryOps::Access, 0), _acc_type(acc_type) {
+  AddValue(ptr);
+  for (const auto &it : indexs) {
+    AddValue(it);
+  }
+}
+
 std::string ICmpInst::opStr() const {
   std::string op;
   switch (_op) {
@@ -623,7 +631,7 @@ void ConstantArray::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << _name;
   if (in_expr) return;
 
-  os << " = " << (_is_private ? "private " : "global ");
+  os << " = global ";
   DumpType(os, type()->GetDerefedType());
   os << " [";
   for (std::size_t i = 0; i < this->size(); i++) {
@@ -698,7 +706,13 @@ void AccessInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << ", ";
   DumpWithType(os, id_mgr, ptr());
   os << ", ";
-  DumpWithType(os, id_mgr, index());
+
+  // dump index
+  std::size_t index_len = this->size();
+  for (std::size_t i = 1; i < index_len; i++) {
+    DumpWithType(os, id_mgr, index(i));
+    if (i != index_len - 1) os << ", ";
+  }
   os << std::endl;
 }
 

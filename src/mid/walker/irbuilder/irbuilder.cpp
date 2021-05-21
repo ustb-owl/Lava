@@ -101,7 +101,7 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
       auto def = init_ssa->type()->GetDerefedType();
       if (def && def->IsArray()) {
         init_expr = init_ssa;
-        var->set_type(MakePointer(type));
+        var->set_type(init_ssa->type());
       } else {
         init_expr = _module.CreateCastInst(init_ssa, type);
       }
@@ -147,16 +147,12 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
   bool is_root = _module.ValueSymTab()->is_root();
   int array_len = GetLinearArrayLength(type);
 
-  if (!is_root) {
-    val = _module.CreateAlloca(type);
-  }
-
   // create an array in rodata if its init list is const literal
   if (node->IsLiteral()) {
     ArrayPtr const_array;
     auto arr_name = _module.GetArrayName();
 
-    // TODO: Need to refine here
+    /* handle empty initial list */
     if (node->exprs().empty()) {
       // init array with const zero
       SSAPtrList exprs;
@@ -175,11 +171,12 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
 
       // generate new type of linear array
       auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
-      const_array = _module.CreateArray(exprs, new_type, arr_name, !is_root);
+      const_array = _module.CreateArray(exprs, new_type, arr_name);
 
       // add to global symbol table
       if (is_root) return const_array;
     } else {
+      /* Handle non-empty initial list */
 
       // get base element type
       TypePtr base_type = GetArrayLinearBaseType(type);
@@ -197,12 +194,13 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
 
       // generate new type of linear array
       auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
-      const_array = _module.CreateArray(exprs, new_type, arr_name, !is_root);
+      const_array = _module.CreateArray(exprs, new_type, arr_name);
 
       // add to global symbol table
       if (is_root) return const_array;
     }
 
+#if 0
     // store into global vairable
     _module.GlobalVars().push_back(const_array);
 
@@ -217,6 +215,27 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
     // emit call instruction
     auto bt_memset = _module.AddInst<CallInst>(memcpy_ssa, args);
     bt_memset->set_type(MakeVoid());
+#endif
+
+    /* Get element address from global copy array */
+
+    // store into global vairable
+    _module.GlobalVars().push_back(const_array);
+
+    /* create a gep at the function entry */
+    // save current insert point and set point as function entry
+    auto cur_insert = _module.InsertPoint();
+    auto func_entry = _module.FuncEntry();
+    auto last = func_entry->inst_end();
+    _module.SetInsertPoint(func_entry, --last);
+
+    // emit gep instruction
+    SSAPtrList index;
+    auto zero = _module.GetZeroValue(Type::Int32);
+    index.push_back(zero);
+    index.push_back(zero);
+
+    val = _module.CreateElemAccess(const_array, index);
 
     return val;
   } else {
@@ -230,7 +249,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
     for (std::size_t i = 0; i < node->exprs().size(); i++) {
       auto ty = type->GetElem(i);
       auto elem = node->exprs()[i]->CodeGeneAction(this);
-      auto ptr = _module.CreateElemAccess(val, _module.CreateConstInt(i), ty);
+      auto ptr = _module.CreateElemAccess(val, SSAPtrList {_module.CreateConstInt(i)});
       _module.CreateAssign(ptr, elem);
     }
     return val;
@@ -539,6 +558,7 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
   // generate expression & index
   auto expr = node->expr()->CodeGeneAction(this);
   DBG_ASSERT(expr != nullptr, "emit expr for accessing failed");
+
   auto index = node->index()->CodeGeneAction(this);
   DBG_ASSERT(index != nullptr, "emit index for accessing failed");
 
@@ -548,17 +568,44 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
 
   SSAPtr ptr;
 
-  // TODO: gep at function entry first if expr is global array
   if (expr_ty->IsArray()) {
-    ptr = _module.CreateElemAccess(expr, index, elem_ty);
+    // gep at function entry first if expr is global array
+    if (_module.IsGlobalVariable(expr)) {
+      // update insert point to function entry
+      auto cur_insert = _module.InsertPoint();
+      auto func_entry = _module.FuncEntry();
+      auto last = func_entry->inst_end();
+      _module.SetInsertPoint(func_entry, --last);
+
+      // generate array index: const zero
+      SSAPtrList acc_index;
+      auto zero = _module.GetZeroValue(Type::Int32);
+      acc_index.push_back(zero);  // get array address
+      acc_index.push_back(zero);  // get array head address
+
+      // create gep, set is global copy
+      expr = _module.CreateElemAccess(expr, acc_index);
+      elem_ty = expr->type()->GetDerefedType();
+
+      // recovery the insert point
+      _module.SetInsertPoint(cur_insert);
+    }
+
+    if (expr_ty->GetDerefedType()->IsArray()) {
+      int dim_len = expr_ty->GetLength();
+      SSAPtr dim_len_ssa = _module.CreateConstInt(dim_len);
+      index = _module.CreateBinaryOperator(BinaryStmt::Operator::Mul, dim_len_ssa, index);
+    }
+
+    // update array's type
+    elem_ty = expr->type()->GetDerefedType();
+
+    ptr = _module.CreateElemAccess(expr, SSAPtrList {index});
   } else {
     // TODO: access ptr. Have not implemented yet
     DBG_ASSERT(0, "Access ptr hasn't been implemented yet");
   }
 
-//   emit load instruction
-//  auto load_elem = _module.CreateLoad(ptr);
-//  DBG_ASSERT(load_elem != nullptr, "emit load instruction for accessing element failed");
 
   DBG_ASSERT(ptr != nullptr, "emit index failed");
   return ptr;

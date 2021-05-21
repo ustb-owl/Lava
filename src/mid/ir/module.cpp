@@ -454,7 +454,7 @@ SSAPtr Module::GetZeroValue(define::Type type) {
   return mid::GetZeroValue(type);
 }
 
-ArrayPtr Module::CreateArray(const SSAPtrList &elems, const TypePtr &type, const std::string &name, bool is_private) {
+ArrayPtr Module::CreateArray(const SSAPtrList &elems, const TypePtr &type, const std::string &name) {
   // type checking
   DBG_ASSERT(type->IsArray() && type->GetLength() == elems.size(), "init values of array are not fit");
 
@@ -465,15 +465,14 @@ ArrayPtr Module::CreateArray(const SSAPtrList &elems, const TypePtr &type, const
   }
 
   // create constant array
-  auto const_array = std::make_shared<ConstantArray>(elems, name, is_private);
+  auto const_array = std::make_shared<ConstantArray>(elems, name);
   const_array->set_type(MakePointer(array_ty));
   return const_array;
 }
 
-SSAPtr Module::CreateElemAccess(const SSAPtr &ptr, const SSAPtr &index, const TypePtr &type) {
+SSAPtr Module::CreateElemAccess(const SSAPtr &ptr, const SSAPtrList &index) {
   // get proper pointer
   auto pointer = ptr;
-//  if (!pointer->type()->IsPointer()) pointer = pointer->GetAddr();
 
   // assertion for type checking
 //  DBG_ASSERT(pointer->type()->GetDerefedType()->GetLength() &&
@@ -485,6 +484,10 @@ SSAPtr Module::CreateElemAccess(const SSAPtr &ptr, const SSAPtr &index, const Ty
   DBG_ASSERT(access != nullptr, "emit access instruction failed");
 
   // set access type
+  TypePtr type = ptr->type();
+  for (std::size_t i = 0; i < index.size(); i++) {
+    type = type->GetDerefedType();
+  }
   access->set_type(MakePointer(type));
   return access;
 }
@@ -494,6 +497,13 @@ std::string Module::GetArrayName()  {
   if (_value_symtab->is_root()) return "";
   func_name = "@__const." + _insert_point->parent()->GetFunctionName();
   return func_name + "." + std::to_string(_array_id++);
+}
+
+bool Module::IsGlobalVariable(const SSAPtr &var) const {
+  for (const auto &it : _global_vars) {
+    if (var == it) return true;
+  }
+  return false;
 }
 
 
