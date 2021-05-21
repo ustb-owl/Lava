@@ -487,6 +487,7 @@ SSAPtr Module::CreateElemAccess(const SSAPtr &ptr, const SSAPtrList &index) {
   TypePtr type = ptr->type();
   for (std::size_t i = 0; i < index.size(); i++) {
     type = type->GetDerefedType();
+    DBG_ASSERT(type != nullptr, "type can't be dereferenced");
   }
   access->set_type(MakePointer(type));
   return access;
