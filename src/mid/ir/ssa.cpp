@@ -10,7 +10,7 @@
 
 namespace lava::mid {
 
-Instruction::Instruction(unsigned opcode, unsigned operand_nums, const SSAPtr& insertBefore)
+Instruction::Instruction(unsigned opcode, unsigned operand_nums, const SSAPtr &insertBefore)
     : User(operand_nums), _opcode(opcode) {
   if (insertBefore != nullptr) {
     DBG_ASSERT(insertBefore->GetParent(), "InsertBefore do not contain a parent(BasicBlock)");
@@ -19,8 +19,8 @@ Instruction::Instruction(unsigned opcode, unsigned operand_nums, const SSAPtr& i
 }
 
 Instruction::Instruction(unsigned opcode, unsigned operand_nums,
-   const Operands& operands, const SSAPtr& insertBefore)
-   : User(operand_nums, operands), _opcode(opcode) {
+                         const Operands &operands, const SSAPtr &insertBefore)
+    : User(operand_nums, operands), _opcode(opcode) {
   if (insertBefore != nullptr) {
     DBG_ASSERT(insertBefore->GetParent(), "InsertBefore do not contain a parent(BasicBlock)");
     auto insts = insertBefore->GetParent()->insts();
@@ -36,7 +36,7 @@ Instruction::Instruction(unsigned opcode, unsigned operand_nums, const BlockPtr 
 }
 
 Instruction::Instruction(unsigned opcode, unsigned operand_nums,
-            const Operands& operands, const BlockPtr &insertAtEnd)
+                         const Operands &operands, const BlockPtr &insertAtEnd)
     : User(operand_nums, operands), _opcode(opcode) {
   DBG_ASSERT(insertAtEnd != nullptr, "Basic block to append to may not be NULL");
   insertAtEnd->AddInstToEnd(SSAPtr(this));
@@ -44,40 +44,61 @@ Instruction::Instruction(unsigned opcode, unsigned operand_nums,
 
 
 std::string Instruction::GetOpcodeAsString(unsigned int opcode) {
-    switch (opcode) {
-      // Terminators
-      case Br:             return "br";
-      case Ret:            return "ret";
-      case Jmp:            return "br";
+  switch (opcode) {
+    // Terminators
+    case Br:
+      return "br";
+    case Ret:
+      return "ret";
+    case Jmp:
+      return "br";
 
-        // Standard binary operators...
-      case Add:            return "add";
-      case Sub:            return "sub";
-      case Mul:            return "mul";
-      case UDiv:           return "udiv";
-      case SDiv:           return "sdiv";
+      // Standard binary operators...
+    case Add:
+      return "add";
+    case Sub:
+      return "sub";
+    case Mul:
+      return "mul";
+    case UDiv:
+      return "udiv";
+    case SDiv:
+      return "sdiv";
 //      case FDiv: return "fdiv";
-      case URem:           return "urem";
-      case SRem:           return "srem";
+    case URem:
+      return "urem";
+    case SRem:
+      return "srem";
 //      case FRem: return "frem";
 
-        // Logical operators...
-      case And:            return "and";
-      case Or :            return "or";
-      case Xor:            return "xor";
+      // Logical operators...
+    case And:
+      return "and";
+    case Or :
+      return "or";
+    case Xor:
+      return "xor";
 
-        // Memory instructions...
-      case Malloc:         return "malloc";
-      case Free:           return "free";
-      case Alloca:         return "alloca";
-      case Load:           return "load";
-      case Store:          return "store";
+      // Memory instructions...
+    case Malloc:
+      return "malloc";
+    case Free:
+      return "free";
+    case Alloca:
+      return "alloca";
+    case Load:
+      return "load";
+    case Store:
+      return "store";
 //      case GetElementPtr: return "getelementptr";
 
-        // Convert instructions...
-      case Trunc:          return "trunc";
-      case ZExt:           return "zext";
-      case SExt:           return "sext";
+      // Convert instructions...
+    case Trunc:
+      return "trunc";
+    case ZExt:
+      return "zext";
+    case SExt:
+      return "sext";
 #if 0
       case FPTrunc:   return "fptrunc";
       case FPExt:     return "fpext";
@@ -86,26 +107,41 @@ std::string Instruction::GetOpcodeAsString(unsigned int opcode) {
       case UIToFP:    return "uitofp";
       case SIToFP:    return "sitofp";
 #endif
-      case IntToPtr:       return "inttoptr";
-      case PtrToInt:       return "ptrtoint";
-      case BitCast:        return "bitcast";
+    case IntToPtr:
+      return "inttoptr";
+    case PtrToInt:
+      return "ptrtoint";
+    case BitCast:
+      return "bitcast";
 
-        // Other instructions...
-      case ICmp:           return "icmp";
+      // Other instructions...
+    case ICmp:
+      return "icmp";
 //      case FCmp:           return "fcmp";
-      case PHI:            return "phi";
-      case Select:         return "select";
-      case Call:           return "call";
-      case Shl:            return "shl";
-      case LShr:           return "lshr";
-      case AShr:           return "ashr";
-      case VAArg:          return "va_arg";
-      case ExtractElement: return "extractelement";
-      case InsertElement:  return "insertelement";
-      case ShuffleVector:  return "shufflevector";
+    case PHI:
+      return "phi";
+    case Select:
+      return "select";
+    case Call:
+      return "call";
+    case Shl:
+      return "shl";
+    case LShr:
+      return "lshr";
+    case AShr:
+      return "ashr";
+    case VAArg:
+      return "va_arg";
+    case ExtractElement:
+      return "extractelement";
+    case InsertElement:
+      return "insertelement";
+    case ShuffleVector:
+      return "shufflevector";
 
-      default: return "<Invalid operator> ";
-    }
+    default:
+      return "<Invalid operator> ";
+  }
   return "";
 }
 
@@ -114,22 +150,22 @@ std::string Instruction::GetOpcodeAsString(unsigned int opcode) {
 //===----------------------------------------------------------------------===//
 
 BinaryOperator::BinaryOperator(Instruction::BinaryOps opcode, const SSAPtr &S1,
-   const SSAPtr &S2, const define::TypePtr &type, const SSAPtr &IB)
-   : Instruction(opcode, 2, IB) {
+                               const SSAPtr &S2, const define::TypePtr &type, const SSAPtr &IB)
+    : Instruction(opcode, 2, IB) {
   AddValue(S1);
   AddValue(S2);
 }
 
 BinaryOperator::BinaryOperator(Instruction::BinaryOps opcode, const SSAPtr &S1,
-   const SSAPtr &S2, const define::TypePtr &type, const BlockPtr &IAE)
-   : Instruction(opcode, 2, IAE){
+                               const SSAPtr &S2, const define::TypePtr &type, const BlockPtr &IAE)
+    : Instruction(opcode, 2, IAE) {
   AddValue(S1);
   AddValue(S2);
 }
 
 BinaryPtr
 BinaryOperator::Create(Instruction::BinaryOps opcode, const SSAPtr &S1,
-     const SSAPtr &S2, const SSAPtr &IB) {
+                       const SSAPtr &S2, const SSAPtr &IB) {
   auto s1_type = S1->type();
   auto s2_type = S2->type();
   DBG_ASSERT(s1_type->IsPrime(), "S1 is not prime type");
@@ -141,7 +177,7 @@ BinaryOperator::Create(Instruction::BinaryOps opcode, const SSAPtr &S1,
 
 BinaryPtr
 BinaryOperator::Create(Instruction::BinaryOps opcode, const SSAPtr &S1,
-     const SSAPtr &S2, const BlockPtr &IAE) {
+                       const SSAPtr &S2, const BlockPtr &IAE) {
   auto s1_type = S1->type();
   auto s2_type = S2->type();
   DBG_ASSERT(s1_type->IsPrime(), "S1 is not prime type");
@@ -191,7 +227,7 @@ void BasicBlock::AddInstBefore(const SSAPtr &insertBefore, const SSAPtr &inst) {
 
 BranchInst::BranchInst(const SSAPtr &cond, const SSAPtr &true_block,
                        const SSAPtr &false_block, const SSAPtr &IB)
-  : TerminatorInst(Instruction::TermOps::Br, 3, IB) {
+    : TerminatorInst(Instruction::TermOps::Br, 3, IB) {
   AddValue(cond);
   AddValue(true_block);
   AddValue(false_block);
@@ -210,20 +246,41 @@ ICmpInst::ICmpInst(Operator op, const SSAPtr &lhs, const SSAPtr &rhs, const SSAP
 }
 
 std::string ICmpInst::opStr() const {
-  std::string  op;
+  std::string op;
   switch (_op) {
 
-    case Operator::Equal:    op = "eq";  break;
-    case Operator::NotEqual: op = "ne";  break;
-    case Operator::SLess:    op = "slt"; break;
-    case Operator::ULess:    op = "ult"; break;
-    case Operator::SLessEq:  op = "sle"; break;
-    case Operator::ULessEq:  op = "ule"; break;
-    case Operator::SGreat:   op = "sgt"; break;
-    case Operator::UGreat:   op = "ugt"; break;
-    case Operator::SGreatEq: op = "sge"; break;
-    case Operator::UGreatEq: op = "uge"; break;
-    default: DBG_ASSERT(0, "compare op is error");
+    case Operator::Equal:
+      op = "eq";
+      break;
+    case Operator::NotEqual:
+      op = "ne";
+      break;
+    case Operator::SLess:
+      op = "slt";
+      break;
+    case Operator::ULess:
+      op = "ult";
+      break;
+    case Operator::SLessEq:
+      op = "sle";
+      break;
+    case Operator::ULessEq:
+      op = "ule";
+      break;
+    case Operator::SGreat:
+      op = "sgt";
+      break;
+    case Operator::UGreat:
+      op = "ugt";
+      break;
+    case Operator::SGreatEq:
+      op = "sge";
+      break;
+    case Operator::UGreatEq:
+      op = "uge";
+      break;
+    default:
+      DBG_ASSERT(0, "compare op is error");
   }
 
   return op;
@@ -292,7 +349,7 @@ bool IsCallInst(const SSAPtr &ptr) {
   return false;
 }
 
-bool IsBinaryOperator(const SSAPtr &ptr){
+bool IsBinaryOperator(const SSAPtr &ptr) {
   if (ptr->isInstruction()) {
     auto inst = CastTo<Instruction>(ptr);
     if (inst->isBinaryOp() || inst->opcode() == Instruction::OtherOps::ICmp) {
@@ -335,7 +392,7 @@ void DumpValue(std::ostream &os, IdManager &id_mgr, const Use &operand) {
   DumpValue(os, id_mgr, operand.get());
 }
 
-template <typename It>
+template<typename It>
 inline void DumpValue(std::ostream &os, IdManager &id_mgr, It begin, It end) {
   for (auto it = begin; it != end; ++it) {
     if (it != begin) os << ", ";
@@ -344,7 +401,7 @@ inline void DumpValue(std::ostream &os, IdManager &id_mgr, It begin, It end) {
 }
 
 inline void DumpBlockName(std::ostream &os, IdManager &id_mgr, const BasicBlock *block) {
-  auto &npos =  std::string::npos;
+  auto &npos = std::string::npos;
   auto name = block->name();
   if (name.find("if_cond") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_IF_COND);
@@ -360,7 +417,7 @@ inline void DumpBlockName(std::ostream &os, IdManager &id_mgr, const BasicBlock 
     os << name << id_mgr.GetId(block, IdType::_ID_LOOP_BODY);
   } else if (name.find("while.end") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_WHILE_END);
-  } else if (name.find("block") != npos){
+  } else if (name.find("block") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_BLOCK);
   } else {
     os << name;
@@ -410,7 +467,7 @@ void BinaryOperator::Dump(std::ostream &os, IdManager &id_mgr) const {
 }
 
 void BasicBlock::Dump(std::ostream &os, IdManager &id_mgr) const {
-  if (!_name.empty()){
+  if (!_name.empty()) {
     if (in_branch) os << "%"; // add '%' if in branch instructions
     DumpBlockName(os, id_mgr, this);
   } else {
@@ -435,7 +492,7 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
   if (define::IsBuiltinFunction(_function_name)) return;
   id_mgr.Reset();
   id_mgr.RecordName(this, _function_name);
-  os << "define " ;
+  os << "define ";
 
   // dump ret type
   auto func_type = type();
@@ -566,7 +623,7 @@ void ConstantArray::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << _name;
   if (in_expr) return;
 
-  os << " = " << (_is_private ? "private " : "global constant ");
+  os << " = " << (_is_private ? "private " : "global ");
   DumpType(os, type()->GetDerefedType());
   os << " [";
   for (std::size_t i = 0; i < this->size(); i++) {
@@ -614,17 +671,19 @@ void CastInst::Dump(std::ostream &os, IdManager &id_mgr) const {
 void GlobalVariable::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << "@" << _name;
   if (in_expr) return;
-  os << " = global ";
-  if (init()) {
-    DumpWithType(os, id_mgr, init());
-  } else {
-    DumpType(os, type());
-    os << " ";
-    if (type()->GetDerefedType()->IsArray()) {
-      os << "zeroinitializer";
+  auto &init_val = init();
+  if (init_val) {
+    auto init_type = init_val->type();
+    if (init_type->GetDerefedType() && init_type->GetDerefedType()->IsArray()) {
+      DumpValue(os, id_mgr, init_val);
     } else {
-      os << "0";
+      os << " = global ";
+      DumpWithType(os, id_mgr, init_val);
     }
+  } else {
+    os << " = global ";
+    DumpType(os, type());
+    os << " " << "0";
   }
   os << std::endl;
 }
@@ -633,7 +692,9 @@ void AccessInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   if (PrintPrefix(os, id_mgr, this)) return;
   auto guard = InExpr();
   os << "getelementptr inbounds ";
-  DumpType(os, ptr()->type()->GetDerefedType());
+  auto ptr_ssa = ptr();
+  auto ptr_type = ptr_ssa->type();
+  DumpType(os, ptr_type->GetDerefedType());
   os << ", ";
   DumpWithType(os, id_mgr, ptr());
   os << ", ";

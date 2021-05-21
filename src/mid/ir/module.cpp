@@ -473,11 +473,11 @@ ArrayPtr Module::CreateArray(const SSAPtrList &elems, const TypePtr &type, const
 SSAPtr Module::CreateElemAccess(const SSAPtr &ptr, const SSAPtr &index, const TypePtr &type) {
   // get proper pointer
   auto pointer = ptr;
-  if (!pointer->type()->IsPointer()) pointer = pointer->GetAddr();
+//  if (!pointer->type()->IsPointer()) pointer = pointer->GetAddr();
 
   // assertion for type checking
-  DBG_ASSERT(pointer->type()->GetDerefedType()->GetLength() &&
-         index->type()->IsInteger(), "check access failed");
+//  DBG_ASSERT(pointer->type()->GetDerefedType()->GetLength() &&
+//         index->type()->IsInteger(), "check access failed");
 
   // create access
   auto acc_type = AccessInst::AccessType::Element;
@@ -490,7 +490,9 @@ SSAPtr Module::CreateElemAccess(const SSAPtr &ptr, const SSAPtr &index, const Ty
 }
 
 std::string Module::GetArrayName()  {
-  auto func_name = "@__const." + _insert_point->parent()->GetFunctionName();
+  std::string func_name;
+  if (_value_symtab->is_root()) return "";
+  func_name = "@__const." + _insert_point->parent()->GetFunctionName();
   return func_name + "." + std::to_string(_array_id++);
 }
 
