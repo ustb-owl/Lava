@@ -46,59 +46,38 @@ Instruction::Instruction(unsigned opcode, unsigned operand_nums,
 std::string Instruction::GetOpcodeAsString(unsigned int opcode) {
   switch (opcode) {
     // Terminators
-    case Br:
-      return "br";
-    case Ret:
-      return "ret";
-    case Jmp:
-      return "br";
+    case Br:              return "br";
+    case Ret:             return "ret";
+    case Jmp:             return "br";
 
       // Standard binary operators...
-    case Add:
-      return "add";
-    case Sub:
-      return "sub";
-    case Mul:
-      return "mul";
-    case UDiv:
-      return "udiv";
-    case SDiv:
-      return "sdiv";
+    case Add:             return "add";
+    case Sub:             return "sub";
+    case Mul:             return "mul";
+    case UDiv:            return "udiv";
+    case SDiv:            return "sdiv";
 //      case FDiv: return "fdiv";
-    case URem:
-      return "urem";
-    case SRem:
-      return "srem";
+    case URem:            return "urem";
+    case SRem:            return "srem";
 //      case FRem: return "frem";
 
       // Logical operators...
-    case And:
-      return "and";
-    case Or :
-      return "or";
-    case Xor:
-      return "xor";
+    case And:             return "and";
+    case Or :             return "or";
+    case Xor:             return "xor";
 
       // Memory instructions...
-    case Malloc:
-      return "malloc";
-    case Free:
-      return "free";
-    case Alloca:
-      return "alloca";
-    case Load:
-      return "load";
-    case Store:
-      return "store";
+    case Malloc:          return "malloc";
+    case Free:            return "free";
+    case Alloca:          return "alloca";
+    case Load:            return "load";
+    case Store:           return "store";
 //      case GetElementPtr: return "getelementptr";
 
       // Convert instructions...
-    case Trunc:
-      return "trunc";
-    case ZExt:
-      return "zext";
-    case SExt:
-      return "sext";
+    case Trunc:           return "trunc";
+    case ZExt:            return "zext";
+    case SExt:            return "sext";
 #if 0
       case FPTrunc:   return "fptrunc";
       case FPExt:     return "fpext";
@@ -107,40 +86,25 @@ std::string Instruction::GetOpcodeAsString(unsigned int opcode) {
       case UIToFP:    return "uitofp";
       case SIToFP:    return "sitofp";
 #endif
-    case IntToPtr:
-      return "inttoptr";
-    case PtrToInt:
-      return "ptrtoint";
-    case BitCast:
-      return "bitcast";
+    case IntToPtr:        return "inttoptr";
+    case PtrToInt:        return "ptrtoint";
+    case BitCast:         return "bitcast";
 
       // Other instructions...
-    case ICmp:
-      return "icmp";
+    case ICmp:            return "icmp";
 //      case FCmp:           return "fcmp";
-    case PHI:
-      return "phi";
-    case Select:
-      return "select";
-    case Call:
-      return "call";
-    case Shl:
-      return "shl";
-    case LShr:
-      return "lshr";
-    case AShr:
-      return "ashr";
-    case VAArg:
-      return "va_arg";
-    case ExtractElement:
-      return "extractelement";
-    case InsertElement:
-      return "insertelement";
-    case ShuffleVector:
-      return "shufflevector";
+    case PHI:             return "phi";
+    case Select:          return "select";
+    case Call:            return "call";
+    case Shl:             return "shl";
+    case LShr:            return "lshr";
+    case AShr:            return "ashr";
+    case VAArg:           return "va_arg";
+    case ExtractElement:  return "extractelement";
+    case InsertElement:   return "insertelement";
+    case ShuffleVector:   return "shufflevector";
 
-    default:
-      return "<Invalid operator> ";
+    default:              return "<Invalid operator> ";
   }
   return "";
 }
@@ -225,6 +189,24 @@ void BasicBlock::AddInstBefore(const SSAPtr &insertBefore, const SSAPtr &inst) {
   _insts.insert(it, inst);
 }
 
+void BasicBlock::ClearInst() {
+  for (const auto &i : _insts) {
+    // remove all of its uses
+    CastTo<Instruction>(i)->Clear();
+  }
+
+  // clear instruction list
+  _insts.clear();
+}
+
+void BasicBlock::DeleteSelf() {
+  // remove all use of predecessors
+  this->Clear();
+
+  // remove all of its instructions
+  this->ClearInst();
+}
+
 BranchInst::BranchInst(const SSAPtr &cond, const SSAPtr &true_block,
                        const SSAPtr &false_block, const SSAPtr &IB)
     : TerminatorInst(Instruction::TermOps::Br, 3, IB) {
@@ -257,38 +239,17 @@ std::string ICmpInst::opStr() const {
   std::string op;
   switch (_op) {
 
-    case Operator::Equal:
-      op = "eq";
-      break;
-    case Operator::NotEqual:
-      op = "ne";
-      break;
-    case Operator::SLess:
-      op = "slt";
-      break;
-    case Operator::ULess:
-      op = "ult";
-      break;
-    case Operator::SLessEq:
-      op = "sle";
-      break;
-    case Operator::ULessEq:
-      op = "ule";
-      break;
-    case Operator::SGreat:
-      op = "sgt";
-      break;
-    case Operator::UGreat:
-      op = "ugt";
-      break;
-    case Operator::SGreatEq:
-      op = "sge";
-      break;
-    case Operator::UGreatEq:
-      op = "uge";
-      break;
-    default:
-      DBG_ASSERT(0, "compare op is error");
+    case Operator::Equal:    op = "eq";  break;
+    case Operator::NotEqual: op = "ne";  break;
+    case Operator::SLess:    op = "slt"; break;
+    case Operator::ULess:    op = "ult"; break;
+    case Operator::SLessEq:  op = "sle"; break;
+    case Operator::ULessEq:  op = "ule"; break;
+    case Operator::SGreat:   op = "sgt"; break;
+    case Operator::UGreat:   op = "ugt"; break;
+    case Operator::SGreatEq: op = "sge"; break;
+    case Operator::UGreatEq: op = "uge"; break;
+    default: DBG_ASSERT(0, "compare op is error");
   }
 
   return op;
@@ -496,34 +457,48 @@ void BasicBlock::Dump(std::ostream &os, IdManager &id_mgr) const {
   for (const auto &it : _insts) DumpValue(os, id_mgr, it);
 }
 
+
 void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
-  if (define::IsBuiltinFunction(_function_name)) return;
+//  if (define::IsBuiltinFunction(_function_name)) return;
   id_mgr.Reset();
   id_mgr.RecordName(this, _function_name);
-  os << "define ";
+  if (_is_decl) {
+    os << "declare ";
+  } else {
+    os << "define ";
+  }
 
   // dump ret type
   auto func_type = type();
-  DumpType(os, func_type->GetReturnType(func_type->GetArgsType().value()));
+  auto args_type = func_type->GetArgsType().value();
+  DumpType(os, func_type->GetReturnType(args_type));
 
   // dump function name
   os << " @" << _function_name;
 
   // dump args
   os << "(";
-  if (!_args.empty()) {
-    auto args_type = func_type->GetArgsType();
-    auto args_type_values = args_type.value();
-    for (std::size_t i = 0; i < _args.size(); i++) {
-      DumpType(os, args_type_values[i]);
-      os << " ";  // span between type and name
-      _args[i]->Dump(os, id_mgr);
+  if (!args_type.empty()) {
+    for (std::size_t i = 0; i < args_type.size(); i++) {
+      DumpType(os, args_type[i]);
+
+      if (!_is_decl) {
+        os << " ";  // span between type and name
+        _args[i]->Dump(os, id_mgr);
+      }
 
       // separate each parameters
-      if (i != _args.size() - 1) os << ", ";
+      if (i != args_type.size() - 1) os << ", ";
     }
   }
-  os << ") {\n";
+  os << ")";
+
+  if (_is_decl) {
+    os << "\n" << std::endl;
+    return;
+  }
+
+  os << " {\n";
 
   // dump content of blocks
   bool report_exit = false;
@@ -628,8 +603,12 @@ void ConstantString::Dump(std::ostream &os, IdManager &id_mgr) const {
 }
 
 void ConstantArray::Dump(std::ostream &os, IdManager &id_mgr) const {
-  os << _name;
-  if (in_expr) return;
+  if (!_name.empty()){
+    os << _name;
+    if (in_expr) return;
+  } else {
+    if (PrintPrefix(os, id_mgr, this)) return;
+  }
 
   os << " = global ";
   DumpType(os, type()->GetDerefedType());
@@ -642,8 +621,15 @@ void ConstantArray::Dump(std::ostream &os, IdManager &id_mgr) const {
 }
 
 void CallInst::Dump(std::ostream &os, IdManager &id_mgr) const {
-  if (PrintPrefix(os, id_mgr, this)) return;
+  bool is_void = type()->IsVoid();
+
+  // do not print name if its return type is void
+  if (!is_void && PrintPrefix(os, id_mgr, this)) return;
+
   auto guard = InExpr();
+
+  if (is_void) os << xIndent; // print indent if return void
+
   os << "call ";
   // dump return type
   DumpType(os, type());

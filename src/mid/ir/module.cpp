@@ -46,9 +46,9 @@ xstl::Guard Module::SetContext(const front::LoggerPtr &logger) {
   return xstl::Guard([this] { _loggers.pop(); });
 }
 
-FuncPtr Module::CreateFunction(const std::string &name, const define::TypePtr &type) {
+FuncPtr Module::CreateFunction(const std::string &name, const define::TypePtr &type, bool is_decl) {
   DBG_ASSERT(type->IsFunction(), "not function type");
-  auto func = MakeSSA<Function>(name);
+  auto func = MakeSSA<Function>(name, is_decl);
   func->set_type(type);
   _functions.push_back(func);
   return func;
@@ -318,15 +318,28 @@ SSAPtr Module::CreateConstInt(unsigned int value) {
 }
 
 SSAPtr Module::CreateCallInst(const SSAPtr &callee, const std::vector<SSAPtr>& args) {
+  // assertion for type checking
+  DBG_ASSERT(callee->type()->IsFunction(), "callee is not function type");
+  auto args_type = *callee->type()->GetArgsType();
+  DBG_ASSERT(args_type.size() == args.size(), "arguments size not fit");
+
+  auto arg_it = args_type.begin();
   std::vector<SSAPtr> new_args;
   for (const auto &it : args) {
+    auto arg = *arg_it++;
 
+    auto it_deref = it->type()->GetDerefedType();
+    // TODO: need to tackle with pointer and array
     if (it->type()->IsConst() || IsBinaryOperator(it) || IsCallInst(it)) {
       new_args.push_back(it);
     } else {
-      auto load_inst = CreateLoad(it);
-      DBG_ASSERT(load_inst != nullptr, "emit load inst before call inst failed");
-      new_args.push_back(load_inst);
+      if (it_deref && it_deref->IsIdentical(arg)) {
+        auto load_inst = CreateLoad(it);
+        DBG_ASSERT(load_inst != nullptr, "emit load inst before call inst failed");
+        new_args.push_back(load_inst);
+      } else {
+        new_args.push_back(it);
+      }
     }
   }
 

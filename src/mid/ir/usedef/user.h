@@ -54,6 +54,9 @@ public:
                }), _operands.end());
   }
 
+  // clear all uses
+  void Clear() { _operands.clear(); }
+
   // access value in current user
   Use &operator[](std::size_t pos) {
     if(_operands_num == 0) { _operands_num = _operands.size(); }

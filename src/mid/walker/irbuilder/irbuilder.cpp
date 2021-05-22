@@ -46,6 +46,16 @@ SSAPtrList GetArrayInitElement(InitListAST *node, IRBuilder *irbuiler) {
   return elems;
 }
 
+void IRBuilder::SetInsertPointAtEntry() {
+  auto func_entry = _module.FuncEntry();
+  auto last = func_entry->inst_end();
+  _module.SetInsertPoint(func_entry, --last);
+}
+
+void IRBuilder::SetInsertPoint(const BlockPtr &BB) {
+  _module.SetInsertPoint(BB);
+}
+
 SSAPtr IRBuilder::visit(IntAST *node) {
   return _module.CreateConstInt(node->value());
 }
@@ -162,7 +172,6 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
         exprs.push_back(std::move(expr));
       }
 
-
       // get base element type
       TypePtr base_type = GetArrayLinearBaseType(type);
 
@@ -184,8 +193,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
       // generate all element
       SSAPtrList exprs = GetArrayInitElement(node, this);
       for (std::size_t i = exprs.size(); i < array_len; i++) {
-        SSAPtr expr;
-        expr = _module.GetZeroValue(base_type->GetType());
+        SSAPtr expr = _module.GetZeroValue(base_type->GetType());
         exprs.push_back(std::move(expr));
       }
 
@@ -225,9 +233,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
     /* create a gep at the function entry */
     // save current insert point and set point as function entry
     auto cur_insert = _module.InsertPoint();
-    auto func_entry = _module.FuncEntry();
-    auto last = func_entry->inst_end();
-    _module.SetInsertPoint(func_entry, --last);
+    SetInsertPointAtEntry();
 
     // emit gep instruction
     SSAPtrList index;
@@ -237,21 +243,63 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
 
     val = _module.CreateElemAccess(const_array, index);
 
+    // recover the insert point
+    SetInsertPoint(cur_insert);
+
     return val;
   } else {
-    // create a temporary alloca
+    /* create a temporary alloca */
 
-    // generate zero value
-    auto zero = _module.GetZeroValue(type->GetDerefedType()->GetType());
-    _module.CreateStore(zero, val);
+    // get base element type
+    TypePtr base_type = GetArrayLinearBaseType(type);
+
+    // alloca a linear array
+    // generate new type of linear array
+    auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
+
+    auto cur_insert = _module.InsertPoint();
+    val = _module.CreateAlloca(new_type);
+    SetInsertPointAtEntry();
+
+    // emit gep instruction
+    SSAPtrList index;
+    auto zero = _module.GetZeroValue(Type::Int32);
+    index.push_back(zero);
+    index.push_back(zero);
+
+    val = _module.CreateElemAccess(val, index);
+
+    // generate array length
+    auto length = _module.CreateConstInt(array_len);
+
+    // memset with zero
+    std::vector<SSAPtr> args;
+    auto memset_ssa = _module.GetFunction("memset");
+
+    // set arguments
+    args.push_back(val);     // array address
+    args.push_back(zero);    // array value
+    args.push_back(length);  // array length
+    _module.CreateCallInst(memset_ssa, args);
 
     // generate elements
-    for (std::size_t i = 0; i < node->exprs().size(); i++) {
-      auto ty = type->GetElem(i);
+    SSAPtrList exprs = GetArrayInitElement(node, this);
+    auto it = exprs.begin();
+    for (std::size_t i = 0; i < exprs.size(); i++) {
+      auto ptr = _module.CreateElemAccess(val, SSAPtrList {_module.CreateConstInt(i)});
+      _module.CreateAssign(ptr, *it);
+      it++;
+    }
+
+    for (std::size_t i = exprs.size(); i < node->exprs().size(); i++) {
       auto elem = node->exprs()[i]->CodeGeneAction(this);
       auto ptr = _module.CreateElemAccess(val, SSAPtrList {_module.CreateConstInt(i)});
       _module.CreateAssign(ptr, elem);
     }
+
+    // recover the insert point
+    SetInsertPoint(cur_insert);
+
     return val;
   }
 
@@ -419,7 +467,7 @@ SSAPtr IRBuilder::visit(ProtoTypeAST *node) {
   const auto& func_name = node->id();
   const auto& func_type = node->ast_type();
   if (!_module.GetFunction(func_name)) {
-    func = _module.CreateFunction(func_name, func_type);
+    func = _module.CreateFunction(func_name, func_type, !_in_func);
     functions.push_back(func);
 
     // add to environment
@@ -573,9 +621,7 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
     if (_module.IsGlobalVariable(expr)) {
       // update insert point to function entry
       auto cur_insert = _module.InsertPoint();
-      auto func_entry = _module.FuncEntry();
-      auto last = func_entry->inst_end();
-      _module.SetInsertPoint(func_entry, --last);
+      SetInsertPointAtEntry();
 
       // generate array index: const zero
       SSAPtrList acc_index;
@@ -588,7 +634,7 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
       elem_ty = expr->type()->GetDerefedType();
 
       // recovery the insert point
-      _module.SetInsertPoint(cur_insert);
+      SetInsertPoint(cur_insert);
     }
 
     if (expr_ty->GetDerefedType()->IsArray()) {

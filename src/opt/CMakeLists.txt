@@ -1,6 +1,7 @@
 add_library(opt
         pass.cpp
         pass_manager.cpp
+        transforms/dge.cpp
         transforms/hello.cpp
         transforms/blockmerge.cpp
 )

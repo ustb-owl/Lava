@@ -68,7 +68,6 @@ public:
   // dump ir
   void Dump(std::ostream &os);
 
-  FuncPtr        CreateFunction(const std::string &name, const TypePtr &type);
   BlockPtr       CreateBlock(const FuncPtr &parent);
   BlockPtr       CreateBlock(const FuncPtr &parent, const std::string &name);
   SSAPtr         CreateJump(const BlockPtr &target);
@@ -89,6 +88,7 @@ public:
   ArrayPtr       CreateArray(const SSAPtrList &elems, const TypePtr &type, const std::string &name);
   GlobalVarPtr   CreateGlobalVar(bool is_var, const std::string &name, const TypePtr &type);
   GlobalVarPtr   CreateGlobalVar(bool is_var, const std::string &name, const TypePtr &type, const SSAPtr &init);
+  FuncPtr        CreateFunction(const std::string &name, const TypePtr &type, bool is_decl = false);
 
   SSAPtr         GetZeroValue(Type type);
 

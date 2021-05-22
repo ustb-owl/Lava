@@ -31,11 +31,17 @@ public:
 
   void AddInstBefore(const SSAPtr &insertBefore, const SSAPtr &inst);
 
+  // remove all instructions
+  void ClearInst();
+
+  // delete it self
+  void DeleteSelf();
+
   //getters
   SSAPtrList          &insts()        { return _insts;         }
   SSAPtrList::iterator inst_begin()   { return _insts.begin(); }
   SSAPtrList::iterator inst_end()     { return _insts.end();   }
-  const FuncPtr      &parent() const { return _parent;        }
+  const FuncPtr       &parent() const { return _parent;        }
   const std::string   &name()   const { return _name;          }
 
 };
@@ -273,11 +279,13 @@ public:
 // operands: basic blocks
 class Function : public User {
 private:
+  bool _is_decl;
   std::vector<SSAPtr> _args;
   std::string _function_name;
 
 public:
-  explicit Function(std::string name) : _function_name(std::move(name)) {}
+  explicit Function(std::string name, bool is_decl = false)
+    : _is_decl(is_decl), _function_name(std::move(name)) {}
 
   bool isInstruction() const override { return false; }
 
@@ -294,6 +302,7 @@ public:
   const std::string &GetFunctionName() const { return _function_name; }
 
   const std::vector<SSAPtr> &args() { return _args; }
+  bool is_decl()              const { return _is_decl; }
 };
 
 class JumpInst : public TerminatorInst {

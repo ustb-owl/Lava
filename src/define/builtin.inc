@@ -12,5 +12,6 @@ BT_FUNCTIONS(Type::Void,  "putarray",            "int n, int a[]")
 BT_FUNCTIONS(Type::Void,  "starttime",                         "")
 BT_FUNCTIONS(Type::Void,  "stoptime",                          "")
 BT_FUNCTIONS(Type::Void,  "memcpy",    "int *a, int *b, int size")
+BT_FUNCTIONS(Type::Void,  "memset",    "int *a, int  b, int size")
 
 #undef BT_FUNCTIONS

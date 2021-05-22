@@ -46,6 +46,7 @@ void Compiler::RunPasses() {
 ASTPtr Compiler::PreBuild() {
   std::istringstream iss;
   iss.str(
+      "void memset(int *dst, int value, int size);\n"
       "int getint();\n"
       "int getch();\n"
       "int getarray(int a[]);\n"
@@ -54,7 +55,7 @@ ASTPtr Compiler::PreBuild() {
       "void putarray(int n, int a[]);\n"
       "void starttime();\n"
       "void stoptime();\n"
-      "void memcpy(int *a, int *b, int size);"
+      "void memcpy(int *a, int *b, int size);\n"
   );
   front::Lexer  tmp_lex(&iss);
   front::Parser tmp_paser(tmp_lex);

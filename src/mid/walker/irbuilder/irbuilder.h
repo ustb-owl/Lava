@@ -62,7 +62,11 @@ public:
 
   void EmitIR() { _translation_decl_unit->CodeGeneAction(this); }
 
-  // print error message
+  // helper
+  void SetInsertPointAtEntry();
+  void SetInsertPoint(const BlockPtr &BB);
+
+    // print error message
   SSAPtr LogError(const front::LoggerPtr &log, std::string &message);
   SSAPtr LogError(const front::LoggerPtr &log, std::string &message, const std::string &id);
 };
