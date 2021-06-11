@@ -132,7 +132,7 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
   // global variable
   // TODO: need to handle default init
   if (_module.ValueSymTab()->is_root()) {
-    auto var = _module.CreateGlobalVar(!type->IsConst(), node->id(), type);
+    GlobalVarPtr var = _module.CreateGlobalVar(!type->IsConst(), node->id(), type);
     if (node->hasInit()) {
       auto &init = node->init();
       DBG_ASSERT(init->IsLiteral(), "init value of global variable should be const expr");
@@ -161,7 +161,7 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
       DBG_ASSERT(init_expr != nullptr, "emit init of global variable failed");
       var->set_init(init_expr);
     } else {
-
+      // TODO: handle the zeroinitializer
     }
     variable = var;
   } else {
@@ -194,6 +194,28 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
         _module.CreateAssign(variable, init_ssa);
       } else {
         variable = init_ssa;
+      }
+    } else {
+
+      // create local array without init
+      if (is_array) {
+        int array_len = GetLinearArrayLength(type);
+        // get base element type
+        TypePtr base_type = GetArrayLinearBaseType(type);
+
+        // alloca a linear array
+        // generate new type of linear array
+        auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
+
+        auto val = _module.CreateAlloca(new_type);
+
+        // emit gep instruction
+        SSAPtrList index;
+        auto zero = _module.GetZeroValue(Type::Int32);
+        index.push_back(zero);
+        index.push_back(zero);
+
+        variable = _module.CreateElemAccess(val, index);
       }
     }
   }
