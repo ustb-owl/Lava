@@ -2,6 +2,7 @@
 #define LAVA_MODULE_H
 
 #include <stack>
+#include <deque>
 
 #include "ssa.h"
 #include "lib/debug.h"
@@ -35,6 +36,7 @@ private:
   SSAPtrList::iterator         _insert_pos;
   std::stack<front::LoggerPtr> _loggers;
   std::stack<BreakCont>        _break_cont;
+  std::deque<int>              _array_lens;
 
   int                          _array_id;
 public:
@@ -117,6 +119,10 @@ public:
     _insert_pos = it;
   }
 
+  void SetArrayLens(std::deque<int> &array_lens) {
+    _array_lens = array_lens;
+  }
+
   // getters
   SSAPtr                &ReturnValue() { return _return_val;   }
   SSAPtrList            &GlobalVars()  { return _global_vars;  }
@@ -127,6 +133,7 @@ public:
   BlockPtr              &FuncExit()    { return _func_exit;    }
   SSAPtrList::iterator   InsertPos()   { return _insert_pos;   }
   std::stack<BreakCont> &BreakCont()   { return _break_cont;   }
+  std::deque<int>       &array_lens()  { return _array_lens;   }
 
   typedef FunctionList::iterator        iterator;
   typedef FunctionList::const_iterator  const_iterator;

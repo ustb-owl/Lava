@@ -266,16 +266,16 @@ SSAPtr GetZeroValue(define::Type type) {
       zero->set_type(define::MakeVoid());
       break;
     case Type::Int8:
-      zero->set_type(define::MakePrimType(Type::Int8, true));
+      zero->set_type(define::MakeConst(Type::Int8));
       break;
     case Type::UInt8:
-      zero->set_type(define::MakePrimType(Type::UInt8, true));
+      zero->set_type(define::MakeConst(Type::UInt8, true));
       break;
     case Type::Int32:
-      zero->set_type(define::MakePrimType(Type::Int32, true));
+      zero->set_type(define::MakeConst(Type::Int32, true));
       break;
     case Type::UInt32:
-      zero->set_type(define::MakePrimType(Type::UInt32, true));
+      zero->set_type(define::MakeConst(Type::UInt32, true));
       break;
     default:
       DBG_ASSERT(0, "Get error zero type");
@@ -606,8 +606,6 @@ void ConstantArray::Dump(std::ostream &os, IdManager &id_mgr) const {
   if (!_name.empty()){
     os << _name;
     if (in_expr) return;
-  } else {
-    if (PrintPrefix(os, id_mgr, this)) return;
   }
 
   os << " = global ";
@@ -669,7 +667,7 @@ void GlobalVariable::Dump(std::ostream &os, IdManager &id_mgr) const {
   if (init_val) {
     auto init_type = init_val->type();
     if (init_type->GetDerefedType() && init_type->GetDerefedType()->IsArray()) {
-      DumpValue(os, id_mgr, init_val);
+      init_val->Dump(os, id_mgr);
     } else {
       os << " = global ";
       DumpWithType(os, id_mgr, init_val);

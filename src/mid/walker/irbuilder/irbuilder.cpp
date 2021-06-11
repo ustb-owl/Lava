@@ -1,4 +1,7 @@
 #include "irbuilder.h"
+#include "mid/ir/castssa.h"
+
+#include <deque>
 #include <iostream>
 
 using namespace lava::define;
@@ -12,7 +15,7 @@ int GetLinearArrayLength(const TypePtr &ptr) {
   DBG_ASSERT(ptr->IsArray(), "not array type");
   TypePtr def = ptr;
   int len = ptr->GetLength();
-  while((def = def->GetDerefedType()) != nullptr) {
+  while ((def = def->GetDerefedType()) != nullptr) {
     int tmp = def->GetLength();
     len *= tmp ? tmp : 1;
   }
@@ -33,16 +36,43 @@ TypePtr GetArrayLinearBaseType(const TypePtr &type) {
 
 SSAPtrList GetArrayInitElement(InitListAST *node, IRBuilder *irbuiler) {
   SSAPtrList elems;
+  auto &module = irbuiler->module();
+
+  /* Get current dimension size */
+  auto &array_lens = module.array_lens();
+  int len, cur = array_lens.front();
+  array_lens.pop_front();
+
+  int size = 1;
+
+  // calculate the size of the current array
+  if (!array_lens.empty()) {
+    for (const auto &it : array_lens) {
+      size *= it;
+    }
+  }
+
+  len = cur * size;
+
   for (const auto &it : node->exprs()) {
     if (!it->ast_type()->IsArray()) {
       auto elem = it->CodeGeneAction(irbuiler);
       DBG_ASSERT(elem != nullptr, "emit array element failed");
       elems.push_back(std::move(elem));
     } else {
-      auto tmp = GetArrayInitElement(static_cast<InitListAST*>(it.get()), irbuiler);
+      auto tmp = GetArrayInitElement(static_cast<InitListAST *>(it.get()), irbuiler);
       elems.insert(elems.end(), tmp.begin(), tmp.end());
     }
   }
+
+  // fill the init elements
+  while (elems.size() < len) {
+    auto zero = module.GetZeroValue(Type::Int32);
+    elems.push_back(std::move(zero));
+  }
+
+  array_lens.push_front(cur);
+
   return elems;
 }
 
@@ -100,11 +130,24 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
   SSAPtr variable;
 
   // global variable
+  // TODO: need to handle default init
   if (_module.ValueSymTab()->is_root()) {
     auto var = _module.CreateGlobalVar(!type->IsConst(), node->id(), type);
     if (node->hasInit()) {
       auto &init = node->init();
       DBG_ASSERT(init->IsLiteral(), "init value of global variable should be const expr");
+
+      /* set array initlist dimension */
+      if (!node->arr_lens().empty()) {
+        std::deque<int> array_lens;
+        TypePtr def = node->init()->ast_type();
+        do {
+          int len = def->GetLength();
+          if (len == 0) break;
+          array_lens.push_back(len);
+        } while ((def = def->GetDerefedType()) != nullptr);
+        _module.SetArrayLens(array_lens);
+      }
 
       SSAPtr init_expr;
       auto init_ssa = init->CodeGeneAction(this);
@@ -117,6 +160,8 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
       }
       DBG_ASSERT(init_expr != nullptr, "emit init of global variable failed");
       var->set_init(init_expr);
+    } else {
+
     }
     variable = var;
   } else {
@@ -128,11 +173,22 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
     }
 
     if (node->hasInit()) {
+
+      /* set array initlist dimension */
+      if (!node->arr_lens().empty()) {
+        std::deque<int> array_lens;
+        TypePtr def = node->init()->ast_type();
+        do {
+          int len = def->GetLength();
+          if (len == 0) break;
+          array_lens.push_back(len);
+        } while ((def = def->GetDerefedType()) != nullptr);
+        _module.SetArrayLens(array_lens);
+      }
+
+
       auto init_ssa = node->init()->CodeGeneAction(this);
       DBG_ASSERT(init_ssa != nullptr, "emit init value failed");
-
-      auto last_pos = _module.FuncEntry()->insts().end();
-      _module.SetInsertPoint(_module.FuncEntry(), --last_pos);
 
       if (node->arr_lens().empty()) {
         _module.CreateAssign(variable, init_ssa);
@@ -192,10 +248,6 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
 
       // generate all element
       SSAPtrList exprs = GetArrayInitElement(node, this);
-      for (std::size_t i = exprs.size(); i < array_len; i++) {
-        SSAPtr expr = _module.GetZeroValue(base_type->GetType());
-        exprs.push_back(std::move(expr));
-      }
 
       // generate constant array
       DBG_ASSERT(type->IsArray(), "type is not array");
@@ -257,9 +309,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
     // generate new type of linear array
     auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
 
-    auto cur_insert = _module.InsertPoint();
     val = _module.CreateAlloca(new_type);
-    SetInsertPointAtEntry();
 
     // emit gep instruction
     SSAPtrList index;
@@ -269,8 +319,8 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
 
     val = _module.CreateElemAccess(val, index);
 
-    // generate array length
-    auto length = _module.CreateConstInt(array_len);
+    // generate array length TODO: dirty hack
+    auto length = _module.CreateConstInt(array_len * 4);
 
     // memset with zero
     std::vector<SSAPtr> args;
@@ -286,19 +336,18 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
     SSAPtrList exprs = GetArrayInitElement(node, this);
     auto it = exprs.begin();
     for (std::size_t i = 0; i < exprs.size(); i++) {
-      auto ptr = _module.CreateElemAccess(val, SSAPtrList {_module.CreateConstInt(i)});
-      _module.CreateAssign(ptr, *it);
+      if (!(*it)->IsConst() || !CastTo<ConstantInt>(*it)->IsZero()) {
+        auto ptr = _module.CreateElemAccess(val, SSAPtrList{_module.CreateConstInt(i)});
+        _module.CreateAssign(ptr, *it);
+      }
       it++;
     }
 
     for (std::size_t i = exprs.size(); i < node->exprs().size(); i++) {
       auto elem = node->exprs()[i]->CodeGeneAction(this);
-      auto ptr = _module.CreateElemAccess(val, SSAPtrList {_module.CreateConstInt(i)});
+      auto ptr = _module.CreateElemAccess(val, SSAPtrList{_module.CreateConstInt(i)});
       _module.CreateAssign(ptr, elem);
     }
-
-    // recover the insert point
-    SetInsertPoint(cur_insert);
 
     return val;
   }
@@ -410,7 +459,7 @@ SSAPtr IRBuilder::visit(IfElseStmt *node) {
   auto &cond = node->cond();
   auto then_block = _module.CreateBlock(func, "if.then");
   auto else_block = _module.CreateBlock(func, "if.else");
-  auto end_block  = _module.CreateBlock(func, "if.end");
+  auto end_block = _module.CreateBlock(func, "if.end");
 
   auto cond_block = cond->CodeGeneAction(this);
   DBG_ASSERT(cond_block != nullptr, "emit condition statement failed");
@@ -464,8 +513,8 @@ SSAPtr IRBuilder::visit(ProtoTypeAST *node) {
   // generate function prototype
   FuncPtr func;
   auto functions = _module.Functions();
-  const auto& func_name = node->id();
-  const auto& func_type = node->ast_type();
+  const auto &func_name = node->id();
+  const auto &func_type = node->ast_type();
   if (!_module.GetFunction(func_name)) {
     func = _module.CreateFunction(func_name, func_type, !_in_func);
     functions.push_back(func);
@@ -638,7 +687,7 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
     }
 
     if (expr_ty->GetDerefedType()->IsArray()) {
-      int dim_len = expr_ty->GetLength();
+      int dim_len = expr_ty->GetDerefedType()->GetLength();
       SSAPtr dim_len_ssa = _module.CreateConstInt(dim_len);
       index = _module.CreateBinaryOperator(BinaryStmt::Operator::Mul, dim_len_ssa, index);
     }
@@ -646,7 +695,7 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
     // update array's type
     elem_ty = expr->type()->GetDerefedType();
 
-    ptr = _module.CreateElemAccess(expr, SSAPtrList {index});
+    ptr = _module.CreateElemAccess(expr, SSAPtrList{index});
   } else {
     // TODO: access ptr. Have not implemented yet
     DBG_ASSERT(0, "Access ptr hasn't been implemented yet");

@@ -22,9 +22,10 @@ public:
     // handle global variables
     auto &glb_vars = M.GlobalVars();
     for (auto it = glb_vars.begin(); it != glb_vars.end();) {
-      if ((*it)->uses().empty()) {
-        (*it)->logger()->LogWarning("unused global variable");
-        glb_vars.erase(it);
+      auto glbVal = *it;
+      if (glbVal->uses().empty()) {
+        glbVal->logger()->LogWarning("unused global variable");
+        it = glb_vars.erase(it);
         changed |= !changed;
       } else {
         it++;
