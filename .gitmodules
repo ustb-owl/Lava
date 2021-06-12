@@ -1,0 +1,3 @@
+[submodule "test/sysruntimelibrary"]
+	path = test/sysruntimelibrary
+	url = https://gitlab.eduxiji.net/windcome/sysyruntimelibrary

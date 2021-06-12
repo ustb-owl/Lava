@@ -1,6 +1,8 @@
 #ifndef LAVA_CONSTANT_H
 #define LAVA_CONSTANT_H
 
+#include <utility>
+
 #include "mid/ir/usedef/user.h"
 #include "define/type.h"
 
@@ -32,7 +34,7 @@ private:
   std::string _str;
 
 public:
-  ConstantString(const std::string &str) : _str(str) {}
+  explicit ConstantString(std::string str) : _str(std::move(str)) {}
 
   bool IsConst() const override { return true; }
 

@@ -56,7 +56,7 @@ std::size_t IdManager::GetId(const Value *value, IdType idType) {
     case IdType::_ID_IF_END:     id = _if_end_id++;     break;
     case IdType::_ID_WHILE_COND: id = _while_cond_id++; break;
     case IdType::_ID_LOOP_BODY:  id = _loop_body_id++;  break;
-    case IdType::_ID_WHILE_END:  id = _while_end_id;    break;
+    case IdType::_ID_WHILE_END:  id = _while_end_id++;  break;
   }
   _blocks.insert({value, id});
   return id;

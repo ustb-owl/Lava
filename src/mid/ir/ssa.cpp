@@ -255,6 +255,17 @@ std::string ICmpInst::opStr() const {
   return op;
 }
 
+bool Instruction::NeedLoad() const {
+  bool res = true;
+  if (this->isBinaryOp()) {
+    res &= false;
+  }
+  if (this->isCast()) {
+    res &= false;
+  }
+  return res;
+}
+
 /* ---------------------------- Methods of Constant Value ------------------------------- */
 
 
@@ -276,6 +287,9 @@ SSAPtr GetZeroValue(define::Type type) {
       break;
     case Type::UInt32:
       zero->set_type(define::MakeConst(Type::UInt32, true));
+      break;
+    case Type::Bool:
+      zero->set_type(define::MakeConst(Type::Bool, true));
       break;
     default:
       DBG_ASSERT(0, "Get error zero type");
@@ -322,6 +336,16 @@ bool IsBinaryOperator(const SSAPtr &ptr) {
   if (ptr->isInstruction()) {
     auto inst = CastTo<Instruction>(ptr);
     if (inst->isBinaryOp() || inst->opcode() == Instruction::OtherOps::ICmp) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool IsCmp(const SSAPtr &ptr) {
+  if (ptr->isInstruction()) {
+    auto inst = CastTo<Instruction>(ptr);
+    if (inst->opcode() == Instruction::OtherOps::ICmp) {
       return true;
     }
   }
@@ -603,7 +627,7 @@ void ConstantString::Dump(std::ostream &os, IdManager &id_mgr) const {
 }
 
 void ConstantArray::Dump(std::ostream &os, IdManager &id_mgr) const {
-  if (!_name.empty()){
+  if (!_name.empty()) {
     os << _name;
     if (in_expr) return;
   }
@@ -664,18 +688,21 @@ void GlobalVariable::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << "@" << _name;
   if (in_expr) return;
   auto &init_val = init();
+
   if (init_val) {
     auto init_type = init_val->type();
+    /* Dump array */
     if (init_type->GetDerefedType() && init_type->GetDerefedType()->IsArray()) {
       init_val->Dump(os, id_mgr);
     } else {
+      /* Dump global variable */
       os << " = global ";
       DumpWithType(os, id_mgr, init_val);
     }
   } else {
     os << " = global ";
-    DumpType(os, type());
-    os << " " << "0";
+    DumpType(os, type()->GetDerefedType());
+    os << " " << "zeroinitializer";
   }
   os << std::endl;
 }

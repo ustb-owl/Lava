@@ -135,6 +135,8 @@ public:
 
   bool isInstruction() const override { return true; }
 
+  bool NeedLoad() const;
+
 
   //----------------------------------------------------------------------
   // Exported opcode enumerations...
@@ -534,7 +536,7 @@ public:
 
 // type casting
 // operands: opr
-class CastInst : public Instruction {
+class  CastInst : public Instruction {
 public:
   explicit CastInst(CastOps op, const SSAPtr &opr, const SSAPtr &IB = nullptr)
   : Instruction(op, 1, IB) {
@@ -575,6 +577,7 @@ public:
   void set_init(const SSAPtr &init) { (*this)[0].set(init);    }
 };
 
+bool IsCmp(const SSAPtr &ptr);
 bool IsCallInst(const SSAPtr &ptr);
 bool IsBinaryOperator(const SSAPtr &ptr);
 

@@ -104,8 +104,17 @@ SSAPtr Module::CreateBranch(const SSAPtr &cond, const BlockPtr &true_block,
   // check condition type
   DBG_ASSERT(cond->type()->IsInteger(), "cond type should be integer");
 
+  SSAPtr condition = cond;
+
+  // create icmp instruction
+  if (!IsCmp(cond)) {
+    auto type = cond->type()->GetType();
+    condition = CreateICmpInst(front::Operator::NotEqual,
+                                        GetZeroValue(type), cond);
+  }
+
   // create branch instruction
-  auto br = AddInst<BranchInst>(cond, true_block, false_block);
+  auto br = AddInst<BranchInst>(condition, true_block, false_block);
   br->set_type(nullptr);
 
   // update predecessor
@@ -177,7 +186,7 @@ static unsigned OpToOpcode(front::Operator op) {
     case front::Operator::Neg:      return BinaryOps::Sub;
     case front::Operator::LNot:     return BinaryOps::And;  // operand && 1
 
-    /* ----------- binary operator ------------ */
+      /* ----------- binary operator ------------ */
     case front::Operator::Add:      return BinaryOps::Add;
     case front::Operator::Sub:      return BinaryOps::Sub;
     case front::Operator::Mul:      return BinaryOps::Mul;
@@ -194,7 +203,7 @@ static unsigned OpToOpcode(front::Operator op) {
     case front::Operator::LAnd:     return BinaryOps::And;
     case front::Operator::LOr:      return BinaryOps::Or;
 
-    /* ----------- compare operator ------------ */
+      /* ----------- compare operator ------------ */
     case front::Operator::Equal:    return OtherOps::ICmp;
     case front::Operator::NotEqual: return OtherOps::ICmp;
     case front::Operator::SLess:    return OtherOps::ICmp;
@@ -206,7 +215,7 @@ static unsigned OpToOpcode(front::Operator op) {
     case front::Operator::SGreatEq: return OtherOps::ICmp;
     case front::Operator::UGreatEq: return OtherOps::ICmp;
 
-    /* ----------- assign operator ------------ */
+      /* ----------- assign operator ------------ */
     case front::Operator::Assign:   return AssignOps::Assign;
     case front::Operator::AssAdd:   return AssignOps::AssAdd;
     case front::Operator::AssSub:   return AssignOps::AssSub;
@@ -289,7 +298,7 @@ SSAPtr Module::CreatePureBinaryInst(Instruction::BinaryOps opcode,
 
 SSAPtr Module::CreateBinaryOperator(define::BinaryStmt::Operator op,
                                     const SSAPtr &S1, const SSAPtr &S2) {
-  using OtherOps  = Instruction::OtherOps;
+  using OtherOps = Instruction::OtherOps;
   using BinaryOps = Instruction::BinaryOps;
   using AssignOps = Instruction::AssignOps;
   auto opcode = OpToOpcode(op);
@@ -311,13 +320,13 @@ SSAPtr Module::CreateBinaryOperator(define::BinaryStmt::Operator op,
 }
 
 SSAPtr Module::CreateConstInt(unsigned int value) {
-  auto const_int =  MakeSSA<ConstantInt>(value);
+  auto const_int = MakeSSA<ConstantInt>(value);
   const_int->set_type(MakeConst(Type::Int32));
   DBG_ASSERT(const_int != nullptr, "emit const int value failed");
   return const_int;
 }
 
-SSAPtr Module::CreateCallInst(const SSAPtr &callee, const std::vector<SSAPtr>& args) {
+SSAPtr Module::CreateCallInst(const SSAPtr &callee, const std::vector<SSAPtr> &args) {
   // assertion for type checking
   DBG_ASSERT(callee->type()->IsFunction(), "callee is not function type");
   auto args_type = *callee->type()->GetArgsType();
@@ -355,29 +364,25 @@ SSAPtr Module::CreateICmpInst(define::BinaryStmt::Operator opcode, const SSAPtr 
   DBG_ASSERT(rhs != nullptr, "rhs SSA is null ptr");
 
   SSAPtr icmp_inst, lhs_ssa, rhs_ssa;
-  bool is_lhs_bin = false, is_rhs_bin = false;
+  bool lhs_not_need_load = false, rhs_not_need_load = false;
 
   if (lhs->isInstruction()) {
     auto lhs_inst = std::static_pointer_cast<Instruction>(lhs);
-    if (lhs_inst->isBinaryOp()) {
-      is_lhs_bin = true;
-    }
+    lhs_not_need_load = !lhs_inst->NeedLoad();
   }
 
   if (rhs->isInstruction()) {
     auto rhs_inst = std::static_pointer_cast<Instruction>(rhs);
-    if (rhs_inst->isBinaryOp()) {
-      is_rhs_bin = true;
-    }
+    rhs_not_need_load = !rhs_inst->NeedLoad();
   }
 
-  if (lhs->type()->IsConst() || is_lhs_bin) {
+  if (lhs->type()->IsConst() || lhs_not_need_load) {
     lhs_ssa = lhs;
   } else {
     lhs_ssa = CreateLoad(lhs);
   }
 
-  if (rhs->type()->IsConst() || is_rhs_bin) {
+  if (rhs->type()->IsConst() || rhs_not_need_load) {
     rhs_ssa = rhs;
   } else {
     rhs_ssa = CreateLoad(rhs);
@@ -433,11 +438,11 @@ SSAPtr Module::CreateCastInst(const SSAPtr &operand, const TypePtr &type) {
   // create type casting
   SSAPtr cast;
 //  if (operand_tmp->IsConst()) {
-    // create a constant type casting, do not insert as an instruction
+  // create a constant type casting, do not insert as an instruction
 //    cast = MakeSSA<CastInst>(op, operand_tmp);
 //  } else {
-    // create a non-constant type casting
-    cast = AddInst<CastInst>(op, operand_tmp);
+  // create a non-constant type casting
+  cast = AddInst<CastInst>(op, operand_tmp);
 //  }
   DBG_ASSERT(cast != nullptr, "emit cast instruction failed");
 
@@ -488,8 +493,8 @@ SSAPtr Module::CreateElemAccess(const SSAPtr &ptr, const SSAPtrList &index) {
   auto pointer = ptr;
 
   // assertion for type checking
-//  DBG_ASSERT(pointer->type()->GetDerefedType()->GetLength() &&
-//         index->type()->IsInteger(), "check access failed");
+  //  DBG_ASSERT(pointer->type()->GetDerefedType()->GetLength() &&
+  //         index->type()->IsInteger(), "check access failed");
 
   // create access
   auto acc_type = AccessInst::AccessType::Element;
@@ -506,7 +511,7 @@ SSAPtr Module::CreateElemAccess(const SSAPtr &ptr, const SSAPtrList &index) {
   return access;
 }
 
-std::string Module::GetArrayName()  {
+std::string Module::GetArrayName() {
   std::string func_name;
   if (_value_symtab->is_root()) return "";
   func_name = "@__const." + _insert_point->parent()->GetFunctionName();

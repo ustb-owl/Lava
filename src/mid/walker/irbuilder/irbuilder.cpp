@@ -161,6 +161,16 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
       DBG_ASSERT(init_expr != nullptr, "emit init of global variable failed");
       var->set_init(init_expr);
     } else {
+      if (type->IsArray()) {
+        int array_len = GetLinearArrayLength(type);
+
+        // get base element type
+        TypePtr base_type = GetArrayLinearBaseType(type);
+
+        // generate new type of linear array
+        auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
+        var->set_type(MakePointer(new_type));
+      }
       // TODO: handle the zeroinitializer
     }
     variable = var;
@@ -282,23 +292,6 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
       if (is_root) return const_array;
     }
 
-#if 0
-    // store into global vairable
-    _module.GlobalVars().push_back(const_array);
-
-    /* copy value to stack */
-    auto memcpy_ssa = _module.GetFunction("memcpy");
-    auto elem_ty = type->GetDerefedType();
-    // create parameters
-    auto length = _module.CreateConstInt(type->GetLength());
-    auto dst = _module.CreateElemAccess(val, _module.GetZeroValue(Type::Int32), elem_ty);
-    auto src = _module.CreateElemAccess(const_array, _module.GetZeroValue(Type::Int32), elem_ty);
-    std::vector<SSAPtr> args = {dst, src, length};
-    // emit call instruction
-    auto bt_memset = _module.AddInst<CallInst>(memcpy_ssa, args);
-    bt_memset->set_type(MakeVoid());
-#endif
-
     /* Get element address from global copy array */
 
     // store into global vairable
@@ -398,7 +391,24 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
 }
 
 SSAPtr IRBuilder::visit(UnaryStmt *node) {
-  return nullptr;
+  using Op = front::Operator;
+  auto context = _module.SetContext(node->logger());
+  auto opr = node->opr()->CodeGeneAction(this);
+  switch (node->op()) {
+    case Op::Pos: return opr;
+    case Op::Neg: {
+      auto zero = _module.GetZeroValue(Type::Int32);
+      auto res = _module.CreateBinaryOperator(Op::Sub, zero, opr);
+      return res;
+    }
+    case Op::Not: {
+      auto allBitsOne = GetAllOneValue(Type::Int32);
+      auto res = _module.CreateBinaryOperator(Op::Xor, opr, allBitsOne);
+      return res;
+    }
+    default:
+      DBG_ASSERT(0, "not unary operator");
+  }
 }
 
 // TODO:: emit control stmts
@@ -711,8 +721,18 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
     if (expr_ty->GetDerefedType()->IsArray()) {
       int dim_len = expr_ty->GetDerefedType()->GetLength();
       SSAPtr dim_len_ssa = _module.CreateConstInt(dim_len);
+
       index = _module.CreateBinaryOperator(BinaryStmt::Operator::Mul, dim_len_ssa, index);
     }
+
+//#if 0
+    // dereference if is alloc
+    if (index->isInstruction()) {
+      if (index->type()->IsPointer()) {
+        index = _module.CreateLoad(index);
+      }
+    }
+//#endif
 
     // update array's type
     elem_ty = expr->type()->GetDerefedType();
