@@ -104,6 +104,35 @@ SSAPtr IRBuilder::visit(VariableAST *node) {
   auto var_ssa = _module.GetValues(node->id());
   DBG_ASSERT(var_ssa != nullptr, "variable not found");
 
+  auto varType = var_ssa->type();
+
+  // create gep at array's first use
+  if (varType->IsPointer() && varType->GetDerefedType()->IsArray()) {
+
+    // gep at function entry first if expr is global array
+    if (_module.IsGlobalVariable(var_ssa)) {
+      // update insert point to function entry
+      auto cur_insert = _module.InsertPoint();
+      SetInsertPointAtEntry();
+
+      // generate array index: const zero
+      SSAPtrList acc_index;
+      auto zero = _module.GetZeroValue(Type::Int32);
+      acc_index.push_back(zero);  // get array address
+      acc_index.push_back(zero);  // get array head address
+
+      // create gep, set is global copy
+      var_ssa = _module.CreateElemAccess(var_ssa, acc_index);
+
+      // recovery the insert point
+      SetInsertPoint(cur_insert);
+
+      // replace it with current gep
+      _module.ReplaceValue(node->id(), var_ssa);
+    }
+
+  }
+
   return var_ssa;
 }
 
@@ -395,7 +424,8 @@ SSAPtr IRBuilder::visit(UnaryStmt *node) {
   auto context = _module.SetContext(node->logger());
   auto opr = node->opr()->CodeGeneAction(this);
   switch (node->op()) {
-    case Op::Pos: return opr;
+    case Op::Pos:
+      return opr;
     case Op::Neg: {
       auto zero = _module.GetZeroValue(Type::Int32);
       auto res = _module.CreateBinaryOperator(Op::Sub, zero, opr);
@@ -698,25 +728,6 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
   SSAPtr ptr;
 
   if (expr_ty->IsArray()) {
-    // gep at function entry first if expr is global array
-    if (_module.IsGlobalVariable(expr)) {
-      // update insert point to function entry
-      auto cur_insert = _module.InsertPoint();
-      SetInsertPointAtEntry();
-
-      // generate array index: const zero
-      SSAPtrList acc_index;
-      auto zero = _module.GetZeroValue(Type::Int32);
-      acc_index.push_back(zero);  // get array address
-      acc_index.push_back(zero);  // get array head address
-
-      // create gep, set is global copy
-      expr = _module.CreateElemAccess(expr, acc_index);
-      elem_ty = expr->type()->GetDerefedType();
-
-      // recovery the insert point
-      SetInsertPoint(cur_insert);
-    }
 
     if (expr_ty->GetDerefedType()->IsArray()) {
       int dim_len = expr_ty->GetDerefedType()->GetLength();
@@ -740,7 +751,15 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
     ptr = _module.CreateElemAccess(expr, SSAPtrList{index});
   } else {
     // TODO: access ptr. Have not implemented yet
-    DBG_ASSERT(0, "Access ptr hasn't been implemented yet");
+//    DBG_ASSERT(0, "Access ptr hasn't been implemented yet");
+    // generate array index: const zero
+    SSAPtrList acc_index;
+    auto zero = _module.GetZeroValue(Type::Int32);
+    acc_index.push_back(zero);  // get array address
+    acc_index.push_back(zero);  // get array head address
+
+    // create gep, set is global copy
+    ptr = _module.CreateElemAccess(expr, acc_index);
   }
 
 

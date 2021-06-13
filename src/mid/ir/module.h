@@ -123,6 +123,10 @@ public:
     _array_lens = array_lens;
   }
 
+  void ReplaceValue(const std::string &id, const SSAPtr &ptr) {
+    _value_symtab->Replace(id, ptr);
+  }
+
   // getters
   SSAPtr                &ReturnValue() { return _return_val;   }
   SSAPtrList            &GlobalVars()  { return _global_vars;  }

@@ -37,6 +37,18 @@ namespace lava::lib {
 
       V GetItem(const K &key) const { return GetItem(key, true); }
 
+      // replace item
+      void Replace(const K &key, const V &value) {
+        auto it = this->map_.find(key);
+        if (it != this->map_.end()) {
+           map_[key] = value;
+        } else if (this->outer_) {
+           this->outer_->Replace(key, value);
+        } else {
+          DBG_ASSERT(0, "can't find this key");
+        }
+      }
+
       // remove item
       bool RemoveItem(const K &key, bool recursive);
 

@@ -339,7 +339,8 @@ SSAPtr Module::CreateCallInst(const SSAPtr &callee, const std::vector<SSAPtr> &a
 
     auto it_deref = it->type()->GetDerefedType();
     // TODO: need to tackle with pointer and array
-    if (it->type()->IsConst() || IsBinaryOperator(it) || IsCallInst(it)) {
+    auto itType = it->type();
+    if (itType->IsConst() || IsBinaryOperator(it) || IsCallInst(it)) {
       new_args.push_back(it);
     } else {
       if (it_deref && it_deref->IsIdentical(arg)) {
@@ -347,7 +348,19 @@ SSAPtr Module::CreateCallInst(const SSAPtr &callee, const std::vector<SSAPtr> &a
         DBG_ASSERT(load_inst != nullptr, "emit load inst before call inst failed");
         new_args.push_back(load_inst);
       } else {
-        new_args.push_back(it);
+        SSAPtr tmp = it;
+
+        // convert array to i32*
+        if (itType->IsArray()) {
+          // emit gep instruction
+          SSAPtrList index;
+          auto zero = GetZeroValue(Type::Int32);
+          index.push_back(zero);
+          index.push_back(zero);
+
+          tmp = CreateElemAccess(it, index);
+        }
+        new_args.push_back(tmp);
       }
     }
   }
