@@ -13,6 +13,13 @@ auto CastTo(const SSAPtr &ssa) {
   return ptr;
 }
 
+template <typename SSA>
+auto CastTo(SSAPtr &ssa) {
+  auto ptr = std::static_pointer_cast<SSA>(ssa);
+  DBG_ASSERT(ptr != nullptr, "Cast SSA failed");
+  return ptr;
+}
+
 }
 
 #endif //XY_LANG_CASTSSA_H

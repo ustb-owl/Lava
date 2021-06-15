@@ -455,6 +455,7 @@ public:
 // TODO: need extend or trunc for operands
 class LoadInst : public Instruction {
 private:
+  std::string _name;
   std::weak_ptr<Value> _pointer;
 public:
   LoadInst(const SSAPtr &ptr, const SSAPtr &IB = nullptr)
@@ -472,6 +473,9 @@ public:
   // getter/setter
   void SetPointer(const SSAPtr &ptr)    { (*this)[0].set(ptr); }
   const SSAPtr &Pointer()         const { return (*this)[0].get(); }
+
+  const std::string &name() const { return _name; }
+  void set_name(const std::string &name) { _name = name; }
 };
 
 
@@ -487,6 +491,8 @@ public:
       : _func(std::move(func)), _index(index), _arg_name(std::move(name)) {}
 
   bool isInstruction() const override { return false; }
+
+  bool IsArgument() const override { return true; }
 
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
@@ -549,7 +555,7 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getter/setter
-  const SSAPtr &oprand() const { return (*this)[0].get(); }
+  const SSAPtr &operand() const { return (*this)[0].get(); }
 };
 
 // global variable definition/declaration

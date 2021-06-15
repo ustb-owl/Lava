@@ -1,5 +1,4 @@
 #include "compiler.h"
-#include "define/builtin.h"
 #include <sstream>
 
 using namespace lava::opt;

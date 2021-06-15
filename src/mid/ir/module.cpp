@@ -101,14 +101,18 @@ SSAPtr Module::CreateReturn(const SSAPtr &value) {
 
 SSAPtr Module::CreateBranch(const SSAPtr &cond, const BlockPtr &true_block,
                             const BlockPtr &false_block) {
-  // check condition type
-  DBG_ASSERT(cond->type()->IsInteger(), "cond type should be integer");
-
   SSAPtr condition = cond;
+  if (condition->type()->IsPointer()) {
+    condition = CreateLoad(cond);
+  }
+
+  // check condition type
+  DBG_ASSERT(condition->type()->IsInteger(), "cond type should be integer");
+
 
   // create icmp instruction
-  if (!IsCmp(cond)) {
-    auto type = cond->type()->GetType();
+  if (!IsCmp(condition)) {
+    auto type = condition->type()->GetType();
     condition = CreateICmpInst(front::Operator::NotEqual,
                                         GetZeroValue(type), cond);
   }
@@ -126,7 +130,13 @@ SSAPtr Module::CreateBranch(const SSAPtr &cond, const BlockPtr &true_block,
 
 // TODO: add necessary cast before store
 SSAPtr Module::CreateStore(const SSAPtr &V, const SSAPtr &P) {
-  auto store = AddInst<StoreInst>(V, P);
+  auto val = V;
+  // create cast (if necessary)
+  auto target_ty = P->type()->GetDerefedType();
+  if (!V->type()->IsIdentical(target_ty)) {
+    val = CreateCastInst(V, target_ty);
+  }
+  auto store = AddInst<StoreInst>(val, P);
   store->set_type(nullptr);
   return store;
 }
@@ -248,7 +258,7 @@ static unsigned OpToOpcode(front::Operator op) {
 SSAPtr Module::CreateAssign(const SSAPtr &S1, const SSAPtr &S2) {
   if (S2->type()->IsConst() || IsBinaryOperator(S2) || IsCallInst(S2)) {
     // S1 = C ---> store C, s1
-    auto store_inst = AddInst<StoreInst>(S2, S1);
+    auto store_inst = CreateStore(S2, S1);
     DBG_ASSERT(store_inst != nullptr, "emit store inst failed");
     return store_inst;
   } else {
@@ -256,7 +266,7 @@ SSAPtr Module::CreateAssign(const SSAPtr &S1, const SSAPtr &S2) {
     auto load_inst = CreateLoad(S2);
 
     // TODO: add necessary cast here
-    auto store_inst = AddInst<StoreInst>(load_inst, S1);
+    auto store_inst = CreateStore(load_inst, S1);
     DBG_ASSERT(store_inst != nullptr, "emit store inst failed");
     return store_inst;
   }
@@ -267,12 +277,12 @@ SSAPtr Module::CreatePureBinaryInst(Instruction::BinaryOps opcode,
   DBG_ASSERT(opcode >= Instruction::BinaryOps::Add, "opcode is not pure binary operator");
   SSAPtr load_s1 = nullptr;
   SSAPtr load_s2 = nullptr;
-  if (!S1->type()->IsConst() && !IsBinaryOperator(S1) && !IsCallInst(S1)) {
+  if (!S1->type()->IsConst() && !IsBinaryOperator(S1) && !IsCallInst(S1) && S1->type()->IsPointer()) {
     load_s1 = CreateLoad(S1);
     DBG_ASSERT(load_s1 != nullptr, "emit load S1 failed");
   }
 
-  if (!S2->type()->IsConst() && !IsBinaryOperator(S2) && !IsCallInst(S2)) {
+  if (!S2->type()->IsConst() && !IsBinaryOperator(S2) && !IsCallInst(S2) && S2->type()->IsPointer()) {
     load_s2 = CreateLoad(S2);
     DBG_ASSERT(load_s2 != nullptr, "emit load S2 failed");
   }
@@ -319,9 +329,9 @@ SSAPtr Module::CreateBinaryOperator(define::BinaryStmt::Operator op,
   return nullptr;
 }
 
-SSAPtr Module::CreateConstInt(unsigned int value) {
+SSAPtr Module::CreateConstInt(unsigned int value, Type type) {
   auto const_int = MakeSSA<ConstantInt>(value);
-  const_int->set_type(MakeConst(Type::Int32));
+  const_int->set_type(MakeConst(type));
   DBG_ASSERT(const_int != nullptr, "emit const int value failed");
   return const_int;
 }
@@ -389,13 +399,13 @@ SSAPtr Module::CreateICmpInst(define::BinaryStmt::Operator opcode, const SSAPtr 
     rhs_not_need_load = !rhs_inst->NeedLoad();
   }
 
-  if (lhs->type()->IsConst() || lhs_not_need_load) {
+  if (lhs->type()->IsConst() || lhs_not_need_load || !lhs->type()->IsPointer()) {
     lhs_ssa = lhs;
   } else {
     lhs_ssa = CreateLoad(lhs);
   }
 
-  if (rhs->type()->IsConst() || rhs_not_need_load) {
+  if (rhs->type()->IsConst() || rhs_not_need_load || !rhs->type()->IsPointer()) {
     rhs_ssa = rhs;
   } else {
     rhs_ssa = CreateLoad(rhs);
@@ -438,25 +448,15 @@ SSAPtr Module::CreateCastInst(const SSAPtr &operand, const TypePtr &type) {
     if (operand_type->GetSize() > target->GetSize()) {
       op = Instruction::CastOps::Trunc;
     } else {
-      if (target->IsUnsigned()) {
-        op = Instruction::CastOps::ZExt;
-      } else {
-        op = Instruction::CastOps::SExt;
-      }
+      op = Instruction::CastOps::ZExt;
     }
   }
   DBG_ASSERT(op != Instruction::CastOps::CastOpsEnd, "get cast operator failed");
 
   // TODO: maybe need distinguish const with non-const
-  // create type casting
   SSAPtr cast;
-//  if (operand_tmp->IsConst()) {
-  // create a constant type casting, do not insert as an instruction
-//    cast = MakeSSA<CastInst>(op, operand_tmp);
-//  } else {
-  // create a non-constant type casting
+
   cast = AddInst<CastInst>(op, operand_tmp);
-//  }
   DBG_ASSERT(cast != nullptr, "emit cast instruction failed");
 
   cast->set_type(target);
@@ -493,6 +493,7 @@ ArrayPtr Module::CreateArray(const SSAPtrList &elems, const TypePtr &type, const
   for (const auto &it : elems) {
     DBG_ASSERT(it->IsConst(), "init value should be const");
     DBG_ASSERT(array_ty->GetDerefedType()->GetSize() == it->type()->GetSize(), "init value type not fit");
+    if (it) continue;
   }
 
   // create constant array
@@ -520,7 +521,7 @@ SSAPtr Module::CreateElemAccess(const SSAPtr &ptr, const SSAPtrList &index) {
     type = type->GetDerefedType();
     DBG_ASSERT(type != nullptr, "type can't be dereferenced");
   }
-  access->set_type(MakePointer(type));
+  access->set_type(MakePointer(MakePrimType(Type::Int32, type->IsRightValue())));
   return access;
 }
 

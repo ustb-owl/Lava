@@ -3,10 +3,12 @@
 // make sure rule linked to executable
 extern int HelloXY;
 extern int BlockMerge;
+extern int DirtyArrayConvert;
 extern int DeadGlobalCodeElimination;
 
 
 int HelloLinked          = HelloXY;
 int BlockMergeLinked     = BlockMerge;
+int DirtyArrayLinked     = DirtyArrayConvert;
 int DeadGlobalCodeLinked = DeadGlobalCodeElimination;
 

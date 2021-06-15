@@ -40,7 +40,7 @@ SSAPtrList GetArrayInitElement(InitListAST *node, IRBuilder *irbuiler) {
 
   /* Get current dimension size */
   auto &array_lens = module.array_lens();
-  int len, cur = array_lens.front();
+  std::size_t len, cur = array_lens.front();
   array_lens.pop_front();
 
   int size = 1;
@@ -111,6 +111,9 @@ SSAPtr IRBuilder::visit(VariableAST *node) {
 
     // gep at function entry first if expr is global array
     if (_module.IsGlobalVariable(var_ssa)) {
+      // save global array's origin SSA
+      _module.SaveOriginArray(node->id(), var_ssa);
+
       // update insert point to function entry
       auto cur_insert = _module.InsertPoint();
       SetInsertPointAtEntry();
@@ -272,7 +275,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
   SSAPtr val;
   const auto &type = node->ast_type();
   bool is_root = _module.ValueSymTab()->is_root();
-  int array_len = GetLinearArrayLength(type);
+  std::size_t array_len = GetLinearArrayLength(type);
 
   // create an array in rodata if its init list is const literal
   if (node->IsLiteral()) {
@@ -401,20 +404,122 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
 SSAPtr IRBuilder::visit(BinaryStmt *node) {
   auto lhs = node->lhs()->CodeGeneAction(this);
   DBG_ASSERT(lhs != nullptr, "lhs generate failed");
-  auto rhs = node->rhs()->CodeGeneAction(this);
-  DBG_ASSERT(rhs != nullptr, "rhs generate failed");
+  SSAPtr rhs = nullptr;
+  SSAPtr bin_inst = nullptr;
 
-  const auto &lty = lhs->type();
-  const auto &rty = rhs->type();
-  SSAPtr LHS = lhs, RHS = rhs;
-  if (lty->IsInteger() && rty->IsInteger()) {
-    const auto &ty = GetCommonType(lty, rty);
-    LHS = _module.CreateCastInst(lhs, ty);
-    RHS = _module.CreateCastInst(rhs, ty);
+
+  TypePtr type = nullptr;
+  if (lhs->type()->IsPointer()) {
+    type = lhs->type()->GetDerefedType();
+  } else {
+    type = lhs->type();
   }
 
-  auto bin_inst = _module.CreateBinaryOperator(node->op(), LHS, RHS);
-  DBG_ASSERT(bin_inst != nullptr, "binary statement generate failed");
+  const auto &func = _module.InsertPoint()->parent();
+  auto zero = _module.GetZeroValue(type->GetType());
+  if (node->op() == front::Operator::LAnd) {
+    bin_inst = _module.CreateAlloca(lhs->type());
+    auto lhs_true = _module.CreateBlock(func, "lhs.true");
+    auto lhs_false = _module.CreateBlock(func, "lhs.false");
+    auto land_end = _module.CreateBlock(func, "land.end");
+    _module.CreateBranch(lhs, lhs_true, lhs_false);
+
+    /* LHS true */
+    // generate rhs in lhs_true block
+    _module.SetInsertPoint(lhs_true);
+    rhs = node->rhs()->CodeGeneAction(this);
+    DBG_ASSERT(rhs != nullptr, "rhs generate failed");
+
+    const auto &lty = lhs->type();
+    const auto &rty = rhs->type();
+    SSAPtr LHS = lhs, RHS = rhs;
+    if (lty->IsInteger() && rty->IsInteger()) {
+      const auto &ty = GetCommonType(lty, rty);
+      LHS = _module.CreateCastInst(lhs, ty);
+      RHS = _module.CreateCastInst(rhs, ty);
+    }
+
+    // create land statement
+    auto landInst = _module.CreateBinaryOperator(node->op(), LHS, RHS);
+    DBG_ASSERT(landInst != nullptr, "logic-and statement generate failed");
+
+    // save result
+    _module.CreateStore(landInst, bin_inst);
+    // jump to land end
+    _module.CreateJump(land_end);
+
+    /* LHS false */
+    // save rhs value
+    _module.SetInsertPoint(lhs_false);
+    _module.CreateStore(lhs, bin_inst);
+    // jump to land end
+    _module.CreateJump(land_end);
+
+    _module.SetInsertPoint(land_end);
+
+    // load result
+    bin_inst = _module.CreateLoad(bin_inst);
+
+  }
+  else if (node->op() == front::Operator::LOr) {
+    bin_inst = _module.CreateAlloca(lhs->type());
+    auto lhs_true = _module.CreateBlock(func, "lhs.true");
+    auto lhs_false = _module.CreateBlock(func, "lhs.false");
+    auto lor_end = _module.CreateBlock(func, "lor.end");
+    _module.CreateBranch(lhs, lhs_true, lhs_false);
+
+    /* LHS false */
+    _module.SetInsertPoint(lhs_false);
+    rhs = node->rhs()->CodeGeneAction(this);
+    DBG_ASSERT(rhs != nullptr, "rhs generate failed");
+
+    const auto &lty = lhs->type();
+    const auto &rty = rhs->type();
+    SSAPtr LHS = lhs, RHS = rhs;
+    if (lty->IsInteger() && rty->IsInteger()) {
+      const auto &ty = GetCommonType(lty, rty);
+      LHS = _module.CreateCastInst(lhs, ty);
+      RHS = _module.CreateCastInst(rhs, ty);
+    }
+
+    // create lor statement
+    auto lorInst = _module.CreateBinaryOperator(node->op(), LHS, RHS);
+    DBG_ASSERT(lorInst != nullptr, "logic-or statement generate failed");
+
+    // save result
+    _module.CreateStore(lorInst, bin_inst);
+    // jump to land end
+    _module.CreateJump(lor_end);
+
+    /* LHS true */
+    // computer will not execute rhs if lhs is true
+    _module.SetInsertPoint(lhs_true);
+    // save rhs value
+    _module.CreateStore(lhs, bin_inst);
+    // jump to lor end
+    _module.CreateJump(lor_end);
+
+    _module.SetInsertPoint(lor_end);
+
+    // create load
+    bin_inst = _module.CreateLoad(bin_inst);
+  }
+  else {
+    rhs = node->rhs()->CodeGeneAction(this);
+    DBG_ASSERT(rhs != nullptr, "rhs generate failed");
+
+    const auto &lty = lhs->type();
+    const auto &rty = rhs->type();
+    SSAPtr LHS = lhs, RHS = rhs;
+    if (lty->IsInteger() && rty->IsInteger()) {
+      const auto &ty = GetCommonType(lty, rty);
+      LHS = _module.CreateCastInst(lhs, ty);
+      RHS = _module.CreateCastInst(rhs, ty);
+    }
+
+    bin_inst = _module.CreateBinaryOperator(node->op(), LHS, RHS);
+    DBG_ASSERT(bin_inst != nullptr, "binary statement generate failed");
+  }
 
   return bin_inst;
 }
@@ -423,21 +528,37 @@ SSAPtr IRBuilder::visit(UnaryStmt *node) {
   using Op = front::Operator;
   auto context = _module.SetContext(node->logger());
   auto opr = node->opr()->CodeGeneAction(this);
+
+  TypePtr type = nullptr;
+  if (opr->type()->IsPointer()) {
+    type = opr->type()->GetDerefedType();
+  } else {
+    type = opr->type();
+  }
   switch (node->op()) {
     case Op::Pos:
       return opr;
     case Op::Neg: {
-      auto zero = _module.GetZeroValue(Type::Int32);
+      auto zero = _module.GetZeroValue(type->GetType());
       auto res = _module.CreateBinaryOperator(Op::Sub, zero, opr);
       return res;
     }
     case Op::Not: {
-      auto allBitsOne = GetAllOneValue(Type::Int32);
+      auto allBitsOne = GetAllOneValue(type->GetType());
       auto res = _module.CreateBinaryOperator(Op::Xor, opr, allBitsOne);
       return res;
     }
+    case Op::LNot: {
+      // TODO: didn't implement
+      auto zero = _module.GetZeroValue(type->GetType());
+      auto tobool = _module.CreateICmpInst(Op::NotEqual, zero, opr);
+      auto trueConst = _module.CreateConstInt(1, Type::Bool);
+      auto lnot = _module.CreateBinaryOperator(Op::Xor, trueConst, tobool);
+      return lnot;
+    }
     default:
       DBG_ASSERT(0, "not unary operator");
+      return nullptr;
   }
 }
 
@@ -578,6 +699,7 @@ SSAPtr IRBuilder::visit(ProtoTypeAST *node) {
   const auto &func_name = node->id();
   const auto &func_type = node->ast_type();
   if (!_module.GetFunction(func_name)) {
+
     func = _module.CreateFunction(func_name, func_type, !_in_func);
     functions.push_back(func);
 
@@ -602,10 +724,19 @@ SSAPtr IRBuilder::visit(ProtoTypeAST *node) {
     auto arg_name = it->ArgName();
     auto param_alloc = it->CodeGeneAction(this);
     // set param_name
-    std::static_pointer_cast<AllocaInst>(param_alloc)->set_name(arg_name + ".addr");
     auto arg_ref = _module.CreateArgRef(func, index++, arg_name);
     _module.CreateStore(arg_ref, param_alloc);
+
+    // convert it to i32*
+    if (param_alloc->type()->GetDerefedType()->GetDerefedType()) {
+      auto loadInst = _module.CreateLoad(param_alloc);
+
+      _module.ReplaceValue(it->ArgName(), loadInst);
+    } else {
+      std::static_pointer_cast<AllocaInst>(param_alloc)->set_name(arg_name + ".addr");
+    }
   }
+
 
   // create func_exit block to init the return value
   // TODO: not sure
@@ -645,6 +776,9 @@ SSAPtr IRBuilder::visit(FunctionDefAST *node) {
   } else {
     _module.CreateReturn(nullptr);
   }
+
+  // recover the changed global array SSA
+  _module.RecoverArrays();
 
   return nullptr;
 }
@@ -720,6 +854,10 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
 
   auto index = node->index()->CodeGeneAction(this);
   DBG_ASSERT(index != nullptr, "emit index for accessing failed");
+  if (!index->type()->IsConst() && !IsBinaryOperator(index) && !IsCallInst(index)) {
+    index = _module.CreateLoad(index);
+    DBG_ASSERT(index != nullptr, "emit load index failed");
+  }
 
   // get type
   auto expr_ty = node->expr()->ast_type();
@@ -727,7 +865,7 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
 
   SSAPtr ptr;
 
-  if (expr_ty->IsArray()) {
+//  if (expr_ty->IsArray()) {
 
     if (expr_ty->GetDerefedType()->IsArray()) {
       int dim_len = expr_ty->GetDerefedType()->GetLength();
@@ -749,18 +887,12 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
     elem_ty = expr->type()->GetDerefedType();
 
     ptr = _module.CreateElemAccess(expr, SSAPtrList{index});
-  } else {
+//  } else {
     // TODO: access ptr. Have not implemented yet
 //    DBG_ASSERT(0, "Access ptr hasn't been implemented yet");
     // generate array index: const zero
-    SSAPtrList acc_index;
-    auto zero = _module.GetZeroValue(Type::Int32);
-    acc_index.push_back(zero);  // get array address
-    acc_index.push_back(zero);  // get array head address
-
-    // create gep, set is global copy
-    ptr = _module.CreateElemAccess(expr, acc_index);
-  }
+//    ptr = _module.CreateLoad(expr);
+//  }
 
 
   DBG_ASSERT(ptr != nullptr, "emit index failed");

@@ -11,7 +11,6 @@
 #include "lib/guard.h"
 #include "lib/nested.h"
 #include "define/ast.h"
-#include "define/type.h"
 #include "mid/walker/analyzer/eval.h"
 
 namespace lava::mid {

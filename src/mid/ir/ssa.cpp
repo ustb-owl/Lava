@@ -5,8 +5,6 @@
 #include "idmanager.h"
 #include "lib/guard.h"
 #include "define/type.h"
-#include "define/builtin.h"
-
 
 namespace lava::mid {
 
@@ -263,6 +261,9 @@ bool Instruction::NeedLoad() const {
   if (this->isCast()) {
     res &= false;
   }
+  if (this->opcode() == Instruction::Call) {
+    res &= false;
+  }
   return res;
 }
 
@@ -410,7 +411,16 @@ inline void DumpBlockName(std::ostream &os, IdManager &id_mgr, const BasicBlock 
     os << name << id_mgr.GetId(block, IdType::_ID_LOOP_BODY);
   } else if (name.find("while.end") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_WHILE_END);
-  } else if (name.find("block") != npos) {
+  } else if (name.find("lhs.true")) {
+    os << name << id_mgr.GetId(block, IdType::_ID_LHS_TRUE);
+  } else if (name.find("lhs.false")) {
+    os << name << id_mgr.GetId(block, IdType::_ID_LHS_FALSE);
+  } else if (name.find("land.end")) {
+    os << name << id_mgr.GetId(block, IdType::_ID_LAND_END);
+  } else if (name.find("lor.end")) {
+    os << name << id_mgr.GetId(block, IdType::_ID_LOR_END);
+  }
+  else if (name.find("block") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_BLOCK);
   } else {
     os << name;
@@ -504,7 +514,12 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << "(";
   if (!args_type.empty()) {
     for (std::size_t i = 0; i < args_type.size(); i++) {
-      DumpType(os, args_type[i]);
+      if (args_type[i]->IsPointer() || args_type[i]->IsArray()) {
+        auto tmpType = define::MakePointer(define::MakePrimType(define::Type::Int32, true));
+        DumpType(os, tmpType);
+      } else {
+        DumpType(os, args_type[i]);
+      }
 
       if (!_is_decl) {
         os << " ";  // span between type and name
@@ -604,7 +619,15 @@ void AllocaInst::Dump(std::ostream &os, IdManager &id_mgr) const {
 }
 
 void LoadInst::Dump(std::ostream &os, IdManager &id_mgr) const {
-  if (PrintPrefix(os, id_mgr, this)) return;
+  bool ret;
+  if (_name.empty()) {
+    ret = PrintPrefix(os, id_mgr, this);
+  } else {
+    ret = PrintPrefix(os, id_mgr, _name);
+  }
+
+  if (ret) return;
+
   auto guard = InExpr();
   os << "load ";
   DumpType(os, type());
@@ -682,6 +705,23 @@ void ICmpInst::Dump(std::ostream &os, IdManager &id_mgr) const {
 }
 
 void CastInst::Dump(std::ostream &os, IdManager &id_mgr) const {
+  if (PrintPrefix(os, id_mgr, this)) return;
+  auto guard = InExpr();
+
+  switch (this->opcode()) {
+    case CastOps::Trunc: {
+      os << "trunc ";
+      DumpWithType(os, id_mgr, operand());
+      break;
+    }
+    case CastOps::ZExt: {
+      os << "zext ";
+      DumpWithType(os, id_mgr, operand());
+    }
+  }
+  os << " to ";
+  DumpType(os, type());
+  os << std::endl;
 }
 
 void GlobalVariable::Dump(std::ostream &os, IdManager &id_mgr) const {

@@ -4,6 +4,7 @@ add_library(opt
         transforms/dge.cpp
         transforms/hello.cpp
         transforms/blockmerge.cpp
+        transforms/dirtyarray_conv.cpp
 )
 
 target_compile_features(opt PUBLIC cxx_std_17)

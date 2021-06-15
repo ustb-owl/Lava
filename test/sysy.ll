@@ -122,14 +122,14 @@ define void @putarray(i32, i32*) #0 {
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define void @_sysy_starttime(i32) #0 {
+define void @starttime(i32) #0 {
   %2 = alloca i32, align 4
   store i32 %0, i32* %2, align 4
   ret void
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define void @_sysy_stoptime(i32) #0 {
+define void @stoptime(i32) #0 {
   %2 = alloca i32, align 4
   store i32 %0, i32* %2, align 4
   ret void

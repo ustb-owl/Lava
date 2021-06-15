@@ -70,8 +70,13 @@ public:
 
   virtual bool IsConst() const { return false; }
 
+  virtual bool IsArgument() const { return false; }
+
   // dump the content of SSA value to output stream
   virtual void Dump(std::ostream &os, IdManager &id_mgr) const = 0;
+
+//   dump to C code
+//  virtual void DumpToC(std::ostream &os)
 
   virtual bool isInstruction() const { return false; }
   const UseList &uses() const { return _use_list; }

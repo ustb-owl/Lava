@@ -15,7 +15,11 @@ enum class IdType {
   _ID_IF_END     = 5,
   _ID_WHILE_COND = 6,
   _ID_LOOP_BODY  = 7,
-  _ID_WHILE_END  = 8
+  _ID_WHILE_END  = 8,
+  _ID_LHS_TRUE   = 9,
+  _ID_LHS_FALSE  = 10,
+  _ID_LAND_END   = 11,
+  _ID_LOR_END    = 12,
 };
 
 class IdManager {
@@ -29,6 +33,10 @@ private:
   std::size_t                                         _while_cond_id; // current cond id
   std::size_t                                         _loop_body_id;  // current loop block id
   std::size_t                                         _while_end_id;  // current while end id
+  std::size_t                                         _lhs_true_id;   // current lhs true id
+  std::size_t                                         _lhs_false_id;  // current lhs false id
+  std::size_t                                         _land_end;      // current land id
+  std::size_t                                         _lor_end;       // current lor id
 
 
   std::unordered_map<const Value *, std::size_t>      _ids;           // local values id
@@ -40,7 +48,8 @@ public:
 
   IdManager()
     : _cur_id(0), _block_id(0), _if_cond_id(0), _then_id(0), _else_id(0),
-      _if_end_id(0), _while_cond_id(0), _loop_body_id(0), _while_end_id(0) {}
+      _if_end_id(0), _while_cond_id(0), _loop_body_id(0), _while_end_id(0),
+      _lhs_true_id(0), _lhs_false_id(0), _land_end(0), _lor_end(0) {}
 
   void Reset();
 

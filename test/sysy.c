@@ -37,5 +37,5 @@ void putarray(int n, int a[]) {
 }
 
 // do nothing
-void _sysy_starttime(int lineno) {}
-void _sysy_stoptime(int lineno) {}
+void starttime(int lineno) {}
+void stoptime(int lineno) {}

@@ -9,16 +9,15 @@
 #include "lib/guard.h"
 #include "lib/nestedmap.h"
 #include "define/ast.h"
-#include "define/type.h"
 
 using namespace lava::define;
 
 namespace lava::mid {
 
-using UserList     = std::vector<UserPtr>;
-using FunctionList = std::vector<FuncPtr>;
-using BreakCont    = std::pair<BlockPtr, BlockPtr>; // pair for storing target block of break & continue
-using ValueEnvPtr  = lib::Nested::NestedMapPtr<std::string, SSAPtr>;
+using UserList      = std::vector<UserPtr>;
+using FunctionList  = std::vector<FuncPtr>;
+using ValueEnvPtr   = lib::Nested::NestedMapPtr<std::string, SSAPtr>;
+using BreakContPair = std::pair<BlockPtr, BlockPtr>; // pair for storing target block of break & continue
 
 /* Module
  * Contain all information about program.
@@ -26,6 +25,7 @@ using ValueEnvPtr  = lib::Nested::NestedMapPtr<std::string, SSAPtr>;
  */
 class Module {
 private:
+  int                          _array_id;
   SSAPtr                       _return_val;
   SSAPtrList                   _global_vars;
   BlockPtr                     _func_entry;
@@ -35,10 +35,11 @@ private:
   FunctionList                 _functions;
   SSAPtrList::iterator         _insert_pos;
   std::stack<front::LoggerPtr> _loggers;
-  std::stack<BreakCont>        _break_cont;
+  std::stack<BreakContPair>        _break_cont;
   std::deque<int>              _array_lens;
 
-  int                          _array_id;
+  std::unordered_map<std::string, SSAPtr> _origin_array;
+
 public:
 
   // create a new SSA with current context (logger)
@@ -82,7 +83,7 @@ public:
   SSAPtr         CreateBinaryOperator(BinaryStmt::Operator opcode, const SSAPtr &S1, const SSAPtr &S2);
   SSAPtr         CreatePureBinaryInst(Instruction::BinaryOps opcode, const SSAPtr &S1, const SSAPtr &S2);
   SSAPtr         CreateAssign(const SSAPtr &S1, const SSAPtr &S2);
-  SSAPtr         CreateConstInt(unsigned int value);
+  SSAPtr         CreateConstInt(unsigned int value,Type type = Type::Int32);
   SSAPtr         CreateCallInst(const SSAPtr &callee, const std::vector<SSAPtr>& args);
   SSAPtr         CreateICmpInst(BinaryStmt::Operator opcode, const SSAPtr &lhs, const SSAPtr &rhs);
   SSAPtr         CreateCastInst(const SSAPtr &operand, const TypePtr &type);
@@ -127,6 +128,17 @@ public:
     _value_symtab->Replace(id, ptr);
   }
 
+  void SaveOriginArray(const std::string &id, const SSAPtr &ptr) {
+    _origin_array.insert(std::make_pair(id, ptr));
+  }
+
+  void RecoverArrays() {
+    for (const auto &it : _origin_array) {
+      _value_symtab->Replace(it.first, it.second);
+    }
+    _origin_array.clear();
+  }
+
   // getters
   SSAPtr                &ReturnValue() { return _return_val;   }
   SSAPtrList            &GlobalVars()  { return _global_vars;  }
@@ -136,7 +148,7 @@ public:
   BlockPtr              &FuncEntry()   { return _func_entry;   }
   BlockPtr              &FuncExit()    { return _func_exit;    }
   SSAPtrList::iterator   InsertPos()   { return _insert_pos;   }
-  std::stack<BreakCont> &BreakCont()   { return _break_cont;   }
+  std::stack<BreakContPair> &BreakCont()   { return _break_cont;   }
   std::deque<int>       &array_lens()  { return _array_lens;   }
 
   typedef FunctionList::iterator        iterator;

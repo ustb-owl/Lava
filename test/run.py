@@ -7,8 +7,11 @@ import subprocess
 
 # directories that storing test cases
 dirs = [
-    'sysyruntimelibrary/section1/functional_test',
+    './cases',
+    # 'sysyruntimelibrary/section1/functional_test',
     # 'sysyruntimelibrary/section1/performance_test',
+    # 'sysyruntimelibrary/section2/functional_test',
+    # 'sysyruntimelibrary/section2/performance_test',
 ]
 
 # init compiler config
@@ -48,6 +51,7 @@ def CompileLibIR():
     cmd = "clang -emit-llvm -S " + sylib
     os.system(cmd)
 
+
 # scan & collect test cases
 def scan_cases(dirs):
     cases = []
@@ -81,7 +85,7 @@ def run_ir_case(sy_file, in_file, out_file):
     if result.returncode:
         return False
 
-    #save output ir file
+    # save output ir file
     with open(ir, 'w+') as f:
         f.write(result.stdout.decode("utf-8").strip())
         f.close()
@@ -104,8 +108,8 @@ def run_ir_case(sy_file, in_file, out_file):
     out = out.strip()
 
     # remove temporary file
-    if os.path.exists(ir):
-        os.unlink(ir)
+    # if os.path.exists(ir):
+    #     os.unlink(ir)
 
     # compare to reference
     with open(out_file) as f:
