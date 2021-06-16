@@ -4,9 +4,9 @@
 
 ```shell script
 git clone --recursive https://gitlab.eduxiji.net/cafebabe/compiler
-cd compiler && make build && cd build
+cd compiler && mkdir build && cd build
 cmake .. && make -j8
-./lava a.sy
+./lacc a.sy
 ```
 
 ## EBNF of the Extended SysY Lang

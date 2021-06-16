@@ -13,6 +13,10 @@ void IdManager::Reset() {
   _while_cond_id    = 0;
   _loop_body_id     = 0;
   _while_end_id     = 0;
+  _lhs_true_id      = 0;
+  _lhs_false_id     = 0;
+  _land_end         = 0;
+  _lor_end          = 0;
   _ids.clear();
 }
 

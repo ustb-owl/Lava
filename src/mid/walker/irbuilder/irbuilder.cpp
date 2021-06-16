@@ -277,53 +277,58 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
   bool is_root = _module.ValueSymTab()->is_root();
   std::size_t array_len = GetLinearArrayLength(type);
 
+  // get base element type
+  TypePtr base_type = GetArrayLinearBaseType(type);
+
   // create an array in rodata if its init list is const literal
   if (node->IsLiteral()) {
     ArrayPtr const_array;
     auto arr_name = _module.GetArrayName();
 
+    bool isEmpty = false;
+    SSAPtrList exprs;
+
     /* handle empty initial list */
     if (node->exprs().empty()) {
+      isEmpty = true;
+
       // init array with const zero
-      SSAPtrList exprs;
 
       for (std::size_t i = 0; i < array_len; i++) {
         auto expr = _module.GetZeroValue(define::Type::Int32);
         exprs.push_back(std::move(expr));
       }
 
-      // get base element type
-      TypePtr base_type = GetArrayLinearBaseType(type);
-
       // generate constant array
       DBG_ASSERT(type->IsArray(), "type is not array");
 
-      // generate new type of linear array
-      auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
-      const_array = _module.CreateArray(exprs, new_type, arr_name);
-
+      /* create a global const array if this is a global array */
       // add to global symbol table
-      if (is_root) return const_array;
+      if (is_root) {
+        // generate new type of linear array
+        auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
+        const_array = _module.CreateArray(exprs, new_type, arr_name);
+        return const_array;
+      }
     } else {
       /* Handle non-empty initial list */
 
-      // get base element type
-      TypePtr base_type = GetArrayLinearBaseType(type);
-
       // generate all element
-      SSAPtrList exprs = GetArrayInitElement(node, this);
+      exprs = GetArrayInitElement(node, this);
 
       // generate constant array
       DBG_ASSERT(type->IsArray(), "type is not array");
 
-      // generate new type of linear array
-      auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
-      const_array = _module.CreateArray(exprs, new_type, arr_name);
-
+      /* create a global const array if this is a global array */
       // add to global symbol table
-      if (is_root) return const_array;
+      if (is_root) {
+        // generate new type of linear array
+        auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
+        const_array = _module.CreateArray(exprs, new_type, arr_name);
+        return const_array;
+      }
     }
-
+#if 0
     /* Get element address from global copy array */
 
     // store into global vairable
@@ -346,11 +351,57 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
     SetInsertPoint(cur_insert);
 
     return val;
+#endif
+
+    /* alloca a memory on stack for array */
+
+    // create a linear array on stack
+    auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
+    val = _module.CreateAlloca(new_type);
+
+    // create zero
+    auto zero = _module.GetZeroValue(Type::Int32);
+
+    // generate array length TODO: dirty hack
+    auto length = _module.CreateConstInt(array_len * 4);
+
+    // convert array pointer to i32*
+    // emit gep instruction
+    SSAPtrList index;
+    zero = _module.GetZeroValue(Type::Int32);
+    index.push_back(zero);  // TODO: the same const, unknown if it has side effect on use-def
+    index.push_back(zero);
+
+    val = _module.CreateElemAccess(val, index);
+
+    // memset with zero
+    std::vector<SSAPtr> args;
+    auto memset_ssa = _module.GetFunction("memset");
+
+    // set arguments
+    args.push_back(val);     // array address
+    args.push_back(zero);    // array value
+    args.push_back(length);  // array length
+    _module.CreateCallInst(memset_ssa, args);
+
+    // if is empty then return
+    if (isEmpty) return val;
+
+    // copy init value
+    auto it = exprs.begin();
+    for (std::size_t i = 0; i < exprs.size(); i++) {
+      if (!(*it)->IsConst() || !CastTo<ConstantInt>(*it)->IsZero()) {
+        auto ptr = _module.CreateElemAccess(val, SSAPtrList{_module.CreateConstInt(i)});
+        _module.CreateAssign(ptr, *it);
+      }
+      it++;
+    }
+
+
+
+    return val;
   } else {
     /* create a temporary alloca */
-
-    // get base element type
-    TypePtr base_type = GetArrayLinearBaseType(type);
 
     // alloca a linear array
     // generate new type of linear array
@@ -418,7 +469,7 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
   const auto &func = _module.InsertPoint()->parent();
   auto zero = _module.GetZeroValue(type->GetType());
   if (node->op() == front::Operator::LAnd) {
-    bin_inst = _module.CreateAlloca(lhs->type());
+    bin_inst = _module.CreateAlloca(type);
     auto lhs_true = _module.CreateBlock(func, "lhs.true");
     auto lhs_false = _module.CreateBlock(func, "lhs.false");
     auto land_end = _module.CreateBlock(func, "land.end");
@@ -451,6 +502,9 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     /* LHS false */
     // save rhs value
     _module.SetInsertPoint(lhs_false);
+    if (lhs->type()->IsPointer()) {
+      lhs = _module.CreateLoad(lhs);
+    }
     _module.CreateStore(lhs, bin_inst);
     // jump to land end
     _module.CreateJump(land_end);
@@ -460,9 +514,8 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     // load result
     bin_inst = _module.CreateLoad(bin_inst);
 
-  }
-  else if (node->op() == front::Operator::LOr) {
-    bin_inst = _module.CreateAlloca(lhs->type());
+  } else if (node->op() == front::Operator::LOr) {
+    bin_inst = _module.CreateAlloca(type);
     auto lhs_true = _module.CreateBlock(func, "lhs.true");
     auto lhs_false = _module.CreateBlock(func, "lhs.false");
     auto lor_end = _module.CreateBlock(func, "lor.end");
@@ -488,6 +541,7 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
 
     // save result
     _module.CreateStore(lorInst, bin_inst);
+
     // jump to land end
     _module.CreateJump(lor_end);
 
@@ -495,6 +549,9 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     // computer will not execute rhs if lhs is true
     _module.SetInsertPoint(lhs_true);
     // save rhs value
+    if (lhs->type()->IsPointer()) {
+      lhs = _module.CreateLoad(lhs);
+    }
     _module.CreateStore(lhs, bin_inst);
     // jump to lor end
     _module.CreateJump(lor_end);
@@ -503,8 +560,7 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
 
     // create load
     bin_inst = _module.CreateLoad(bin_inst);
-  }
-  else {
+  } else {
     rhs = node->rhs()->CodeGeneAction(this);
     DBG_ASSERT(rhs != nullptr, "rhs generate failed");
 

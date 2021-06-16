@@ -711,14 +711,15 @@ void CastInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   switch (this->opcode()) {
     case CastOps::Trunc: {
       os << "trunc ";
-      DumpWithType(os, id_mgr, operand());
       break;
     }
     case CastOps::ZExt: {
       os << "zext ";
-      DumpWithType(os, id_mgr, operand());
+    }
+    default: {
     }
   }
+  DumpWithType(os, id_mgr, operand());
   os << " to ";
   DumpType(os, type());
   os << std::endl;
