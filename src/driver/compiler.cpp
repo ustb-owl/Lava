@@ -52,6 +52,7 @@ ASTPtr Compiler::PreBuild() {
       "void putint(int a);\n"
       "void putch(int a);\n"
       "void putarray(int n, int a[]);\n"
+      "void putaddress(int a[]);\n"
       "void starttime();\n"
       "void stoptime();\n"
       "void memcpy(int *a, int *b, int size);\n"

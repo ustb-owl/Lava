@@ -921,35 +921,26 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
 
   SSAPtr ptr;
 
-//  if (expr_ty->IsArray()) {
 
-    if (expr_ty->GetDerefedType()->IsArray()) {
-      int dim_len = expr_ty->GetDerefedType()->GetLength();
-      SSAPtr dim_len_ssa = _module.CreateConstInt(dim_len);
+  if (expr_ty->GetDerefedType()->IsArray()) {
+    // get rest length of the array
+    auto derefType = expr_ty->GetDerefedType();
+    int dim_len = GetLinearArrayLength(derefType);
+    SSAPtr dim_len_ssa = _module.CreateConstInt(dim_len);
 
-      index = _module.CreateBinaryOperator(BinaryStmt::Operator::Mul, dim_len_ssa, index);
+    index = _module.CreateBinaryOperator(BinaryStmt::Operator::Mul, dim_len_ssa, index);
+  }
+
+  if (index->isInstruction()) {
+    if (index->type()->IsPointer()) {
+      index = _module.CreateLoad(index);
     }
+  }
 
-//#if 0
-    // dereference if is alloc
-    if (index->isInstruction()) {
-      if (index->type()->IsPointer()) {
-        index = _module.CreateLoad(index);
-      }
-    }
-//#endif
+  // update array's type
+  elem_ty = expr->type()->GetDerefedType();
 
-    // update array's type
-    elem_ty = expr->type()->GetDerefedType();
-
-    ptr = _module.CreateElemAccess(expr, SSAPtrList{index});
-//  } else {
-    // TODO: access ptr. Have not implemented yet
-//    DBG_ASSERT(0, "Access ptr hasn't been implemented yet");
-    // generate array index: const zero
-//    ptr = _module.CreateLoad(expr);
-//  }
-
+  ptr = _module.CreateElemAccess(expr, SSAPtrList{index});
 
   DBG_ASSERT(ptr != nullptr, "emit index failed");
   return ptr;

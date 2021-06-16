@@ -7,11 +7,12 @@ import subprocess
 
 # directories that storing test cases
 dirs = [
-    './cases',
+    # './cases',
     # 'sysyruntimelibrary/section1/functional_test',
     # 'sysyruntimelibrary/section1/performance_test',
     # 'sysyruntimelibrary/section2/functional_test',
     # 'sysyruntimelibrary/section2/performance_test',
+    './testcases/cases'
 ]
 
 # init compiler config
