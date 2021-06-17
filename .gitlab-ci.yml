@@ -1,0 +1,17 @@
+image: "lava test"
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+before_script:
+  - mkdir build && cd build
+  - ls
+  - cmake --version
+  - export CC=clang CXX=clang++ LD=clang
+  - cmake .. && make
+
+run_test:
+  script:
+    - cd ../test/
+    - ls
+    - ./run.py -l ../build/lacc
