@@ -390,7 +390,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
     // copy init value
     auto it = exprs.begin();
     for (std::size_t i = 0; i < exprs.size(); i++) {
-      if (!(*it)->IsConst() || !CastTo<ConstantInt>(*it)->IsZero()) {
+      if (!(*it)->IsConst() || !dyn_cast<ConstantInt>(*it)->IsZero()) {
         auto ptr = _module.CreateElemAccess(val, SSAPtrList{_module.CreateConstInt(i)});
         _module.CreateAssign(ptr, *it);
       }
@@ -434,7 +434,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
     SSAPtrList exprs = GetArrayInitElement(node, this);
     auto it = exprs.begin();
     for (std::size_t i = 0; i < exprs.size(); i++) {
-      if (!(*it)->IsConst() || !CastTo<ConstantInt>(*it)->IsZero()) {
+      if (!(*it)->IsConst() || !dyn_cast<ConstantInt>(*it)->IsZero()) {
         auto ptr = _module.CreateElemAccess(val, SSAPtrList{_module.CreateConstInt(i)});
         _module.CreateAssign(ptr, *it);
       }

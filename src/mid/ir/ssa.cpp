@@ -8,38 +8,42 @@
 
 namespace lava::mid {
 
-Instruction::Instruction(unsigned opcode, unsigned operand_nums, const SSAPtr &insertBefore)
-    : User(operand_nums), _opcode(opcode) {
-  if (insertBefore != nullptr) {
-    DBG_ASSERT(insertBefore->GetParent(), "InsertBefore do not contain a parent(BasicBlock)");
-    insertBefore->GetParent()->AddInstBefore(insertBefore, SSAPtr(this));
+Instruction::Instruction(unsigned opcode, unsigned operand_nums, ClassId classId)
+    : User(classId, operand_nums), _opcode(opcode) {}
+
+Instruction::Instruction(unsigned opcode, unsigned operand_nums,
+                         const Operands &operands, ClassId classId)
+    : User(classId, operand_nums, operands), _opcode(opcode) {}
+
+bool Instruction::classof(Value *value) {
+  switch (value->classId()) {
+    case ClassId::PHINodeId:
+    case ClassId::UndefId:
+    case ClassId::FunctionId:
+    case ClassId::BasicBlockId:
+    case ClassId::ArgRefSSAId:
+    case ClassId::GlobalVariableId:
+    case ClassId::ConstantIntId:
+    case ClassId::ConstantArrayId:
+    case ClassId::ConstantStringId: return false;
+    default: return true;
   }
 }
 
-Instruction::Instruction(unsigned opcode, unsigned operand_nums,
-                         const Operands &operands, const SSAPtr &insertBefore)
-    : User(operand_nums, operands), _opcode(opcode) {
-  if (insertBefore != nullptr) {
-    DBG_ASSERT(insertBefore->GetParent(), "InsertBefore do not contain a parent(BasicBlock)");
-    auto insts = insertBefore->GetParent()->insts();
-    auto it = std::find(insts.begin(), insts.end(), insertBefore);
-    insts.insert(it, SSAPtr(this));
+bool Instruction::classof(const Value *value) {
+  switch (value->classId()) {
+    case ClassId::PHINodeId:
+    case ClassId::UndefId:
+    case ClassId::FunctionId:
+    case ClassId::BasicBlockId:
+    case ClassId::ArgRefSSAId:
+    case ClassId::GlobalVariableId:
+    case ClassId::ConstantIntId:
+    case ClassId::ConstantArrayId:
+    case ClassId::ConstantStringId: return false;
+    default: return true;
   }
 }
-
-Instruction::Instruction(unsigned opcode, unsigned operand_nums, const BlockPtr &insertAtEnd)
-    : User(operand_nums), _opcode(opcode) {
-  DBG_ASSERT(insertAtEnd != nullptr, "Basic block to append to may not be NULL");
-  insertAtEnd->AddInstToEnd(SSAPtr(this));
-}
-
-Instruction::Instruction(unsigned opcode, unsigned operand_nums,
-                         const Operands &operands, const BlockPtr &insertAtEnd)
-    : User(operand_nums, operands), _opcode(opcode) {
-  DBG_ASSERT(insertAtEnd != nullptr, "Basic block to append to may not be NULL");
-  insertAtEnd->AddInstToEnd(SSAPtr(this));
-}
-
 
 std::string Instruction::GetOpcodeAsString(unsigned int opcode) {
   switch (opcode) {
@@ -107,90 +111,89 @@ std::string Instruction::GetOpcodeAsString(unsigned int opcode) {
   return "";
 }
 
+bool TerminatorInst::classof(Value *value) {
+  switch (value->classId()) {
+    case ClassId::ReturnInstId:
+    case ClassId::BranchInstId:
+    case ClassId::JumpInstId: return true;
+    default: return false;
+  }
+}
+
+bool TerminatorInst::classof(const Value *value) {
+  switch (value->classId()) {
+    case ClassId::ReturnInstId:
+    case ClassId::BranchInstId:
+    case ClassId::JumpInstId: return true;
+    default: return false;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 //                           BinaryOperator Class
 //===----------------------------------------------------------------------===//
 
 BinaryOperator::BinaryOperator(Instruction::BinaryOps opcode, const SSAPtr &S1,
-                               const SSAPtr &S2, const define::TypePtr &type, const SSAPtr &IB)
-    : Instruction(opcode, 2, IB) {
-  AddValue(S1);
-  AddValue(S2);
-}
-
-BinaryOperator::BinaryOperator(Instruction::BinaryOps opcode, const SSAPtr &S1,
-                               const SSAPtr &S2, const define::TypePtr &type, const BlockPtr &IAE)
-    : Instruction(opcode, 2, IAE) {
+                               const SSAPtr &S2, const define::TypePtr &type)
+    : Instruction(opcode, 2, ClassId::BinaryOperatorId) {
   AddValue(S1);
   AddValue(S2);
 }
 
 BinaryPtr
-BinaryOperator::Create(Instruction::BinaryOps opcode, const SSAPtr &S1,
-                       const SSAPtr &S2, const SSAPtr &IB) {
+BinaryOperator::Create(Instruction::BinaryOps opcode, const SSAPtr &S1, const SSAPtr &S2) {
   auto s1_type = S1->type();
   auto s2_type = S2->type();
   DBG_ASSERT(s1_type->IsPrime(), "S1 is not prime type");
   DBG_ASSERT(s1_type->IsInteger(), "binary operator can only being performed on int");
   DBG_ASSERT(s1_type->GetSize() == s2_type->GetSize(), "S1 has different type with S2");
 
-  return std::make_shared<BinaryOperator>(opcode, S1, S2, s1_type, IB);
+  return std::make_shared<BinaryOperator>(opcode, S1, S2, s1_type);
 }
 
-BinaryPtr
-BinaryOperator::Create(Instruction::BinaryOps opcode, const SSAPtr &S1,
-                       const SSAPtr &S2, const BlockPtr &IAE) {
-  auto s1_type = S1->type();
-  auto s2_type = S2->type();
-  DBG_ASSERT(s1_type->IsPrime(), "S1 is not prime type");
-  DBG_ASSERT(s1_type->IsInteger(), "binary operator can only being performed on int");
-  DBG_ASSERT(s1_type->IsIdentical(s2_type), "S1 has different type with S2");
-
-  return std::make_shared<BinaryOperator>(opcode, S1, S2, s1_type, IAE);
-}
-
-BinaryPtr BinaryOperator::createNeg(const SSAPtr &Op, const SSAPtr &InsertBefore) {
+BinaryPtr BinaryOperator::createNeg(const SSAPtr &Op) {
   auto typeInfo = Op->type();
   DBG_ASSERT(typeInfo->IsInteger(), "Neg operator is not integer");
   auto zero = GetZeroValue(typeInfo->GetType());
-  return std::make_shared<BinaryOperator>(Instruction::Sub, zero, Op,
-                                          typeInfo, InsertBefore);
+  return std::make_shared<BinaryOperator>(Instruction::Sub, zero, Op, typeInfo);
 }
 
-BinaryPtr BinaryOperator::createNeg(const SSAPtr &Op, const BlockPtr &InsertAtEnd) {
-  auto typeInfo = Op->type();
-  DBG_ASSERT(typeInfo->IsInteger(), "Neg operator is not integer");
-  auto zero = GetZeroValue(typeInfo->GetType());
-  return std::make_shared<BinaryOperator>(Instruction::Sub, zero, Op,
-                                          typeInfo, InsertAtEnd);
-}
 
-BinaryPtr BinaryOperator::createNot(const SSAPtr &Op, const SSAPtr &InsertBefore) {
+BinaryPtr BinaryOperator::createNot(const SSAPtr &Op) {
   auto typeInfo = Op->type();
   DBG_ASSERT(typeInfo->IsInteger(), "Not operator is not integer");
   auto C = GetAllOneValue(typeInfo->GetType());
-  return std::make_shared<BinaryOperator>(Instruction::Xor, Op, C,
-                                          typeInfo, InsertBefore);
+  return std::make_shared<BinaryOperator>(Instruction::Xor, Op, C, typeInfo);
 }
 
-BinaryPtr BinaryOperator::createNot(const SSAPtr &Op, const BlockPtr &InsertAtEnd) {
-  auto typeInfo = Op->type();
-  DBG_ASSERT(typeInfo->IsInteger(), "Not operator is not integer");
-  auto C = GetAllOneValue(typeInfo->GetType());
-  return std::make_shared<BinaryOperator>(Instruction::Sub, Op, C,
-                                          typeInfo, InsertAtEnd);
+bool BinaryOperator::classof(Value *value) {
+  if (value->classId() == ClassId::BinaryOperatorId) return true;
+  return false;
 }
 
-void BasicBlock::AddInstBefore(const SSAPtr &insertBefore, const SSAPtr &inst) {
-  auto it = std::find(_insts.begin(), _insts.end(), insertBefore);
-  DBG_ASSERT(it != _insts.end(), "Basic block don't has this instruction");
-  _insts.insert(it, inst);
+bool BinaryOperator::classof(const Value *value) {
+  if (value->classId() == ClassId::BinaryOperatorId) return true;
+  return false;
+}
+
+bool BasicBlock::classof(Value *value) {
+  switch (value->classId()) {
+    case ClassId::BasicBlockId: return true;
+    default: return false;
+  }
+}
+
+bool BasicBlock::classof(const Value *value) {
+  switch (value->classId()) {
+    case ClassId::BasicBlockId: return true;
+    default: return false;
+  }
 }
 
 void BasicBlock::ClearInst() {
   for (const auto &i : _insts) {
     // remove all of its uses
-    CastTo<Instruction>(i)->Clear();
+    dyn_cast<Instruction>(i)->Clear();
   }
 
   // clear instruction list
@@ -205,28 +208,27 @@ void BasicBlock::DeleteSelf() {
   this->ClearInst();
 }
 
-BranchInst::BranchInst(const SSAPtr &cond, const SSAPtr &true_block,
-                       const SSAPtr &false_block, const SSAPtr &IB)
-    : TerminatorInst(Instruction::TermOps::Br, 3, IB) {
+BranchInst::BranchInst(const SSAPtr &cond, const SSAPtr &true_block, const SSAPtr &false_block)
+    : TerminatorInst(Instruction::TermOps::Br, 3) {
   AddValue(cond);
   AddValue(true_block);
   AddValue(false_block);
 }
 
-CallInst::CallInst(const SSAPtr &callee, const std::vector<SSAPtr> &args, const SSAPtr &IB) :
-    Instruction(Instruction::OtherOps::Call, args.size() + 1, IB) {
+CallInst::CallInst(const SSAPtr &callee, const std::vector<SSAPtr> &args) :
+    Instruction(Instruction::OtherOps::Call, args.size() + 1, ClassId::CallInstId) {
   AddValue(callee);
   for (const auto &it : args) AddValue(it);
 }
 
-ICmpInst::ICmpInst(Operator op, const SSAPtr &lhs, const SSAPtr &rhs, const SSAPtr &IB)
-    : Instruction(Instruction::OtherOps::ICmp, 2, IB), _op(op) {
+ICmpInst::ICmpInst(Operator op, const SSAPtr &lhs, const SSAPtr &rhs)
+    : Instruction(Instruction::OtherOps::ICmp, 2, ClassId::ICmpInstId), _op(op) {
   AddValue(lhs);
   AddValue(rhs);
 }
 
 AccessInst::AccessInst(AccessType acc_type, const SSAPtr &ptr, const SSAPtrList &indexs)
-    : Instruction(Instruction::MemoryOps::Access, 0), _acc_type(acc_type) {
+    : Instruction(Instruction::MemoryOps::Access, 0, ClassId::AccessInstId), _acc_type(acc_type) {
   AddValue(ptr);
   for (const auto &it : indexs) {
     AddValue(it);
@@ -324,31 +326,22 @@ SSAPtr GetAllOneValue(define::Type type) {
 }
 
 bool IsCallInst(const SSAPtr &ptr) {
-  if (ptr->isInstruction()) {
-    auto inst = CastTo<Instruction>(ptr);
-    if (inst->opcode() == Instruction::OtherOps::Call) {
-      return true;
-    }
+  if (ptr->classId() == ClassId::CallInstId) {
+    return true;
   }
   return false;
 }
 
 bool IsBinaryOperator(const SSAPtr &ptr) {
-  if (ptr->isInstruction()) {
-    auto inst = CastTo<Instruction>(ptr);
-    if (inst->isBinaryOp() || inst->opcode() == Instruction::OtherOps::ICmp) {
-      return true;
-    }
+  if (ptr->classId() == ClassId::BinaryOperatorId) {
+    return true;
   }
   return false;
 }
 
 bool IsCmp(const SSAPtr &ptr) {
-  if (ptr->isInstruction()) {
-    auto inst = CastTo<Instruction>(ptr);
-    if (inst->opcode() == Instruction::OtherOps::ICmp) {
-      return true;
-    }
+  if (ptr->classId() == ClassId::ICmpInstId) {
+    return true;
   }
   return false;
 }
@@ -491,7 +484,6 @@ void BasicBlock::Dump(std::ostream &os, IdManager &id_mgr) const {
   for (const auto &it : _insts) DumpValue(os, id_mgr, it);
 }
 
-
 void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
 //  if (define::IsBuiltinFunction(_function_name)) return;
   id_mgr.Reset();
@@ -544,7 +536,7 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
   for (std::size_t i = 0; i < this->size(); i++) {
 
     // dump function exit later
-    if (auto block = CastTo<BasicBlock>((*this)[i].get())) {
+    if (auto block = dyn_cast<BasicBlock>((*this)[i].get())) {
       if (block->name() == "func_exit") {
         report_exit = true;
         continue;

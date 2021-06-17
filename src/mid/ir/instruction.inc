@@ -146,8 +146,8 @@ HANDLE_OTHER_INST(29, ICmp   , ICmpInst   )  // Integer comparison instruction
 HANDLE_OTHER_INST(30, PHI    , PHINode    )  // PHI node instruction
 HANDLE_OTHER_INST(31, Call   , CallInst   )  // Call a function
 HANDLE_OTHER_INST(32, Select , SelectInst )  // select instruction
-HANDLE_OTHER_INST(33, UserOp1, Instruction)  // May be used internally in a pass
-HANDLE_OTHER_INST(34, UserOp2, Instruction)  // Internal to passes only
+HANDLE_OTHER_INST(33, UserOp1, Instruction1)  // May be used internally in a pass
+HANDLE_OTHER_INST(34, UserOp2, Instruction2)  // Internal to passes only
 HANDLE_OTHER_INST(35, VAArg  , VAArgInst  )  // vaarg instruction
 HANDLE_OTHER_INST(36, ExtractElement, ExtractElementInst)// extract from vector.
 HANDLE_OTHER_INST(37, InsertElement, InsertElementInst)  // insert into vector

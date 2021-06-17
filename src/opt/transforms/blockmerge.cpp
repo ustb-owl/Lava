@@ -34,13 +34,13 @@ public:
     SSAPtr entry;
     for (auto &it : *F) {
       if (entry == nullptr) entry = it.get();
-      auto block = CastTo<BasicBlock>(it.get());
+      auto block = dyn_cast<BasicBlock>(it.get());
 
       // check if this block has only one predecessor
       if (block->size() == 1) {
-        auto pred = CastTo<BasicBlock>((*block)[0].get());
+        auto pred = dyn_cast<BasicBlock>((*block)[0].get());
         auto inst = *(--pred->inst_end());
-        auto branch_inst = CastTo<Instruction>(inst);
+        auto branch_inst = dyn_cast<Instruction>(inst);
 
         // check if its predecessor has only one successor
         if (branch_inst->opcode() == Instruction::TermOps::Ret ||

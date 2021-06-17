@@ -16,7 +16,8 @@ private:
   unsigned int _value;
 
 public:
-  explicit ConstantInt(unsigned int value) : _value(value) {}
+  explicit ConstantInt(unsigned int value)
+    : Value(ClassId::ConstantIntId), _value(value) {}
 
   bool IsConst() const override { return true; }
 
@@ -34,7 +35,8 @@ private:
   std::string _str;
 
 public:
-  explicit ConstantString(std::string str) : _str(std::move(str)) {}
+  explicit ConstantString(std::string str)
+    : Value(ClassId::ConstantStringId), _str(std::move(str)) {}
 
   bool IsConst() const override { return true; }
 
@@ -52,7 +54,7 @@ private:
   std::string _name;
 public:
   explicit ConstantArray(const SSAPtrList &elems, std::string name)
-  : _name(std::move(name)) {
+  : User(ClassId::ConstantArrayId), _name(std::move(name)) {
     for (const auto &it : elems) AddValue(it);
   }
 
