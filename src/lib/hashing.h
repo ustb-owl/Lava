@@ -4,7 +4,7 @@
 #include <functional>
 #include <utility>
 
-namespace mimic::utils {
+namespace lava::utils {
 namespace __impl {
 inline void HashCombine(std::size_t &seed) {}
 
@@ -32,7 +32,7 @@ inline std::size_t HashCombineRange(Iter first, Iter last) {
   return seed;
 }
 
-}  // namespace mimic::utils
+}  // namespace lava::utils
 
 namespace std {
 
@@ -40,7 +40,7 @@ namespace std {
 template <typename T0, typename T1>
 struct hash<std::pair<T0, T1>> {
   inline std::size_t operator()(const std::pair<T0, T1> &val) const {
-    return mimic::utils::HashCombine(val.first, val.second);
+    return lava::utils::HashCombine(val.first, val.second);
   }
 };
 

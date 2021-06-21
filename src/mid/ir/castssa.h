@@ -13,7 +13,6 @@ std::shared_ptr<SSA> dyn_cast(const SSAPtr &ssa) {
     DBG_ASSERT(ptr != nullptr, "cast SSA failed");
     return ptr;
   } else {
-    DBG_ASSERT(0, "cast SSA failed");
     return nullptr;
   }
 }
@@ -25,8 +24,25 @@ std::shared_ptr<SSA> dyn_cast(SSAPtr &ssa) {
     DBG_ASSERT(ptr != nullptr, "cast SSA failed");
     return ptr;
   } else {
-    DBG_ASSERT(0, "cast SSA failed");
     return nullptr;
+  }
+}
+
+template <typename SSA>
+bool IsSSA(const SSAPtr &ssa) {
+  if (SSA::classof(ssa.get())) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template <typename SSA>
+bool IsSSA(SSAPtr &ssa) {
+  if (SSA::classof(ssa.get())) {
+    return true;
+  } else {
+    return false;
   }
 }
 

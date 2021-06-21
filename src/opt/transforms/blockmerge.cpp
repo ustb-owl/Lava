@@ -1,7 +1,6 @@
 #include <algorithm>
 
 #include "opt/pass.h"
-#include "lib/debug.h"
 #include "mid/ir/castssa.h"
 #include "opt/pass_manager.h"
 
@@ -93,7 +92,7 @@ class BlockMergeFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<BlockMerge>();
-    auto passinfo =  std::make_shared<PassInfo>(pass, "BlockMerge", false, false);
+    auto passinfo =  std::make_shared<PassInfo>(pass, "BlockMerge", false, false, BLOCK_MERGE);
     return passinfo;
   }
 };

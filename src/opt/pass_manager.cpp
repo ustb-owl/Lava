@@ -41,6 +41,8 @@ bool PassManager::RunPass(PassNameSet &valid, const PassInfoPtr &info) {
 bool PassManager::RunPass(const PassPtr &pass) {
   bool changed = false;
 
+  // perform initialization
+  pass->initialize();
   if (pass->IsModulePass()) {
     changed = pass->runOnModule(module());
   } else {
@@ -113,6 +115,7 @@ void PassManager::RunPasses() {
       candidates.push_back(info);
     }
   }
+  std::sort(candidates.begin(), candidates.end(), compare);
   RunPasses(candidates);
 }
 
@@ -123,6 +126,10 @@ void PassManager::init() {
     DBG_ASSERT(_pass_infos.find(pass_name) == _pass_infos.end(), "pass %s has been registered", pass_name.c_str());
     _pass_infos.insert(std::make_pair(pass_name, pass));
   }
+}
+
+bool compare(const PassInfoPtr &ptr1, const PassInfoPtr &ptr2) {
+  return ptr1->pass_order() < ptr2->pass_order();
 }
 
 }

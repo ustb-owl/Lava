@@ -21,13 +21,13 @@ public:
 
 };
 
-class HelloPassFactory : public PassFactory {
-public:
-  PassInfoPtr CreatePass(PassManager *) override {
-    auto pass = std::make_shared<HelloXYPass>();
-    return std::make_shared<PassInfo>(pass, "HelloXYPass", false, 0);
-  }
-};
+//class HelloPassFactory : public PassFactory {
+//public:
+//  PassInfoPtr CreatePass(PassManager *) override {
+//    auto pass = std::make_shared<HelloXYPass>();
+//    return std::make_shared<PassInfo>(pass, "HelloXYPass", false, 0);
+//  }
+//};
 
 //static PassRegisterFactory<HelloPassFactory> registry;
 

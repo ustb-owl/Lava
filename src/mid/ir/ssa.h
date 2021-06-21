@@ -249,8 +249,12 @@ public:
   // getters
   const std::string &GetFunctionName() const { return _function_name; }
 
+  const SSAPtr      &entry() { return (*this)[0].get(); }
+
   const std::vector<SSAPtr> &args() { return _args; }
+
   bool is_decl()              const { return _is_decl; }
+
 
   // methods for dyn_cast
   static inline bool classof(Function *) { return true; }

@@ -94,7 +94,8 @@ class DirtyArrayConvertFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<DirtyArrayConvert>();
-    auto passinfo = std::make_shared<PassInfo>(pass, "DirtyArrayConvert", false, false);
+    auto passinfo =
+        std::make_shared<PassInfo>(pass, "DirtyArrayConvert", false, false, DIRTY_ARRAY_CONV);
     return passinfo;
   }
 };

@@ -38,13 +38,15 @@ private:
   std::string   _pass_name;
   bool          _is_analysis;
   std::size_t   _min_opt_level;
+  std::size_t   _pass_order;
   PassNameList  _required_passes;
   PassNameList  _invalidated_passes;
 
 public:
-  PassInfo(PassPtr pass, std::string name, bool is_analysis, std::size_t min_opt_level)
+  PassInfo(PassPtr pass, std::string name, bool is_analysis,
+           std::size_t min_opt_level, std::size_t order)
       : _pass(std::move(pass)), _pass_name(std::move(name)), _is_analysis(is_analysis),
-        _min_opt_level(min_opt_level) {}
+        _min_opt_level(min_opt_level), _pass_order(order) {}
 
   // add required pass by name for current pass
   // all required passes should be run before running current pass
@@ -60,9 +62,15 @@ public:
     _is_analysis = is_analysis;
     return *this;
   }
+
   // set minimum optimization level of current pass required
   PassInfo &set_min_opt_level(std::size_t min_opt_level) {
     _min_opt_level = min_opt_level;
+    return *this;
+  }
+
+  PassInfo &set_pass_order(std::size_t order) {
+    _pass_order = order;
     return *this;
   }
 
@@ -70,11 +78,14 @@ public:
   const PassPtr &pass()          const { return _pass;          }
   std::string    name()          const { return _pass_name;     }
   bool           is_analysis()   const { return _is_analysis;   }
+  std::size_t    pass_order()    const { return _pass_order;    };
   std::size_t    min_opt_level() const { return _min_opt_level; }
 
   const PassNameList &required_passes()    const { return _required_passes;    }
   const PassNameList &invalidated_passes() const { return _invalidated_passes; }
 };
+
+bool compare(const PassInfoPtr &ptr1, const PassInfoPtr &ptr2);
 
 // pass manager
 class PassManager {

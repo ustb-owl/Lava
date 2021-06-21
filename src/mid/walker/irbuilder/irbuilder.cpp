@@ -228,7 +228,6 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
         _module.SetArrayLens(array_lens);
       }
 
-
       auto init_ssa = node->init()->CodeGeneAction(this);
       DBG_ASSERT(init_ssa != nullptr, "emit init value failed");
 

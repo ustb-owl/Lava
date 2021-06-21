@@ -24,21 +24,21 @@ add_compile_options(-Wall -Werror)
 
 include_directories(${LAVA_INCLUDE_DIR})
 
-file(GLOB_RECURSE SOURCES "${LAVA_SOURCE_DIR}/*.cpp")
-#add_subdirectory("${LAVA_SOURCE_DIR}/define")
-#add_subdirectory("${LAVA_SOURCE_DIR}/front")
-#add_subdirectory("${LAVA_SOURCE_DIR}/mid")
-#add_subdirectory("${LAVA_SOURCE_DIR}/opt")
-#add_subdirectory("${LAVA_SOURCE_DIR}/driver")
+#file(GLOB_RECURSE SOURCES "${LAVA_SOURCE_DIR}/*.cpp")
+add_subdirectory("${LAVA_SOURCE_DIR}/define")
+add_subdirectory("${LAVA_SOURCE_DIR}/front")
+add_subdirectory("${LAVA_SOURCE_DIR}/mid")
+add_subdirectory("${LAVA_SOURCE_DIR}/opt")
+add_subdirectory("${LAVA_SOURCE_DIR}/driver")
 
 # executable
-add_executable(lacc main.cpp link.cpp ${SOURCES})
-#add_executable(lacc main.cpp link.cpp)
+#add_executable(lacc main.cpp link.cpp ${SOURCES})
+add_executable(lacc main.cpp link.cpp)
 #
-#target_link_libraries(lacc
-#        lava::definelib
-#        lava::front
-#        lava::mid
-#        lava::opt
-#        lava::driver
-#)
+target_link_libraries(lacc
+        lava::definelib
+        lava::front
+        lava::mid
+        lava::opt
+        lava::driver
+)

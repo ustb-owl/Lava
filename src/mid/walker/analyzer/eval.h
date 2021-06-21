@@ -1,5 +1,5 @@
-#ifndef MIMIC_MID_EVAL_H_
-#define MIMIC_MID_EVAL_H_
+#ifndef LAVA_MID_EVAL_H_
+#define LAVA_MID_EVAL_H_
 
 #include <optional>
 #include <string>
@@ -78,4 +78,4 @@ class Evaluator {
 
 }  // namespace lava::mid
 
-#endif  // MIMIC_MID_EVAL_H_
+#endif  // LAVA_MID_EVAL_H_

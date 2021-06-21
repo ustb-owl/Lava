@@ -70,7 +70,8 @@ class DeadGlobalCodeEliminationFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<DeadGlobalCodeElimination>();
-    auto passinfo =  std::make_shared<PassInfo>(pass, "DeadGlobalCodeElimination", false, false);
+    auto passinfo =
+        std::make_shared<PassInfo>(pass, "DeadGlobalCodeElimination", false, false, DEAD_GLOBAL_CODE_ELIMINATION);
     return passinfo;
   }
 };
