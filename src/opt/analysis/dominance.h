@@ -14,18 +14,34 @@ namespace lava::opt {
  */
 class DominanceInfo : public FunctionPass {
 private:
-  bool _changed;
+  bool        _changed;
+  Function   *_cur_func;
   BlockWalker _blkWalker;
 
   void SolveDominance(const FuncPtr &F);
 
   // dominance information of each function
   struct DominanceResult {
-    // dominance set of basic blocks
-    std::unordered_map<mid::BasicBlock *, std::unordered_set<mid::BasicBlock *>> dom;
+    // dominators set of basic blocks
+    std::unordered_map<mid::BasicBlock *, std::unordered_set<mid::BasicBlock *>> domBy;
+
+    // immediate dominator
+    std::unordered_map<mid::BasicBlock *, mid::BasicBlock *> idom;
+
+    // dominatees set of basic blocks
+    std::unordered_map<mid::BasicBlock *, std::unordered_set<mid::BasicBlock *>> doms;
   };
 
   std::unordered_map<mid::User *, DominanceResult> _dom_info;
+
+  // check if dominator strictly dominates BB
+  bool IsStrictlyDom(BasicBlock *dominator, BasicBlock *BB);
+
+  // solve the immediate dominator of each block
+  void SolveImmediateDom();
+
+  // get strictly dominators of a block
+  std::unordered_set<mid::BasicBlock *> GetSDoms(BasicBlock *BB);
 
 public:
   bool runOnFunction(const FuncPtr &F) final {
@@ -38,6 +54,7 @@ public:
   }
 
   void initialize() final {
+    _cur_func = nullptr;
     _dom_info.clear();
   }
 

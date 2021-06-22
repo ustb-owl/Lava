@@ -36,9 +36,11 @@ add_subdirectory("${LAVA_SOURCE_DIR}/driver")
 add_executable(lacc main.cpp link.cpp)
 #
 target_link_libraries(lacc
-        lava::definelib
+        -Wl,--start-group
         lava::front
+        lava::definelib
         lava::mid
         lava::opt
         lava::driver
+        -Wl,--end-group
 )
