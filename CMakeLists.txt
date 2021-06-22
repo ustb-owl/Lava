@@ -10,9 +10,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_definitions (-DBUILD_LAVA)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    MESSAGE(STATUS "Debug mode is open")
     add_definitions (-DDEBUG -DIs_True_On)
     set (OPT_FLAGS "-O0")
 else ()
+    MESSAGE(STATUS "Debug mode is close")
     add_definitions (-DNDEBUG)
     set (OPT_FLAGS "-O2")
 endif ()
@@ -24,7 +26,6 @@ add_compile_options(-Wall -Werror)
 
 include_directories(${LAVA_INCLUDE_DIR})
 
-#file(GLOB_RECURSE SOURCES "${LAVA_SOURCE_DIR}/*.cpp")
 add_subdirectory("${LAVA_SOURCE_DIR}/define")
 add_subdirectory("${LAVA_SOURCE_DIR}/front")
 add_subdirectory("${LAVA_SOURCE_DIR}/mid")
@@ -32,10 +33,18 @@ add_subdirectory("${LAVA_SOURCE_DIR}/opt")
 add_subdirectory("${LAVA_SOURCE_DIR}/driver")
 
 # executable
-#add_executable(lacc main.cpp link.cpp ${SOURCES})
 add_executable(lacc main.cpp link.cpp)
-#
-target_link_libraries(lacc
+
+IF (APPLE)
+    target_link_libraries(lacc
+        lava::front
+        lava::definelib
+        lava::mid
+        lava::opt
+        lava::driver
+    )
+ELSEIF (UNIX)
+    target_link_libraries(lacc
         -Wl,--start-group
         lava::front
         lava::definelib
@@ -44,3 +53,4 @@ target_link_libraries(lacc
         lava::driver
         -Wl,--end-group
 )
+ENDIF()

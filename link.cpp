@@ -18,3 +18,14 @@ int DeadCodeLinked       = DeadCodeElimination;
 
 int DominanceLinked      = Dominance;
 
+int LINK() {
+  int res = 0;
+  res += HelloLinked;
+  res += BlockMergeLinked;
+  res += DirtyArrayLinked;
+  res += DeadGlobalCodeLinked;
+  res += DeadCodeLinked;
+
+  res += DominanceLinked;
+  return res;
+}
