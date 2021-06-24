@@ -3,6 +3,8 @@ add_library(opt
         pass_manager.cpp
         blkwalker.cpp
         analysis/dominance.cpp
+        analysis/dominancebase.cpp
+        analysis/postdominance.cpp
         transforms/dge.cpp
         transforms/dce.cpp
         transforms/hello.cpp

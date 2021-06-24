@@ -176,6 +176,20 @@ bool BinaryOperator::classof(const Value *value) {
   return false;
 }
 
+std::vector<BasicBlock *> BasicBlock::successors() {
+  std::vector<BasicBlock *> succes;
+  auto inst = insts().back();
+  if (auto jumpInst = dyn_cast<JumpInst>(inst)) {
+    succes.push_back(dyn_cast<BasicBlock>(jumpInst->target()).get());
+  } else if (auto branchInst = dyn_cast<BranchInst>(inst)) {
+    succes.push_back(dyn_cast<BasicBlock>(branchInst->true_block()).get());
+    succes.push_back(dyn_cast<BasicBlock>(branchInst->false_block()).get());
+  } else {
+    // do nothing, maybe function exit
+  }
+  return succes;
+}
+
 bool BasicBlock::classof(Value *value) {
   switch (value->classId()) {
     case ClassId::BasicBlockId: return true;

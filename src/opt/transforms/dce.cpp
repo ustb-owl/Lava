@@ -2,6 +2,8 @@
 #include "mid/ir/castssa.h"
 #include "opt/pass_manager.h"
 
+#include "opt/analysis/postdominance.h"
+
 int DeadCodeElimination;
 
 namespace lava::opt {
@@ -19,7 +21,9 @@ public:
   bool runOnFunction(const FuncPtr &F) final {
     _changed = false;
 
+    auto AA = PassManager::GetAnalysis<PostDominanceInfo>("PostDominanceInfo");
 
+    auto domInfo = AA->GetDomInfo();
     return _changed;
   }
 
@@ -54,7 +58,7 @@ public:
         std::make_shared<PassInfo>(pass, "DeadCodeElimination", false, false, DEAD_CODE_ELIMINATION);
 
     // add requires pass
-    passinfo->Requires("DominanceInfo");
+    passinfo->Requires("PostDominanceInfo");
     return passinfo;
   }
 };

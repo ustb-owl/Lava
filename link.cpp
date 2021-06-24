@@ -9,6 +9,7 @@ extern int DeadCodeElimination;
 
 // analysis
 extern int Dominance;
+extern int PostDominance;
 
 int HelloLinked          = HelloXY;
 int BlockMergeLinked     = BlockMerge;
@@ -17,6 +18,7 @@ int DeadGlobalCodeLinked = DeadGlobalCodeElimination;
 int DeadCodeLinked       = DeadCodeElimination;
 
 int DominanceLinked      = Dominance;
+int PostDominanceLinked  = PostDominance;
 
 int LINK() {
   int res = 0;

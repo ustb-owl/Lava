@@ -129,6 +129,23 @@ public:
   // invalidate the specific pass
   static void InvalidatePass(PassNameSet &valid, const std::string &name);
 
+  /* methods related with analysis result */
+  template<typename AnalysisType>
+  static std::shared_ptr<AnalysisType> GetAnalysis(const std::string &name) {
+    auto pass = _instance._pass_infos.find(name);
+    // found pass by name
+    if (pass == _instance._pass_infos.end()) {
+      DBG_ASSERT(0, "analysis pass %s not found", name.c_str());
+    }
+
+    // check if analysis pass
+    if (!pass->second->is_analysis()) {
+      DBG_ASSERT(0, "pass %s is not analysis pass", name.c_str());
+    }
+
+    return std::static_pointer_cast<AnalysisType>(pass->second->pass());
+  }
+
   // register pass
   static void RegisterPassFactory(const PassFactoryPtr &factory) {
     _instance.AddFactory(factory);

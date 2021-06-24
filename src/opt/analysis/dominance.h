@@ -1,47 +1,22 @@
 #ifndef LAVA_DOMINANCE_H
 #define LAVA_DOMINANCE_H
 
-#include "opt/pass.h"
-#include "opt/blkwalker.h"
-#include "opt/pass_manager.h"
-#include "lib/bitvec.h"
-#include "mid/ir/castssa.h"
+#include "dominancebase.h"
 
 namespace lava::opt {
 
 /*
  Calculate the dominance information of basic blocks
  */
-class DominanceInfo : public FunctionPass {
+class DominanceInfo : public DominanceBase {
 private:
-  bool        _changed;
-  Function   *_cur_func;
-  BlockWalker _blkWalker;
-
-  void SolveDominance(const FuncPtr &F);
-
-  // dominance information of each function
-  struct DominanceResult {
-    // dominators set of basic blocks
-    std::unordered_map<mid::BasicBlock *, std::unordered_set<mid::BasicBlock *>> domBy;
-
-    // immediate dominator
-    std::unordered_map<mid::BasicBlock *, mid::BasicBlock *> idom;
-
-    // dominatees set of basic blocks
-    std::unordered_map<mid::BasicBlock *, std::unordered_set<mid::BasicBlock *>> doms;
-  };
-
-  std::unordered_map<mid::User *, DominanceResult> _dom_info;
-
-  // check if dominator strictly dominates BB
-  bool IsStrictlyDom(BasicBlock *dominator, BasicBlock *BB);
+  void SolveDominance(const FuncPtr &F) final;
 
   // solve the immediate dominator of each block
-  void SolveImmediateDom();
+  void SolveImmediateDom() final;
 
-  // get strictly dominators of a block
-  std::unordered_set<mid::BasicBlock *> GetSDoms(BasicBlock *BB);
+  // solve the dominance frontier of each block
+  void SolveDominanceFrontier() final;
 
 public:
   bool runOnFunction(const FuncPtr &F) final {

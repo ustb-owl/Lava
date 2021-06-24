@@ -4,20 +4,6 @@ int Dominance;
 
 namespace lava::opt {
 
-bool DominanceInfo::IsStrictlyDom(BasicBlock *dominator, BasicBlock *BB) {
-  /* A node d strictly dominates a node n if d dominates n and d does not equal n. */
-  if (dominator != BB) {
-    return _dom_info[_cur_func].domBy[BB].find(dominator) != _dom_info[_cur_func].domBy[BB].end();
-  }
-  return false;
-}
-
-std::unordered_set<mid::BasicBlock *> DominanceInfo::GetSDoms(BasicBlock *BB) {
-  auto doms = _dom_info[_cur_func].domBy[BB];
-  doms.erase(BB);
-  return doms;
-}
-
 void DominanceInfo::SolveDominance(const FuncPtr &F) {
   _cur_func = F.get();
   auto &info = _dom_info[_cur_func];
@@ -67,7 +53,14 @@ void DominanceInfo::SolveDominance(const FuncPtr &F) {
     if (!changed) break;
   }
 
+  // check result
+  DBG_ASSERT(info.domBy.size() == rpo.size(), "domBy size not equals to basic block numbers");
+
+  // solve idom
   SolveImmediateDom();
+
+  // solve DF
+  SolveDominanceFrontier();
 }
 
 /*
@@ -110,6 +103,38 @@ void DominanceInfo::SolveImmediateDom() {
       info.idom[BB] = dominator;
     }
   }
+
+  // check the result
+  DBG_ASSERT(info.doms.size() == rpo.size(), "doms size not equals to basic block numbers");
+  DBG_ASSERT(info.idom.size() == rpo.size() - 1, "idom set number is wrong");
+  DBG_ASSERT(info.idom.find(entry) == info.idom.end(), "entry should not have idom");
+}
+
+void DominanceInfo::SolveDominanceFrontier() {
+  auto &info = _dom_info[_cur_func];
+  auto entry = dyn_cast<BasicBlock>(_cur_func->entry()).get();
+  auto rpo = _blkWalker.RPOTraverse(entry);
+
+  // set DF of all nodes as phi
+  for (const auto &it : rpo) {
+    info.DF[it].clear();
+  }
+
+  for (const auto &BB : rpo) {
+    if (BB->size() > 1) {
+      for (const auto &pred : *BB) {
+        BasicBlock * pred_block = dyn_cast<BasicBlock>(pred.get()).get();
+        auto runner = pred_block;
+        while (runner != info.idom[BB]) {
+          info.DF[runner].insert(BB);
+          runner = info.idom[runner];
+        }
+      }
+    }
+  }
+
+  DBG_ASSERT(info.DF.size() == rpo.size(), "DF size not equals to basic blocks");
+  DBG_ASSERT(info.DF[entry].empty(), "entry dominate all of the nodes");
 }
 
 

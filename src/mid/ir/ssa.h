@@ -9,6 +9,7 @@
 
 namespace lava::mid {
 
+// operands: pred1, pred2 ...
 class BasicBlock : public User {
 private:
   SSAPtrList  _insts;
@@ -43,6 +44,8 @@ public:
   SSAPtrList::iterator inst_end()     { return _insts.end();   }
   const FuncPtr       &parent() const { return _parent;        }
   const std::string   &name()   const { return _name;          }
+
+  std::vector<BasicBlock *> successors();
 
   // methods for dyn_cast
   static inline bool classof(BasicBlock *) { return true; }

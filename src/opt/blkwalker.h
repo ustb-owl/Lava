@@ -16,8 +16,11 @@ private:
   std::list<BasicBlock *>          _rpo;
   std::unordered_set<BasicBlock *> _visited;
 
+  // reverse post order
   void TraverseRPO(BasicBlock *BB);
 
+  // post order
+  void TraversePO(BasicBlock *BB);
 public:
   BlockWalker() = default;
 
@@ -29,6 +32,12 @@ public:
   std::list<BasicBlock *> RPOTraverse(BasicBlock *entry) {
     init();
     TraverseRPO(entry);
+    return _rpo;
+  }
+
+  std::list<BasicBlock *> POTraverse(BasicBlock *entry) {
+    init();
+    TraversePO(entry);
     return _rpo;
   }
 
