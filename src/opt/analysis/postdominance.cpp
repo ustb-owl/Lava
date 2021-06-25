@@ -135,6 +135,9 @@ void PostDominanceInfo::SolveDominanceFrontier() {
       }
     }
   }
+
+  DBG_ASSERT(info.DF.size() == po.size(), "PDF size not equals to basic blocks");
+  DBG_ASSERT(info.DF[entry].empty(), "exit post-dominate all of the nodes");
 }
 
 static PassRegisterFactory<PostDominanceInfoPassFactory> registry;

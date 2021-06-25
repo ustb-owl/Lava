@@ -104,22 +104,25 @@ private:
   void init();
 
 public:
-  static PassManager _instance;
+  static PassManager *_instance;
 
   PassManager() : _opt_level(0), _module(nullptr) {}
 
   explicit PassManager(mid::Module &module)
     : _opt_level(0), _module(&module) {}
 
-  static void Initialize() { _instance.init(); }
+  static void Initialize() { _instance->init(); }
 
-  static PassManager *GetPassManager() { return &_instance; }
+  static PassManager *GetPassManager() {
+    if (_instance == nullptr) _instance = new PassManager();
+    return _instance;
+  }
 
-  static PassInfoMap &GetPasses() { return _instance._pass_infos; }
+  static PassInfoMap &GetPasses() { return _instance->_pass_infos; }
 
-  static RequirementMap &GetRequiredBy() { return _instance._requirements; }
+  static RequirementMap &GetRequiredBy() { return _instance->_requirements; }
 
-  static PassPtrList &Candidates() { return _instance._candidates; }
+  static PassPtrList &Candidates() { return _instance->_candidates; }
 
   static void RequiredBy(const std::string &slave, const std::string &master);
 
@@ -132,9 +135,9 @@ public:
   /* methods related with analysis result */
   template<typename AnalysisType>
   static std::shared_ptr<AnalysisType> GetAnalysis(const std::string &name) {
-    auto pass = _instance._pass_infos.find(name);
+    auto pass = _instance->_pass_infos.find(name);
     // found pass by name
-    if (pass == _instance._pass_infos.end()) {
+    if (pass == _instance->_pass_infos.end()) {
       DBG_ASSERT(0, "analysis pass %s not found", name.c_str());
     }
 
@@ -148,7 +151,7 @@ public:
 
   // register pass
   static void RegisterPassFactory(const PassFactoryPtr &factory) {
-    _instance.AddFactory(factory);
+    _instance->AddFactory(factory);
   }
 
   // run a specific pass
@@ -163,10 +166,10 @@ public:
   static void RunPasses();
 
   // getter/setter
-  static std::size_t  opt_level() { return _instance._opt_level; }
-  static mid::Module &module()    { return *_instance._module; }
+  static std::size_t  opt_level() { return _instance->_opt_level; }
+  static mid::Module &module()    { return *_instance->_module; }
 
-  static void SetModule(mid::Module &module) { _instance._module = &module; }
+  static void SetModule(mid::Module &module) { _instance->_module = &module; }
 };
 
 template <typename PassClassFactory>
@@ -174,6 +177,8 @@ class PassRegisterFactory {
 public:
   PassRegisterFactory() {
     auto pass_factory = std::make_shared<PassClassFactory>();
+    // make sure PassManager has been created
+    DBG_ASSERT(PassManager::GetPassManager() != nullptr, "PassManager hasn't been created");
     PassManager::RegisterPassFactory(pass_factory);
   }
 };

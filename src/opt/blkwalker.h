@@ -14,6 +14,7 @@ namespace lava::opt {
 class BlockWalker {
 private:
   std::list<BasicBlock *>          _rpo;
+  std::list<BasicBlock *>          _po;
   std::unordered_set<BasicBlock *> _visited;
 
   // reverse post order
@@ -26,6 +27,7 @@ public:
 
   void init() {
     _rpo.clear();
+    _po.clear();
     _visited.clear();
   }
 

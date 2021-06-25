@@ -3,7 +3,7 @@
 
 namespace lava::opt {
 
-PassManager PassManager::_instance;
+PassManager *PassManager::_instance = nullptr;
 
 PassInfo &PassInfo::Requires(const std::string &pass_name) {
   _required_passes.push_back(pass_name);

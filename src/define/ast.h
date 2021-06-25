@@ -48,7 +48,7 @@ class BaseAST {
   // generate IR by current AST
   virtual mid::SSAPtr CodeGeneAction(mid::IRBuilder *irbuilder) = 0;
   // merge two ast
-  virtual void Merge(ASTPtrList &) {};
+  virtual void Merge(ASTPtrList &) {}
 
   // setters
   void set_logger(const front::LoggerPtr &logger) { logger_ = logger; }

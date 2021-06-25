@@ -58,7 +58,7 @@ public:
         std::make_shared<PassInfo>(pass, "DeadCodeElimination", false, false, DEAD_CODE_ELIMINATION);
 
     // add requires pass
-    passinfo->Requires("PostDominanceInfo");
+//    passinfo->Requires("PostDominanceInfo");
     return passinfo;
   }
 };

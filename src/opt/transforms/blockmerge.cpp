@@ -31,6 +31,7 @@ public:
   bool runOnFunction(const FuncPtr &F) final {
     _changed = false;
     SSAPtr entry;
+    if (F->is_decl()) return _changed;
     for (auto &it : *F) {
       if (entry == nullptr) entry = it.get();
       auto block = dyn_cast<BasicBlock>(it.get());

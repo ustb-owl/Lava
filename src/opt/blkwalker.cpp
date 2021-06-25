@@ -1,4 +1,5 @@
 #include "blkwalker.h"
+#include "lib/debug.h"
 
 namespace lava::opt {
 
@@ -19,7 +20,7 @@ void BlockWalker::TraverseRPO(BasicBlock *BB) {
   } else if (auto retInst = dyn_cast<ReturnInst>(termInst)) {
     // do nothing, because this is the end of the function
   } else {
-    DBG_ASSERT(0, "unknown terminate instruction");
+    ERROR("unknown terminate instruction");
   }
 
   _rpo.push_front(BB);
@@ -45,7 +46,7 @@ void BlockWalker::TraversePO(BasicBlock *BB) {
     ERROR("unknown terminate instruction");
   }
 
-  _rpo.push_back(BB);
+  _po.push_back(BB);
 }
 
 }
