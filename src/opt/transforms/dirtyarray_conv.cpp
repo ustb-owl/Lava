@@ -27,7 +27,7 @@ public:
     if (F->empty()) return _changed;
 
     for (auto &it : *F) {
-      if (entry == nullptr) entry = it.get();
+      if (entry == nullptr) entry = it.value();
       break;
     }
 

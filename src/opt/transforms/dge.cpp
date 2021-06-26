@@ -46,7 +46,7 @@ public:
         }
 
         for (const auto &block : *it->get()) {
-          auto BB = dyn_cast<BasicBlock>(block.get());
+          auto BB = dyn_cast<BasicBlock>(block.value());
           BB->DeleteSelf();
         }
 

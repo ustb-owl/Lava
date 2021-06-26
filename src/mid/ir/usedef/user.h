@@ -22,7 +22,7 @@ public:
     : Value(classId), _operands_num(operands_num) {
     DBG_ASSERT(_operands.size() <= _operands_num, "User() operands out of range");
     for (const auto &it : operands) {
-      AddValue(it.get());
+      AddValue(it.value());
     }
   }
 
@@ -30,7 +30,7 @@ public:
 
   virtual SSAPtr GetOperand(unsigned i) const {
     DBG_ASSERT(i < _operands_num, "getOperand() out of range");
-    return _operands[i].get();
+    return _operands[i].value();
   }
 
   virtual void SetOperand(unsigned i, const SSAPtr& V) {
@@ -51,7 +51,7 @@ public:
     _operands.erase(
         std::remove_if(_operands.begin(), _operands.end(),
                [&V](const Use &use) {
-                 return use.get().get() == V;
+                 return use.value().get() == V;
                }), _operands.end());
   }
 

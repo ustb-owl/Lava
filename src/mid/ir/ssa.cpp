@@ -390,7 +390,7 @@ void DumpValue(std::ostream &os, IdManager &id_mgr, const SSAPtr &value) {
 }
 
 void DumpValue(std::ostream &os, IdManager &id_mgr, const Use &operand) {
-  DumpValue(os, id_mgr, operand.get());
+  DumpValue(os, id_mgr, operand.value());
 }
 
 template<typename It>
@@ -550,7 +550,7 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
   for (std::size_t i = 0; i < this->size(); i++) {
 
     // dump function exit later
-    if (auto block = dyn_cast<BasicBlock>((*this)[i].get())) {
+    if (auto block = dyn_cast<BasicBlock>((*this)[i].value())) {
       if (block->name() == "func_exit") {
         report_exit = true;
         continue;
@@ -665,7 +665,7 @@ void ConstantArray::Dump(std::ostream &os, IdManager &id_mgr) const {
   DumpType(os, type()->GetDerefedType());
   os << " [";
   for (std::size_t i = 0; i < this->size(); i++) {
-    DumpWithType(os, id_mgr, (*this)[i].get());
+    DumpWithType(os, id_mgr, (*this)[i].value());
     if (i != this->size() - 1) os << ", ";
   }
   os << "]" << std::endl;
@@ -692,7 +692,7 @@ void CallInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << name << "(";
 
   for (std::size_t i = 1; i < size(); i++) {
-    auto arg = (*this)[i].get();
+    auto arg = (*this)[i].value();
     DumpWithType(os, id_mgr, arg);
     if (i != size() - 1) os << ", ";
   }

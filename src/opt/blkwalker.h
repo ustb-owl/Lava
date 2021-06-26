@@ -40,7 +40,7 @@ public:
   std::list<BasicBlock *> POTraverse(BasicBlock *entry) {
     init();
     TraversePO(entry);
-    return _rpo;
+    return _po;
   }
 
 

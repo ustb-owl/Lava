@@ -40,7 +40,7 @@ void DominanceInfo::SolveDominance(const FuncPtr &F) {
       for (auto dominator = info.domBy[block].begin(); dominator != info.domBy[block].end();) {
         if (*dominator != block &&
             std::any_of((*BB)->begin(), (*BB)->end(), [&dominator, &info](Use &BB) {
-              auto pred = dyn_cast<BasicBlock>(BB.get()).get();
+              auto pred = dyn_cast<BasicBlock>(BB.value()).get();
               return info.domBy[pred].find(*dominator) == info.domBy[pred].end();
             })) {
           changed = true;
@@ -124,7 +124,7 @@ void DominanceInfo::SolveDominanceFrontier() {
   for (const auto &BB : rpo) {
     if (BB->size() > 1) {
       for (const auto &pred : *BB) {
-        BasicBlock * pred_block = dyn_cast<BasicBlock>(pred.get()).get();
+        BasicBlock * pred_block = dyn_cast<BasicBlock>(pred.value()).get();
         auto runner = pred_block;
         while (runner != info.idom[BB]) {
           info.DF[runner].insert(BB);

@@ -252,7 +252,7 @@ public:
   // getters
   const std::string &GetFunctionName() const { return _function_name; }
 
-  const SSAPtr      &entry() { return (*this)[0].get(); }
+  const SSAPtr      &entry() { return (*this)[0].value(); }
 
   const std::vector<SSAPtr> &args() { return _args; }
 
@@ -297,7 +297,7 @@ public:
     this->SetOperand(0, B);
   }
 
-  const SSAPtr &target() const { return (*this)[0].get(); }
+  const SSAPtr &target() const { return (*this)[0].value(); }
 
   // methods for dyn_cast
   static inline bool classof(JumpInst *) { return true; }
@@ -343,7 +343,7 @@ public:
   }
 
   // getter/setter
-  const SSAPtr &RetVal()    const { return (*this)[0].get(); }
+  const SSAPtr &RetVal()    const { return (*this)[0].value(); }
   void SetRetVal(const SSAPtr &value) { (*this)[0].set(value); }
 
   // methods for dyn_cast
@@ -387,9 +387,9 @@ public:
   }
 
   // getter/setter
-  const SSAPtr &cond()        const       { return (*this)[0].get(); }
-  const SSAPtr &true_block()  const       { return (*this)[1].get(); }
-  const SSAPtr &false_block() const       { return (*this)[2].get(); }
+  const SSAPtr &cond()        const       { return (*this)[0].value(); }
+  const SSAPtr &true_block()  const       { return (*this)[1].value(); }
+  const SSAPtr &false_block() const       { return (*this)[2].value(); }
   void SetCond(const SSAPtr &value)       { (*this)[0].set(value);   }
   void SetTrueBlock(const SSAPtr &value)  { (*this)[1].set(value);   }
   void SetFalseBlock(const SSAPtr &value) { (*this)[2].set(value);   }
@@ -423,9 +423,9 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getters
-  const SSAPtr &value() const { return (*this)[0].get(); }
+  const SSAPtr &value() const { return (*this)[0].value(); }
 
-  const SSAPtr &pointer() const { return (*this)[1].get(); }
+  const SSAPtr &pointer() const { return (*this)[1].value(); }
 
   // methods for dyn_cast
   static inline bool classof(StoreInst *) { return true; }
@@ -496,7 +496,7 @@ public:
 
   // getter/setter
   void SetPointer(const SSAPtr &ptr)    { (*this)[0].set(ptr); }
-  const SSAPtr &Pointer()         const { return (*this)[0].get(); }
+  const SSAPtr &Pointer()         const { return (*this)[0].value(); }
 
   const std::string &name() const { return _name; }
   void set_name(const std::string &name) { _name = name; }
@@ -563,7 +563,7 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getter/setter
-  const SSAPtr & Callee() const { return (*this)[0].get(); }
+  const SSAPtr & Callee() const { return (*this)[0].value(); }
 
   // methods for dyn_cast
   static inline bool classof(CallInst *) { return true; }
@@ -595,8 +595,8 @@ public:
 
   // getter/setter
   Operator             op()   const { return _op;              }
-  const SSAPtr       &LHS()   const { return (*this)[0].get(); }
-  const SSAPtr       &RHS()   const { return (*this)[1].get(); }
+  const SSAPtr       &LHS()   const { return (*this)[0].value(); }
+  const SSAPtr       &RHS()   const { return (*this)[1].value(); }
   std::string         opStr() const;
 
   // methods for dyn_cast
@@ -627,7 +627,7 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getter/setter
-  const SSAPtr &operand() const { return (*this)[0].get(); }
+  const SSAPtr &operand() const { return (*this)[0].value(); }
 
   // methods for dyn_cast
   static inline bool classof(CastInst *) { return true; }
@@ -660,7 +660,7 @@ public:
 
   // getter/setter
   bool               isVar()  const { return _is_var;          }
-  const SSAPtr      &init()   const { return (*this)[0].get(); }
+  const SSAPtr      &init()   const { return (*this)[0].value(); }
   const std::string &name()   const { return _name;            }
 
   void set_is_var(bool is_var)      { _is_var = is_var;        }
@@ -703,8 +703,8 @@ public:
 
   // getter/setter
   AccessType acc_type()      const { return _acc_type;        }
-  const SSAPtr &ptr()        const { return (*this)[0].get(); }
-  const SSAPtr &index(int n) const { return (*this)[n].get(); }
+  const SSAPtr &ptr()        const { return (*this)[0].value(); }
+  const SSAPtr &index(int n) const { return (*this)[n].value(); }
   void set_ptr(const SSAPtr &ptr)          { (*this)[0].set(ptr); }
   void set_index(const SSAPtr &idx, int n) { (*this)[n].set(idx); }
 

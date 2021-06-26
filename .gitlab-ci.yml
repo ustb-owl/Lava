@@ -8,7 +8,7 @@ before_script:
   - ls
   - cmake --version
   - export CC=clang CXX=clang++ LD=clang
-  - cmake .. && make
+  - cmake -DCMAKE_BUILD_TYPE=Debug .. && make
 
 run_test:
   script:

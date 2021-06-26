@@ -3,57 +3,212 @@ source_filename = "llvm-link"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.15.0"
 
+@matrix = global [20000000 x i32] zeroinitializer
+@a = global [100000 x i32] zeroinitializer
 @.str = private unnamed_addr constant [3 x i8] c"%d\00", align 1
 @.str.1 = private unnamed_addr constant [3 x i8] c"%c\00", align 1
 @.str.2 = private unnamed_addr constant [4 x i8] c"%d:\00", align 1
 @.str.3 = private unnamed_addr constant [4 x i8] c" %d\00", align 1
 
-define i32 @if_if_Else() {
+define i32 @transpose(i32 %n, i32* %matrix, i32 %rowsize) {
 entry0:
+  %n.addr = alloca i32, align 4
+  %0 = alloca i32*, align 8
+  store i32 %n, i32* %n.addr, align 4
+  store i32* %matrix, i32** %0, align 8
+  %rowsize.addr = alloca i32, align 4
+  %1 = load i32*, i32** %0, align 8
   %retval = alloca i32, align 4
-  %0 = alloca i32, align 4
-  %1 = alloca i32, align 4
-  store i32 5, i32* %0, align 4
-  store i32 10, i32* %1, align 4
-  %2 = load i32, i32* %0, align 4
-  %3 = icmp eq i32 %2, 5
-  br i1 %3, label %if.then0, label %if.else0
+  store i32 %rowsize, i32* %rowsize.addr, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = load i32, i32* %n.addr, align 4
+  %7 = load i32, i32* %rowsize.addr, align 4
+  %8 = sdiv i32 %6, %7
+  store i32 %8, i32* %2, align 4
+  store i32 0, i32* %3, align 4
+  store i32 0, i32* %4, align 4
+  br label %while.cond0
 
-if.then0:                                         ; preds = %entry0
-  %4 = load i32, i32* %1, align 4
-  %5 = icmp eq i32 %4, 10
-  br i1 %5, label %if.then1, label %if.else1
+while.cond0:                                      ; preds = %while.end0, %entry0
+  %9 = load i32, i32* %3, align 4
+  %10 = load i32, i32* %2, align 4
+  %11 = icmp slt i32 %9, %10
+  br i1 %11, label %loop.body0, label %while.end1
 
-if.else0:                                         ; preds = %entry0
-  %6 = load i32, i32* %0, align 4
-  %7 = add i32 %6, 15
-  store i32 %7, i32* %0, align 4
-  br label %if.end0
+loop.body0:                                       ; preds = %while.cond0
+  store i32 0, i32* %4, align 4
+  br label %while.cond1
 
-if.end0:                                          ; preds = %if.end1, %if.else0
-  %8 = load i32, i32* %0, align 4
-  store i32 %8, i32* %retval, align 4
-  %9 = load i32, i32* %retval, align 4
-  ret i32 %9
+while.end1:                                       ; preds = %while.cond0
+  %12 = sub i32 0, 1
+  store i32 %12, i32* %retval, align 4
+  %13 = load i32, i32* %retval, align 4
+  ret i32 %13
 
-if.then1:                                         ; preds = %if.then0
-  store i32 25, i32* %0, align 4
-  br label %if.end1
+while.cond1:                                      ; preds = %if.end0, %if.then0, %loop.body0
+  %14 = load i32, i32* %4, align 4
+  %15 = load i32, i32* %rowsize.addr, align 4
+  %16 = icmp slt i32 %14, %15
+  br i1 %16, label %loop.body1, label %while.end0
 
-if.else1:                                         ; preds = %if.then0
-  br label %if.end1
+loop.body1:                                       ; preds = %while.cond1
+  %17 = load i32, i32* %3, align 4
+  %18 = load i32, i32* %4, align 4
+  %19 = icmp slt i32 %17, %18
+  br i1 %19, label %if.then0, label %if.end0
 
-if.end1:                                          ; preds = %if.else1, %if.then1
-  br label %if.end0
+while.end0:                                       ; preds = %while.cond1
+  %20 = load i32, i32* %3, align 4
+  %21 = add i32 %20, 1
+  store i32 %21, i32* %3, align 4
+  br label %while.cond0
+
+if.then0:                                         ; preds = %loop.body1
+  %22 = load i32, i32* %4, align 4
+  %23 = add i32 %22, 1
+  store i32 %23, i32* %4, align 4
+  br label %while.cond1
+
+if.end0:                                          ; preds = %loop.body1
+  %24 = load i32, i32* %3, align 4
+  %25 = load i32, i32* %rowsize.addr, align 4
+  %26 = mul i32 %24, %25
+  %27 = load i32, i32* %4, align 4
+  %28 = add i32 %26, %27
+  %29 = getelementptr inbounds i32, i32* %1, i32 %28
+  %30 = load i32, i32* %29, align 4
+  store i32 %30, i32* %5, align 4
+  %31 = load i32, i32* %4, align 4
+  %32 = load i32, i32* %2, align 4
+  %33 = mul i32 %31, %32
+  %34 = load i32, i32* %3, align 4
+  %35 = add i32 %33, %34
+  %36 = getelementptr inbounds i32, i32* %1, i32 %35
+  %37 = load i32, i32* %3, align 4
+  %38 = load i32, i32* %rowsize.addr, align 4
+  %39 = mul i32 %37, %38
+  %40 = load i32, i32* %4, align 4
+  %41 = add i32 %39, %40
+  %42 = getelementptr inbounds i32, i32* %1, i32 %41
+  %43 = load i32, i32* %42, align 4
+  store i32 %43, i32* %36, align 4
+  %44 = load i32, i32* %3, align 4
+  %45 = load i32, i32* %rowsize.addr, align 4
+  %46 = mul i32 %44, %45
+  %47 = load i32, i32* %4, align 4
+  %48 = add i32 %46, %47
+  %49 = getelementptr inbounds i32, i32* %1, i32 %48
+  %50 = load i32, i32* %5, align 4
+  store i32 %50, i32* %49, align 4
+  %51 = load i32, i32* %4, align 4
+  %52 = add i32 %51, 1
+  store i32 %52, i32* %4, align 4
+  br label %while.cond1
 }
 
 define i32 @main() {
 entry0:
   %retval = alloca i32, align 4
-  %0 = call i32 @if_if_Else()
-  store i32 %0, i32* %retval, align 4
-  %1 = load i32, i32* %retval, align 4
-  ret i32 %1
+  %0 = alloca i32, align 4
+  %1 = alloca i32, align 4
+  %2 = getelementptr inbounds [100000 x i32], [100000 x i32]* @a, i32 0, i32 0
+  %3 = alloca i32, align 4
+  %4 = getelementptr inbounds [20000000 x i32], [20000000 x i32]* @matrix, i32 0, i32 0
+  %5 = alloca i32, align 4
+  %6 = call i32 @getint()
+  store i32 %6, i32* %0, align 4
+  %7 = call i32 @getarray(i32* %2)
+  store i32 %7, i32* %1, align 4
+  call void bitcast (void (i32)* @starttime to void ()*)()
+  store i32 0, i32* %3, align 4
+  br label %while.cond0
+
+while.cond0:                                      ; preds = %loop.body0, %entry0
+  %8 = load i32, i32* %3, align 4
+  %9 = load i32, i32* %0, align 4
+  %10 = icmp slt i32 %8, %9
+  br i1 %10, label %loop.body0, label %while.end0
+
+loop.body0:                                       ; preds = %while.cond0
+  %11 = load i32, i32* %3, align 4
+  %12 = getelementptr inbounds i32, i32* %4, i32 %11
+  %13 = load i32, i32* %3, align 4
+  store i32 %13, i32* %12, align 4
+  %14 = load i32, i32* %3, align 4
+  %15 = add i32 %14, 1
+  store i32 %15, i32* %3, align 4
+  br label %while.cond0
+
+while.end0:                                       ; preds = %while.cond0
+  store i32 0, i32* %3, align 4
+  br label %while.cond1
+
+while.cond1:                                      ; preds = %loop.body1, %while.end0
+  %16 = load i32, i32* %3, align 4
+  %17 = load i32, i32* %1, align 4
+  %18 = icmp slt i32 %16, %17
+  br i1 %18, label %loop.body1, label %while.end1
+
+loop.body1:                                       ; preds = %while.cond1
+  %19 = load i32, i32* %3, align 4
+  %20 = getelementptr inbounds i32, i32* %2, i32 %19
+  %21 = load i32, i32* %0, align 4
+  %22 = load i32, i32* %20, align 4
+  %23 = call i32 @transpose(i32 %21, i32* %4, i32 %22)
+  %24 = load i32, i32* %3, align 4
+  %25 = add i32 %24, 1
+  store i32 %25, i32* %3, align 4
+  br label %while.cond1
+
+while.end1:                                       ; preds = %while.cond1
+  store i32 0, i32* %5, align 4
+  store i32 0, i32* %3, align 4
+  br label %while.cond2
+
+while.cond2:                                      ; preds = %loop.body2, %while.end1
+  %26 = load i32, i32* %3, align 4
+  %27 = load i32, i32* %1, align 4
+  %28 = icmp slt i32 %26, %27
+  br i1 %28, label %loop.body2, label %while.end2
+
+loop.body2:                                       ; preds = %while.cond2
+  %29 = load i32, i32* %3, align 4
+  %30 = load i32, i32* %3, align 4
+  %31 = mul i32 %29, %30
+  %32 = load i32, i32* %3, align 4
+  %33 = getelementptr inbounds i32, i32* %4, i32 %32
+  %34 = load i32, i32* %33, align 4
+  %35 = mul i32 %31, %34
+  %36 = load i32, i32* %5, align 4
+  %37 = add i32 %36, %35
+  store i32 %37, i32* %5, align 4
+  %38 = load i32, i32* %3, align 4
+  %39 = add i32 %38, 1
+  store i32 %39, i32* %3, align 4
+  br label %while.cond2
+
+while.end2:                                       ; preds = %while.cond2
+  %40 = load i32, i32* %5, align 4
+  %41 = icmp slt i32 %40, 0
+  br i1 %41, label %if.then0, label %if.end0
+
+if.then0:                                         ; preds = %while.end2
+  %42 = load i32, i32* %5, align 4
+  %43 = sub i32 0, %42
+  store i32 %43, i32* %5, align 4
+  br label %if.end0
+
+if.end0:                                          ; preds = %if.then0, %while.end2
+  call void bitcast (void (i32)* @stoptime to void ()*)()
+  %44 = load i32, i32* %5, align 4
+  call void @putint(i32 %44)
+  call void @putch(i32 10)
+  store i32 0, i32* %retval, align 4
+  %45 = load i32, i32* %retval, align 4
+  ret i32 %45
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable

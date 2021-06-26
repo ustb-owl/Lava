@@ -8,7 +8,7 @@ using namespace lava::mid;
 namespace lava {
 template <typename SSA>
 std::shared_ptr<SSA> dyn_cast(const SSAPtr &ssa) {
-  if (SSA::classof(ssa.get())) {
+  if (ssa && SSA::classof(ssa.get())) {
     auto ptr = std::static_pointer_cast<SSA>(ssa);
     DBG_ASSERT(ptr != nullptr, "cast SSA failed");
     return ptr;
@@ -19,7 +19,7 @@ std::shared_ptr<SSA> dyn_cast(const SSAPtr &ssa) {
 
 template <typename SSA>
 std::shared_ptr<SSA> dyn_cast(SSAPtr &ssa) {
-  if (SSA::classof(ssa.get())) {
+  if (ssa && SSA::classof(ssa.get())) {
     auto ptr = std::static_pointer_cast<SSA>(ssa);
     DBG_ASSERT(ptr != nullptr, "cast SSA failed");
     return ptr;
@@ -30,6 +30,7 @@ std::shared_ptr<SSA> dyn_cast(SSAPtr &ssa) {
 
 template <typename SSA>
 bool IsSSA(const SSAPtr &ssa) {
+  DBG_ASSERT(ssa != nullptr, "SSA is nullptr");
   if (SSA::classof(ssa.get())) {
     return true;
   } else {
@@ -39,6 +40,7 @@ bool IsSSA(const SSAPtr &ssa) {
 
 template <typename SSA>
 bool IsSSA(SSAPtr &ssa) {
+  DBG_ASSERT(ssa != nullptr, "SSA is nullptr");
   if (SSA::classof(ssa.get())) {
     return true;
   } else {

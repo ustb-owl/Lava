@@ -8,7 +8,7 @@ add_library(opt
         transforms/dge.cpp
         transforms/dce.cpp
         transforms/hello.cpp
-        transforms/blockmerge.cpp
+        transforms/blocksimp.cpp
         transforms/dirtyarray_conv.cpp
 )
 
