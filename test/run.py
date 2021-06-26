@@ -8,6 +8,7 @@ import subprocess
 # directories that storing test cases
 dirs = [
     './cases',
+    # 'custom_test',
     'sysyruntimelibrary/section1/functional_test',
     'sysyruntimelibrary/section1/performance_test',
     'sysyruntimelibrary/section2/functional_test',
@@ -153,7 +154,7 @@ if __name__ == '__main__':
     # initialize argument parser
     parser = argparse.ArgumentParser()
     parser.formatter_class = argparse.RawTextHelpFormatter
-    parser.description = 'An auto-test tool for MimiC project.'
+    parser.description = 'An auto-test tool for lava project.'
     parser.add_argument('-i', '--input', default='',
                         help='specify input SysY source file, ' +
                              'default to empty, that means run ' +

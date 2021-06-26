@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "order.h"
 #include "mid/ir/ssa.h"
 #include "mid/ir/module.h"
 
@@ -28,6 +29,9 @@ public:
 
   // overridden by subclass, run on function
   virtual bool runOnFunction(const FuncPtr &F) = 0;
+
+  // initialize before run pass
+  virtual void initialize() = 0;
 
   // print - Print out the internal state of the pass.  This is called by
   // Analyze to print out the contents of an analysis.  Otherwise it is not
@@ -57,6 +61,9 @@ public:
 
   bool runOnFunction(const FuncPtr &F) final { return false; };
 
+  // subclass can override this method to perform initialization
+  void initialize() override {};
+
   ModulePass() = default;
   // Force out-of-line virtual method.
   virtual ~ModulePass() = default;
@@ -85,6 +92,9 @@ public:
 
   // not implement
   bool runOnModule(Module &M) final { return false; }
+
+  // subclass can override this method to perform initialization
+  void initialize() override {};
 
   // doFinalization - Virtual method overriden by subclasses to do any post
   // processing needed after all passes have run.

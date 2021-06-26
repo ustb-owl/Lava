@@ -27,17 +27,17 @@ public:
     if (F->empty()) return _changed;
 
     for (auto &it : *F) {
-      if (entry == nullptr) entry = it.get();
+      if (entry == nullptr) entry = it.value();
       break;
     }
 
-    auto entryBlock = CastTo<BasicBlock>(entry);
+    auto entryBlock = dyn_cast<BasicBlock>(entry);
     for (auto &it : entryBlock->insts()) {
-      auto inst = CastTo<Instruction>(it);
+      auto inst = dyn_cast<Instruction>(it);
       switch (inst->opcode()) {
         case Instruction::Alloca: {
 
-          auto alloca = CastTo<AllocaInst>(it);
+          auto alloca = dyn_cast<AllocaInst>(it);
           auto pointeeType = alloca->type()->GetDerefedType();
           if (pointeeType->IsArray() || pointeeType->IsPointer()) {
 
@@ -73,13 +73,6 @@ public:
                     break;
                   }
 
-                  case Instruction::Access: {
-                    auto access = static_cast<AccessInst *>(userInst);
-                    if (access->ptr() == alloca) {
-                      SetGepType(access);
-                    }
-                    break;
-                  }
                 }
               }
             }
@@ -95,16 +88,14 @@ public:
     return _changed;
   }
 
-  void SetGepType(AccessInst *inst) {
-
-  }
 };
 
 class DirtyArrayConvertFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<DirtyArrayConvert>();
-    auto passinfo = std::make_shared<PassInfo>(pass, "DirtyArrayConvert", false, false);
+    auto passinfo =
+        std::make_shared<PassInfo>(pass, "DirtyArrayConvert", false, false, DIRTY_ARRAY_CONV);
     return passinfo;
   }
 };

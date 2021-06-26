@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <cassert>
 
-namespace mimic::utils {
+namespace lava::utils {
 
 // vector that can holds N bits
 class BitVec {
@@ -155,6 +155,6 @@ class BitVec {
   std::size_t width_;
 };
 
-}  // namespace mimic::utils
+}  // namespace lava::utils
 
 #endif  // LAVA_UTILS_BITVEC_H_

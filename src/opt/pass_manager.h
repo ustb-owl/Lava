@@ -38,13 +38,15 @@ private:
   std::string   _pass_name;
   bool          _is_analysis;
   std::size_t   _min_opt_level;
+  std::size_t   _pass_order;
   PassNameList  _required_passes;
   PassNameList  _invalidated_passes;
 
 public:
-  PassInfo(PassPtr pass, std::string name, bool is_analysis, std::size_t min_opt_level)
+  PassInfo(PassPtr pass, std::string name, bool is_analysis,
+           std::size_t min_opt_level, std::size_t order)
       : _pass(std::move(pass)), _pass_name(std::move(name)), _is_analysis(is_analysis),
-        _min_opt_level(min_opt_level) {}
+        _min_opt_level(min_opt_level), _pass_order(order) {}
 
   // add required pass by name for current pass
   // all required passes should be run before running current pass
@@ -60,9 +62,15 @@ public:
     _is_analysis = is_analysis;
     return *this;
   }
+
   // set minimum optimization level of current pass required
   PassInfo &set_min_opt_level(std::size_t min_opt_level) {
     _min_opt_level = min_opt_level;
+    return *this;
+  }
+
+  PassInfo &set_pass_order(std::size_t order) {
+    _pass_order = order;
     return *this;
   }
 
@@ -70,11 +78,14 @@ public:
   const PassPtr &pass()          const { return _pass;          }
   std::string    name()          const { return _pass_name;     }
   bool           is_analysis()   const { return _is_analysis;   }
+  std::size_t    pass_order()    const { return _pass_order;    };
   std::size_t    min_opt_level() const { return _min_opt_level; }
 
   const PassNameList &required_passes()    const { return _required_passes;    }
   const PassNameList &invalidated_passes() const { return _invalidated_passes; }
 };
+
+bool compare(const PassInfoPtr &ptr1, const PassInfoPtr &ptr2);
 
 // pass manager
 class PassManager {
@@ -93,22 +104,25 @@ private:
   void init();
 
 public:
-  static PassManager _instance;
+  static PassManager *_instance;
 
   PassManager() : _opt_level(0), _module(nullptr) {}
 
   explicit PassManager(mid::Module &module)
     : _opt_level(0), _module(&module) {}
 
-  static void Initialize() { _instance.init(); }
+  static void Initialize() { _instance->init(); }
 
-  static PassManager *GetPassManager() { return &_instance; }
+  static PassManager *GetPassManager() {
+    if (_instance == nullptr) _instance = new PassManager();
+    return _instance;
+  }
 
-  static PassInfoMap &GetPasses() { return _instance._pass_infos; }
+  static PassInfoMap &GetPasses() { return _instance->_pass_infos; }
 
-  static RequirementMap &GetRequiredBy() { return _instance._requirements; }
+  static RequirementMap &GetRequiredBy() { return _instance->_requirements; }
 
-  static PassPtrList &Candidates() { return _instance._candidates; }
+  static PassPtrList &Candidates() { return _instance->_candidates; }
 
   static void RequiredBy(const std::string &slave, const std::string &master);
 
@@ -118,9 +132,26 @@ public:
   // invalidate the specific pass
   static void InvalidatePass(PassNameSet &valid, const std::string &name);
 
+  /* methods related with analysis result */
+  template<typename AnalysisType>
+  static std::shared_ptr<AnalysisType> GetAnalysis(const std::string &name) {
+    auto pass = _instance->_pass_infos.find(name);
+    // found pass by name
+    if (pass == _instance->_pass_infos.end()) {
+      DBG_ASSERT(0, "analysis pass %s not found", name.c_str());
+    }
+
+    // check if analysis pass
+    if (!pass->second->is_analysis()) {
+      DBG_ASSERT(0, "pass %s is not analysis pass", name.c_str());
+    }
+
+    return std::static_pointer_cast<AnalysisType>(pass->second->pass());
+  }
+
   // register pass
   static void RegisterPassFactory(const PassFactoryPtr &factory) {
-    _instance.AddFactory(factory);
+    _instance->AddFactory(factory);
   }
 
   // run a specific pass
@@ -135,10 +166,10 @@ public:
   static void RunPasses();
 
   // getter/setter
-  static std::size_t  opt_level() { return _instance._opt_level; }
-  static mid::Module &module()    { return *_instance._module; }
+  static std::size_t  opt_level() { return _instance->_opt_level; }
+  static mid::Module &module()    { return *_instance->_module; }
 
-  static void SetModule(mid::Module &module) { _instance._module = &module; }
+  static void SetModule(mid::Module &module) { _instance->_module = &module; }
 };
 
 template <typename PassClassFactory>
@@ -146,6 +177,8 @@ class PassRegisterFactory {
 public:
   PassRegisterFactory() {
     auto pass_factory = std::make_shared<PassClassFactory>();
+    // make sure PassManager has been created
+    DBG_ASSERT(PassManager::GetPassManager() != nullptr, "PassManager hasn't been created");
     PassManager::RegisterPassFactory(pass_factory);
   }
 };

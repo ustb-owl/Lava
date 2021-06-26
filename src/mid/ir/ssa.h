@@ -9,6 +9,7 @@
 
 namespace lava::mid {
 
+// operands: pred1, pred2 ...
 class BasicBlock : public User {
 private:
   SSAPtrList  _insts;
@@ -18,7 +19,7 @@ private:
 public:
 
   BasicBlock(FuncPtr parent, std::string name)
-      : _name(std::move(name)), _parent(std::move(parent)) {}
+      : User(ClassId::BasicBlockId), _name(std::move(name)), _parent(std::move(parent)) {}
 
   bool isInstruction() const override { return false; }
 
@@ -44,40 +45,24 @@ public:
   const FuncPtr       &parent() const { return _parent;        }
   const std::string   &name()   const { return _name;          }
 
+  std::vector<BasicBlock *> successors();
+
+  // methods for dyn_cast
+  static inline bool classof(BasicBlock *) { return true; }
+  static inline bool classof(const BasicBlock *) { return true; }
+  static bool classof(Value *value);
+  static bool classof(const Value *value);
 };
 
 class Instruction : public User {
 private:
   unsigned _opcode;
-  InstPtr _prev, _next;
-
-  void SetPrev(InstPtr P) { _prev = std::move(P); }
-
-  void SetNext(InstPtr N) { _next = std::move(N); }
-
-
-  // getNext/Prev - Return the next or previous instruction in the list.  The
-  // last node in the list is a terminator instruction.
-  InstPtr GetNext() { return _next; }
-
-  const InstPtr &GetNext() const { return _next; }
-
-  InstPtr GetPrev() { return _prev; }
-
-  const InstPtr &GetPrev() const { return _prev; }
 
 public:
-  Instruction(unsigned opcode, unsigned operand_nums,
-              const SSAPtr &insertBefore = nullptr);
+  Instruction(unsigned opcode, unsigned operand_nums, ClassId classId);
 
-  Instruction(unsigned opcode, unsigned operand_nums,
-              const Operands &operands, const SSAPtr &insertBefore = nullptr);
+  Instruction(unsigned opcode, unsigned operand_nums, const Operands &operands, ClassId classId);
 
-  Instruction(unsigned opcode, unsigned operand_nums,
-              const BlockPtr &insertAtEnd);
-
-  Instruction(unsigned opcode, unsigned operand_nums,
-              const Operands &operands, const BlockPtr &insertAtEnd);
 
   virtual ~Instruction() = default;
 
@@ -145,6 +130,12 @@ public:
 #include "opcode.inc"
 
   static const int AssignSpain = AssAdd - Add;
+
+  // methods for dyn_cast
+  static inline bool classof(Instruction *) { return true; }
+  static inline bool classof(const Instruction *) { return true; }
+  static bool classof(Value *);
+  static bool classof(const Value *);
 };
 
 //===----------------------------------------------------------------------===//
@@ -158,21 +149,12 @@ class TerminatorInst : public Instruction {
 private:
   std::vector<BlockPtr> _successors;
 public:
-  TerminatorInst(Instruction::TermOps opcode,
-                 unsigned operands_num, const SSAPtr &insertBefore = nullptr)
-      : Instruction(opcode, operands_num, insertBefore) {}
+  TerminatorInst(Instruction::TermOps opcode, unsigned operands_num)
+      : Instruction(opcode, operands_num, static_cast<ClassId>(opcode)) {}
 
   TerminatorInst(Instruction::TermOps opcode, const Operands &operands,
                  unsigned operands_num, const SSAPtr &insertBefore = nullptr)
-      : Instruction(opcode, operands_num, operands, insertBefore) {}
-
-  TerminatorInst(Instruction::TermOps opcode,
-                 unsigned operands_num, const BlockPtr &insertAtEnd)
-      : Instruction(opcode, operands_num, insertAtEnd) {}
-
-  TerminatorInst(Instruction::TermOps opcode, const Operands &operands,
-                 unsigned operands_num, const BlockPtr &insertAtEnd)
-      : Instruction(opcode, operands_num, operands, insertAtEnd) {}
+      : Instruction(opcode, operands_num, operands, static_cast<ClassId>(opcode)) {}
 
   bool isInstruction() const override { return true; }
 
@@ -190,27 +172,12 @@ public:
   virtual SSAPtr GetSuccessor(unsigned idx) const = 0;
   virtual void SetSuccessor(unsigned idx, const BlockPtr &BB) = 0;
   virtual void AddSuccessor(const BlockPtr &BB) { _successors.push_back(BB); }
-};
 
-//===----------------------------------------------------------------------===//
-//                          UnaryInstruction Class
-//===----------------------------------------------------------------------===//
-
-class UnaryInstruction : public Instruction {
-public:
-  UnaryInstruction(unsigned opcode, const SSAPtr &V, const SSAPtr &IB = nullptr)
-      : Instruction(opcode, 1, IB) {
-    AddValue(V);
-  }
-
-  UnaryInstruction(unsigned opcode, const SSAPtr &V, const BlockPtr &IAE)
-      : Instruction(opcode, 1, IAE) {
-    AddValue(V);
-  }
-
-  bool isInstruction() const override { return true; }
-
-  static unsigned GetNumOperands() { return 1; }
+  // methods for dyn_cast
+  static inline bool classof(TerminatorInst *) { return true; }
+  static inline bool classof(const TerminatorInst *) { return true; }
+  static bool classof(Value *);
+  static bool classof(const Value *);
 };
 
 //===----------------------------------------------------------------------===//
@@ -220,21 +187,15 @@ public:
 class BinaryOperator : public Instruction {
 public:
   BinaryOperator(BinaryOps opcode, const SSAPtr &S1,
-                 const SSAPtr &S2, const define::TypePtr &type, const SSAPtr &IB = nullptr);
+                 const SSAPtr &S2, const define::TypePtr &type);
 
-  BinaryOperator(BinaryOps opcode, const SSAPtr &S1,
-                 const SSAPtr &S2, const define::TypePtr &type, const BlockPtr &IAE);
 
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   static unsigned GetNumOperands() { return 2; }
 
-  static BinaryPtr Create(BinaryOps opcode, const SSAPtr &S1,
-                          const SSAPtr &S2, const SSAPtr &IB = nullptr);
-
-  static BinaryPtr Create(BinaryOps opcode, const SSAPtr &S1,
-                          const SSAPtr &S2, const BlockPtr &IAE);
+  static BinaryPtr Create(BinaryOps opcode, const SSAPtr &S1, const SSAPtr &S2);
 
   bool isInstruction() const override { return true; }
 
@@ -248,22 +209,6 @@ public:
 
 #include "instruction.inc"
 
-#define HANDLE_BINARY_INST(N, OPC, ClASS)                            \
-  static BinaryPtr Create##OPC(const SSAPtr &V1, const SSAPtr &V2,   \
-            const BlockPtr &IAE) {                                   \
-    return Create(Instruction::OPC, V1, V2, IAE);                    \
-  }
-
-#include "instruction.inc"
-
-#define HANDLE_BINARY_INST(N, OPC, ClASS)                            \
-  static BinaryPtr Create##OPC(const SSAPtr &V1, const SSAPtr &V2,   \
-            const SSAPtr &IB) {                                      \
-    return Create(Instruction::OPC, V1, V2, IB);                     \
-  }
-
-#include "instruction.inc"
-
 
   /// Helper functions to construct and inspect unary operations (NEG and NOT)
   /// via binary operators SUB and XOR:
@@ -271,10 +216,14 @@ public:
   /// createNeg, createNot - Create the NEG and NOT
   ///     instructions out of SUB and XOR instructions.
   ///
-  static BinaryPtr createNeg(const SSAPtr &Op, const SSAPtr &InsertBefore = nullptr);
-  static BinaryPtr createNeg(const SSAPtr &Op, const BlockPtr &InsertAtEnd);
-  static BinaryPtr createNot(const SSAPtr &Op, const SSAPtr &InsertBefore = nullptr);
-  static BinaryPtr createNot(const SSAPtr &Op, const BlockPtr &InsertAtEnd);
+  static BinaryPtr createNeg(const SSAPtr &Op);
+  static BinaryPtr createNot(const SSAPtr &Op);
+
+  // methods for dyn_cast
+  static inline bool classof(BinaryOperator *) { return true; }
+  static inline bool classof(const BinaryOperator *) { return true; }
+  static bool classof(Value *);
+  static bool classof(const Value *);
 };
 
 // function definition
@@ -287,7 +236,7 @@ private:
 
 public:
   explicit Function(std::string name, bool is_decl = false)
-    : _is_decl(is_decl), _function_name(std::move(name)) {}
+    : User(ClassId::FunctionId), _is_decl(is_decl), _function_name(std::move(name)) {}
 
   bool isInstruction() const override { return false; }
 
@@ -303,14 +252,30 @@ public:
   // getters
   const std::string &GetFunctionName() const { return _function_name; }
 
+  const SSAPtr      &entry() { return (*this)[0].value(); }
+
   const std::vector<SSAPtr> &args() { return _args; }
+
   bool is_decl()              const { return _is_decl; }
+
+
+  // methods for dyn_cast
+  static inline bool classof(Function *) { return true; }
+  static inline bool classof(const Function *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::FunctionId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::FunctionId) return true;
+    return false;
+  }
 };
 
 class JumpInst : public TerminatorInst {
 public:
-  explicit JumpInst(const SSAPtr &target, const SSAPtr & IB = nullptr)
-      : TerminatorInst(Instruction::TermOps::Jmp,1, IB) {
+  explicit JumpInst(const SSAPtr &target)
+      : TerminatorInst(Instruction::TermOps::Jmp,1) {
     AddValue(target);
   }
 
@@ -332,7 +297,19 @@ public:
     this->SetOperand(0, B);
   }
 
-  const SSAPtr &target() const { return (*this)[0].get(); }
+  const SSAPtr &target() const { return (*this)[0].value(); }
+
+  // methods for dyn_cast
+  static inline bool classof(JumpInst *) { return true; }
+  static inline bool classof(const JumpInst *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::JumpInstId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::JumpInstId) return true;
+    return false;
+  }
 };
 
 
@@ -340,8 +317,8 @@ public:
 // operand: value
 class ReturnInst : public TerminatorInst {
 public:
-  explicit ReturnInst(const SSAPtr &value, const SSAPtr &IB = nullptr)
-      : TerminatorInst(Instruction::TermOps::Ret,1, IB)
+  explicit ReturnInst(const SSAPtr &value)
+      : TerminatorInst(Instruction::TermOps::Ret,1)
   { AddValue(value); }
 
   bool isInstruction() const override { return true; }
@@ -366,16 +343,27 @@ public:
   }
 
   // getter/setter
-  const SSAPtr &RetVal()    const { return (*this)[0].get(); }
+  const SSAPtr &RetVal()    const { return (*this)[0].value(); }
   void SetRetVal(const SSAPtr &value) { (*this)[0].set(value); }
+
+  // methods for dyn_cast
+  static inline bool classof(ReturnInst *) { return true; }
+  static inline bool classof(const ReturnInst *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::ReturnInstId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::ReturnInstId) return true;
+    return false;
+  }
 };
 
 // branch with condition
 // operands: cond true_block false_block
 class BranchInst : public TerminatorInst {
 public:
-  BranchInst(const SSAPtr &cond, const SSAPtr &true_block,
-             const SSAPtr &false_block, const SSAPtr &IB = nullptr);
+  BranchInst(const SSAPtr &cond, const SSAPtr &true_block, const SSAPtr &false_block);
 
   bool isInstruction() const override { return true; }
 
@@ -399,20 +387,32 @@ public:
   }
 
   // getter/setter
-  const SSAPtr &cond()        const       { return (*this)[0].get(); }
-  const SSAPtr &true_block()  const       { return (*this)[1].get(); }
-  const SSAPtr &false_block() const       { return (*this)[2].get(); }
+  const SSAPtr &cond()        const       { return (*this)[0].value(); }
+  const SSAPtr &true_block()  const       { return (*this)[1].value(); }
+  const SSAPtr &false_block() const       { return (*this)[2].value(); }
   void SetCond(const SSAPtr &value)       { (*this)[0].set(value);   }
   void SetTrueBlock(const SSAPtr &value)  { (*this)[1].set(value);   }
   void SetFalseBlock(const SSAPtr &value) { (*this)[2].set(value);   }
+
+  // methods for dyn_cast
+  static inline bool classof(BranchInst *) { return true; }
+  static inline bool classof(const BranchInst *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::BranchInstId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::BranchInstId) return true;
+    return false;
+  }
 };
 
 // store to alloc
 // operands: value, pointer
 class StoreInst : public Instruction {
 public:
-  StoreInst(const SSAPtr &V, const SSAPtr &P, const SSAPtr &IB = nullptr)
-      : Instruction(Instruction::MemoryOps::Store, 2, IB) {
+  StoreInst(const SSAPtr &V, const SSAPtr &P)
+      : Instruction(Instruction::MemoryOps::Store, 2, ClassId::StoreInstId) {
     AddValue(V);
     AddValue(P);
   }
@@ -423,9 +423,21 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getters
-  const SSAPtr &value() const { return (*this)[0].get(); }
+  const SSAPtr &value() const { return (*this)[0].value(); }
 
-  const SSAPtr &pointer() const { return (*this)[1].get(); }
+  const SSAPtr &pointer() const { return (*this)[1].value(); }
+
+  // methods for dyn_cast
+  static inline bool classof(StoreInst *) { return true; }
+  static inline bool classof(const StoreInst *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::StoreInstId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::StoreInstId) return true;
+    return false;
+  }
 };
 
 // alloc on stack
@@ -433,12 +445,12 @@ class AllocaInst : public Instruction {
 private:
   std::string _name;
 public:
-  AllocaInst(const SSAPtr &IB = nullptr)
-      : Instruction(Instruction::MemoryOps::Alloca, 0, IB),
+  AllocaInst()
+      : Instruction(Instruction::MemoryOps::Alloca, 0, ClassId::AllocaInstId),
         _name(std::string("")) {}
 
-  explicit AllocaInst(const std::string &name, const SSAPtr &IB = nullptr)
-      : Instruction(Instruction::MemoryOps::Alloca, 0, IB),
+  explicit AllocaInst(const std::string &name)
+      : Instruction(Instruction::MemoryOps::Alloca, 0, ClassId::AllocaInstId),
         _name(name) {}
 
   bool isInstruction() const override { return true; }
@@ -448,6 +460,18 @@ public:
 
   const std::string &name() const { return _name; }
   void set_name(const std::string &name) { _name = name; }
+
+  // methods for dyn_cast
+  static inline bool classof(AllocaInst *) { return true; }
+  static inline bool classof(const AllocaInst *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::AllocaInstId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::AllocaInstId) return true;
+    return false;
+  }
 };
 
 // load from pointer
@@ -458,8 +482,8 @@ private:
   std::string _name;
   std::weak_ptr<Value> _pointer;
 public:
-  LoadInst(const SSAPtr &ptr, const SSAPtr &IB = nullptr)
-      : Instruction(Instruction::MemoryOps::Load, 1, IB), _pointer(ptr) {
+  LoadInst(const SSAPtr &ptr)
+      : Instruction(Instruction::MemoryOps::Load, 1, ClassId::LoadInstId), _pointer(ptr) {
     AddValue(ptr);
   }
 
@@ -472,10 +496,22 @@ public:
 
   // getter/setter
   void SetPointer(const SSAPtr &ptr)    { (*this)[0].set(ptr); }
-  const SSAPtr &Pointer()         const { return (*this)[0].get(); }
+  const SSAPtr &Pointer()         const { return (*this)[0].value(); }
 
   const std::string &name() const { return _name; }
   void set_name(const std::string &name) { _name = name; }
+
+  // methods for dyn_cast
+  static inline bool classof(LoadInst *) { return true; }
+  static inline bool classof(const LoadInst *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::LoadInstId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::LoadInstId) return true;
+    return false;
+  }
 };
 
 
@@ -488,7 +524,7 @@ private:
 
 public:
   ArgRefSSA(SSAPtr func, std::size_t index, std::string name)
-      : _func(std::move(func)), _index(index), _arg_name(std::move(name)) {}
+      : Value(ClassId::ArgRefSSAId), _func(std::move(func)), _index(index), _arg_name(std::move(name)) {}
 
   bool isInstruction() const override { return false; }
 
@@ -501,13 +537,25 @@ public:
   const SSAPtr      &func()    const { return _func;  }
   std::size_t       index()    const { return _index; }
   std::string arg_name() const { return _arg_name; }
+
+  // methods for dyn_cast
+  static inline bool classof(ArgRefSSA *) { return true; }
+  static inline bool classof(const ArgRefSSA *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::ArgRefSSAId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::ArgRefSSAId) return true;
+    return false;
+  }
 };
 
 // function call
 // operands: callee, parameters
 class CallInst : public Instruction {
 public:
-  CallInst(const SSAPtr &callee, const std::vector<SSAPtr> &args, const SSAPtr &IB = nullptr);
+  CallInst(const SSAPtr &callee, const std::vector<SSAPtr> &args);
 
   bool isInstruction() const override { return true; }
 
@@ -515,7 +563,19 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getter/setter
-  const SSAPtr & Callee() const { return (*this)[0].get(); }
+  const SSAPtr & Callee() const { return (*this)[0].value(); }
+
+  // methods for dyn_cast
+  static inline bool classof(CallInst *) { return true; }
+  static inline bool classof(const CallInst *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::CallInstId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::CallInstId) return true;
+    return false;
+  }
 };
 
 class ICmpInst : public Instruction {
@@ -524,7 +584,7 @@ private:
   Operator _op;
 public:
 
-  ICmpInst(Operator op, const SSAPtr &lhs, const SSAPtr &rhs, const SSAPtr &IB = nullptr);
+  ICmpInst(Operator op, const SSAPtr &lhs, const SSAPtr &rhs);
 
   bool isInstruction() const override { return true; }
 
@@ -535,17 +595,29 @@ public:
 
   // getter/setter
   Operator             op()   const { return _op;              }
-  const SSAPtr       &LHS()   const { return (*this)[0].get(); }
-  const SSAPtr       &RHS()   const { return (*this)[1].get(); }
+  const SSAPtr       &LHS()   const { return (*this)[0].value(); }
+  const SSAPtr       &RHS()   const { return (*this)[1].value(); }
   std::string         opStr() const;
+
+  // methods for dyn_cast
+  static inline bool classof(ICmpInst *) { return true; }
+  static inline bool classof(const ICmpInst *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::ICmpInstId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::ICmpInstId) return true;
+    return false;
+  }
 };
 
 // type casting
 // operands: opr
 class  CastInst : public Instruction {
 public:
-  explicit CastInst(CastOps op, const SSAPtr &opr, const SSAPtr &IB = nullptr)
-  : Instruction(op, 1, IB) {
+  explicit CastInst(CastOps op, const SSAPtr &opr)
+  : Instruction(op, 1, ClassId::CallInstId) {
     AddValue(opr);
   }
 
@@ -555,7 +627,19 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getter/setter
-  const SSAPtr &operand() const { return (*this)[0].get(); }
+  const SSAPtr &operand() const { return (*this)[0].value(); }
+
+  // methods for dyn_cast
+  static inline bool classof(CastInst *) { return true; }
+  static inline bool classof(const CastInst *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::CastInstId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::CastInstId) return true;
+    return false;
+  }
 };
 
 // global variable definition/declaration
@@ -567,7 +651,7 @@ private:
 
 public:
   GlobalVariable(bool is_var, const std::string &name, const SSAPtr &init)
-    : _is_var(is_var), _name(name) {
+    : User(ClassId::GlobalVariableId), _is_var(is_var), _name(name) {
     AddValue(init);
   }
 
@@ -576,11 +660,23 @@ public:
 
   // getter/setter
   bool               isVar()  const { return _is_var;          }
-  const SSAPtr      &init()   const { return (*this)[0].get(); }
+  const SSAPtr      &init()   const { return (*this)[0].value(); }
   const std::string &name()   const { return _name;            }
 
   void set_is_var(bool is_var)      { _is_var = is_var;        }
   void set_init(const SSAPtr &init) { (*this)[0].set(init);    }
+
+  // methods for dyn_cast
+  static inline bool classof(GlobalVariable *) { return true; }
+  static inline bool classof(const GlobalVariable *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::GlobalVariableId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::GlobalVariableId) return true;
+    return false;
+  }
 };
 
 bool IsCmp(const SSAPtr &ptr);
@@ -607,10 +703,22 @@ public:
 
   // getter/setter
   AccessType acc_type()      const { return _acc_type;        }
-  const SSAPtr &ptr()        const { return (*this)[0].get(); }
-  const SSAPtr &index(int n) const { return (*this)[n].get(); }
+  const SSAPtr &ptr()        const { return (*this)[0].value(); }
+  const SSAPtr &index(int n) const { return (*this)[n].value(); }
   void set_ptr(const SSAPtr &ptr)          { (*this)[0].set(ptr); }
   void set_index(const SSAPtr &idx, int n) { (*this)[n].set(idx); }
+
+  // methods for dyn_cast
+  static inline bool classof(AccessInst *) { return true; }
+  static inline bool classof(const AccessInst *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::AccessInstId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::AccessInstId) return true;
+    return false;
+  }
 };
 
 }

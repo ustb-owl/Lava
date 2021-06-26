@@ -5,6 +5,7 @@
 
 #include "define/type.h"
 #include "front/logger.h"
+#include "mid/ir/classid.h"
 #include "mid/ir/usedef/use.h"
 
 namespace lava::mid {
@@ -39,9 +40,10 @@ private:
   front::LoggerPtr  _logger;
   BlockPtr          _parent;  // block
   UseList           _use_list;
+  ClassId           _class_id;
 
 public:
-  Value() = default;
+  explicit Value(ClassId classId) : _class_id(classId) {};
   virtual ~Value() = default;
 
   void addUse(Use *U) { _use_list.emplace_back(U); }
@@ -82,6 +84,12 @@ public:
   const UseList &uses() const { return _use_list; }
   const front::LoggerPtr &logger() const { return _logger; }
   const define::TypePtr &type() const { return _type; }
+
+  // methods for dyn_cast
+  static inline bool classof(Value *) { return true; }
+  static inline bool classof(const Value *) { return true; }
+
+  ClassId classId() const { return _class_id; }
 };
 };
 

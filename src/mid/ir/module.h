@@ -140,24 +140,24 @@ public:
   }
 
   // getters
-  SSAPtr                &ReturnValue() { return _return_val;   }
-  SSAPtrList            &GlobalVars()  { return _global_vars;  }
-  ValueEnvPtr           &ValueSymTab() { return _value_symtab; }
-  FunctionList          &Functions()   { return _functions;    }
-  BlockPtr              &InsertPoint() { return _insert_point; }
-  BlockPtr              &FuncEntry()   { return _func_entry;   }
-  BlockPtr              &FuncExit()    { return _func_exit;    }
-  SSAPtrList::iterator   InsertPos()   { return _insert_pos;   }
-  std::stack<BreakContPair> &BreakCont()   { return _break_cont;   }
-  std::deque<int>       &array_lens()  { return _array_lens;   }
-
   typedef FunctionList::iterator        iterator;
   typedef FunctionList::const_iterator  const_iterator;
 
-  iterator               begin()       { return _functions.begin(); }
-  iterator               end()         { return _functions.end();   }
-  const_iterator         begin() const { return _functions.begin(); }
-  const_iterator         end()   const { return _functions.end();   }
+  SSAPtr                    &ReturnValue() { return _return_val;   }
+  SSAPtrList                &GlobalVars()  { return _global_vars;  }
+  ValueEnvPtr               &ValueSymTab() { return _value_symtab; }
+  FunctionList              &Functions()   { return _functions;    }
+  BlockPtr                  &InsertPoint() { return _insert_point; }
+  BlockPtr                  &FuncEntry()   { return _func_entry;   }
+  BlockPtr                  &FuncExit()    { return _func_exit;    }
+  SSAPtrList::iterator       InsertPos()   { return _insert_pos;   }
+  std::deque<int>           &array_lens()  { return _array_lens;   }
+  std::stack<BreakContPair> &BreakCont()   { return _break_cont;   }
+
+  iterator                   begin()       { return _functions.begin(); }
+  iterator                   end()         { return _functions.end();   }
+  const_iterator             begin() const { return _functions.begin(); }
+  const_iterator             end()   const { return _functions.end();   }
 };
 
 

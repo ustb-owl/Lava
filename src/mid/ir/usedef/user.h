@@ -14,14 +14,15 @@ private:
   unsigned int      _operands_num;
 
 public:
-  User() : _operands_num(0) {}
-  explicit User(unsigned operands_num) : _operands_num(operands_num) {}
+  explicit User(ClassId classId) : Value(classId), _operands_num(0) {}
+  User(ClassId classId, unsigned operands_num)
+    : Value(classId), _operands_num(operands_num) {}
 
-  User(unsigned operands_num, const Operands &operands)
-    : _operands_num(operands_num) {
+  User(ClassId classId, unsigned operands_num, const Operands &operands)
+    : Value(classId), _operands_num(operands_num) {
     DBG_ASSERT(_operands.size() <= _operands_num, "User() operands out of range");
     for (const auto &it : operands) {
-      AddValue(it.get());
+      AddValue(it.value());
     }
   }
 
@@ -29,7 +30,7 @@ public:
 
   virtual SSAPtr GetOperand(unsigned i) const {
     DBG_ASSERT(i < _operands_num, "getOperand() out of range");
-    return _operands[i].get();
+    return _operands[i].value();
   }
 
   virtual void SetOperand(unsigned i, const SSAPtr& V) {
@@ -50,7 +51,7 @@ public:
     _operands.erase(
         std::remove_if(_operands.begin(), _operands.end(),
                [&V](const Use &use) {
-                 return use.get().get() == V;
+                 return use.value().get() == V;
                }), _operands.end());
   }
 
@@ -79,6 +80,19 @@ public:
 
   bool empty() const { return _operands.empty(); }
   unsigned size() const { return _operands.size(); }
+
+  // methods for dyn_cast
+  static inline bool classof(User *) { return true; }
+  static inline bool classof(const User *) { return true; }
+  static inline bool classof(const Value *value) {
+    switch (value->classId()) {
+      case ClassId::ArgRefSSAId:
+      case ClassId::ConstantIntId:
+      case ClassId::ConstantStringId: return false;
+      default: return true;
+    }
+  }
+
 };
 }
 

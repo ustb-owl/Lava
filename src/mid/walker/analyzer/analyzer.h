@@ -1,5 +1,5 @@
-#ifndef MIMIC_MID_ANALYZER_H_
-#define MIMIC_MID_ANALYZER_H_
+#ifndef LAVA_MID_ANALYZER_H_
+#define LAVA_MID_ANALYZER_H_
 
 #include <string>
 #include <string_view>
@@ -99,4 +99,4 @@ class Analyzer {
 
 }  // namespace lava::mid
 
-#endif  // MIMIC_MID_ANALYZER_H_
+#endif  // LAVA_MID_ANALYZER_H_

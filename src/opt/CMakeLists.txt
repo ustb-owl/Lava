@@ -1,9 +1,14 @@
 add_library(opt
         pass.cpp
         pass_manager.cpp
+        blkwalker.cpp
+        analysis/dominance.cpp
+        analysis/dominancebase.cpp
+        analysis/postdominance.cpp
         transforms/dge.cpp
+        transforms/dce.cpp
         transforms/hello.cpp
-        transforms/blockmerge.cpp
+        transforms/blocksimp.cpp
         transforms/dirtyarray_conv.cpp
 )
 
