@@ -1,6 +1,6 @@
 #include <define/ast.h>
 #include "ssa.h"
-#include "castssa.h"
+#include "common/casting.h"
 #include "constant.h"
 #include "idmanager.h"
 #include "lib/guard.h"

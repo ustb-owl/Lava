@@ -35,7 +35,7 @@ private:
   FunctionList                 _functions;
   SSAPtrList::iterator         _insert_pos;
   std::stack<front::LoggerPtr> _loggers;
-  std::stack<BreakContPair>        _break_cont;
+  std::stack<BreakContPair>    _break_cont;
   std::deque<int>              _array_lens;
 
   std::unordered_map<std::string, SSAPtr> _origin_array;

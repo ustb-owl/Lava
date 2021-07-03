@@ -2,7 +2,7 @@
 
 #include "opt/pass.h"
 #include "opt/blkwalker.h"
-#include "mid/ir/castssa.h"
+#include "common/casting.h"
 #include "opt/pass_manager.h"
 
 int BlockMerge;
@@ -11,7 +11,7 @@ namespace lava::opt {
 
 /*
  reference from <Engineering a compiler> 10.2.2
-
+ simplify the structure of basic blocks
 */
 class BlockSimplification : public FunctionPass {
 private:

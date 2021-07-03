@@ -30,6 +30,7 @@ add_subdirectory("${LAVA_SOURCE_DIR}/define")
 add_subdirectory("${LAVA_SOURCE_DIR}/front")
 add_subdirectory("${LAVA_SOURCE_DIR}/mid")
 add_subdirectory("${LAVA_SOURCE_DIR}/opt")
+add_subdirectory("${LAVA_SOURCE_DIR}/back")
 add_subdirectory("${LAVA_SOURCE_DIR}/driver")
 
 # executable
@@ -41,6 +42,7 @@ IF (APPLE)
         lava::definelib
         lava::mid
         lava::opt
+        lava::back
         lava::driver
     )
 ELSEIF (UNIX)
@@ -50,6 +52,7 @@ ELSEIF (UNIX)
         lava::definelib
         lava::mid
         lava::opt
+        lava::back
         lava::driver
         -Wl,--end-group
 )

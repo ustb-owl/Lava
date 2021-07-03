@@ -2,7 +2,7 @@
 
 #include "opt/pass.h"
 #include "lib/debug.h"
-#include "mid/ir/castssa.h"
+#include "common/casting.h"
 #include "opt/pass_manager.h"
 
 int DirtyArrayConvert;

@@ -178,6 +178,7 @@ public:
   PassRegisterFactory() {
     auto pass_factory = std::make_shared<PassClassFactory>();
     // make sure PassManager has been created
+    PassManager::GetPassManager();
     DBG_ASSERT(PassManager::GetPassManager() != nullptr, "PassManager hasn't been created");
     PassManager::RegisterPassFactory(pass_factory);
   }

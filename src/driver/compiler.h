@@ -12,16 +12,18 @@
 #include "mid/walker/analyzer/eval.h"
 #include "mid/walker/irbuilder/irbuilder.h"
 #include "opt/pass_manager.h"
+#include "back/codegen.h"
 
 namespace lava::driver {
 
 class Compiler {
 private:
-  front::Lexer    _lexer;
-  front::Parser   _parser;
-  mid::Analyzer   _analysis;
-  mid::Evaluator  _eval;
-  mid::IRBuilder *_irbuilder;
+  front::Lexer         _lexer;
+  front::Parser        _parser;
+  mid::Analyzer        _analysis;
+  mid::Evaluator       _eval;
+  mid::IRBuilder      *_irbuilder;
+  back::CodeGenerator  _codegen;
 
   bool            _dump_ast, _dump_ir;
   bool            _dump_pass_info, _dump_code;
@@ -60,9 +62,12 @@ public:
   // run passes on IR
   void RunPasses();
 
+  // generate code
+  void CodeGeneAction(std::ostream &os);
+
   // setters
   void set_dump_ast(bool dump_ast)   { _dump_ast  = dump_ast;  }
-  void set_dump_yuir(bool dump_yuir) { _dump_ir   = dump_yuir; }
+  void set_dump_ir(bool dump_ir)     { _dump_ir   = dump_ir;   }
   void set_dump_code(bool dump_code) { _dump_code = dump_code; }
 
   void set_dump_pass_info(bool dump_pass_info) {

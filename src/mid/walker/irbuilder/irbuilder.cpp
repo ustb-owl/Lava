@@ -1,5 +1,5 @@
 #include "irbuilder.h"
-#include "mid/ir/castssa.h"
+#include "common/casting.h"
 
 #include <deque>
 #include <iostream>

@@ -5,7 +5,7 @@
 #include <unordered_set>
 
 #include "mid/ir/ssa.h"
-#include "mid/ir/castssa.h"
+#include "common/casting.h"
 
 using namespace lava::mid;
 
