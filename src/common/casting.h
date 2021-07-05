@@ -3,42 +3,42 @@
 
 
 namespace lava {
-template <typename SSA, typename TYPE>
-std::shared_ptr<SSA> dyn_cast(const TYPE &ssa) {
-  if (ssa && SSA::classof(ssa.get())) {
-    auto ptr = std::static_pointer_cast<SSA>(ssa);
-    DBG_ASSERT(ptr != nullptr, "cast SSA failed");
+template <typename CLS, typename TYPE>
+std::shared_ptr<CLS> dyn_cast(const TYPE &ssa) {
+  if (ssa && CLS::classof(ssa.get())) {
+    auto ptr = std::static_pointer_cast<CLS>(ssa);
+    DBG_ASSERT(ptr != nullptr, "cast CLS failed");
     return ptr;
   } else {
     return nullptr;
   }
 }
 
-template <typename SSA, typename TYPE>
-std::shared_ptr<SSA> dyn_cast(TYPE &ssa) {
-  if (ssa && SSA::classof(ssa.get())) {
-    auto ptr = std::static_pointer_cast<SSA>(ssa);
-    DBG_ASSERT(ptr != nullptr, "cast SSA failed");
+template <typename CLS, typename TYPE>
+std::shared_ptr<CLS> dyn_cast(TYPE &ssa) {
+  if (ssa && CLS::classof(ssa.get())) {
+    auto ptr = std::static_pointer_cast<CLS>(ssa);
+    DBG_ASSERT(ptr != nullptr, "cast CLS failed");
     return ptr;
   } else {
     return nullptr;
   }
 }
 
-template <typename SSA, typename TYPE>
+template <typename CLS, typename TYPE>
 bool IsSSA(const TYPE &ssa) {
-  DBG_ASSERT(ssa != nullptr, "SSA is nullptr");
-  if (SSA::classof(ssa.get())) {
+  DBG_ASSERT(ssa != nullptr, "CLS is nullptr");
+  if (CLS::classof(ssa.get())) {
     return true;
   } else {
     return false;
   }
 }
 
-template <typename SSA, typename TYPE>
+template <typename CLS, typename TYPE>
 bool IsSSA(TYPE &ssa) {
-  DBG_ASSERT(ssa != nullptr, "SSA is nullptr");
-  if (SSA::classof(ssa.get())) {
+  DBG_ASSERT(ssa != nullptr, "CLS is nullptr");
+  if (CLS::classof(ssa.get())) {
     return true;
   } else {
     return false;

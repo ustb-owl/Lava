@@ -124,7 +124,7 @@ void DominanceInfo::SolveDominanceFrontier() {
   for (const auto &BB : rpo) {
     if (BB->size() > 1) {
       for (const auto &pred : *BB) {
-        BasicBlock * pred_block = dyn_cast<BasicBlock>(pred.value()).get();
+        BasicBlock * pred_block = dyn_cast<BasicBlock>(pred.data()).get();
         auto runner = pred_block;
         while (runner != info.idom[BB]) {
           info.DF[runner].insert(BB);

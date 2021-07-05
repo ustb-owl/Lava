@@ -12,6 +12,9 @@ void CodeGenerator::CodeGene() {
       auto ll_block = _ll_module.CreateBasicBlock(dyn_cast<mid::BasicBlock>(it.value()), ll_function);
       DBG_ASSERT(ll_block != nullptr, "create low-level block failed");
     }
+
+    // update vreg number
+    ll_function->SetVirtualMax(_ll_module.VirtualMax());
   }
 }
 

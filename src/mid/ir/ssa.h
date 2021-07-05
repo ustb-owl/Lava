@@ -423,7 +423,7 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getters
-  const SSAPtr &value() const { return (*this)[0].value(); }
+  const SSAPtr &data() const { return (*this)[0].value(); }
 
   const SSAPtr &pointer() const { return (*this)[1].value(); }
 
@@ -685,7 +685,7 @@ bool IsBinaryOperator(const SSAPtr &ptr);
 
 
 // element accessing (load effective address)
-// operands: ptr, index1, index2, ...
+// operands: ptr, index1, multiplier, ...
 class AccessInst : public Instruction {
 public:
   enum class AccessType { Pointer, Element };
@@ -704,7 +704,9 @@ public:
   // getter/setter
   AccessType acc_type()      const { return _acc_type;        }
   const SSAPtr &ptr()        const { return (*this)[0].value(); }
+  const SSAPtr &index()      const { return (*this)[1].value(); }
   const SSAPtr &index(int n) const { return (*this)[n].value(); }
+  const SSAPtr &multiplier() const { return (*this)[2].value(); }
   void set_ptr(const SSAPtr &ptr)          { (*this)[0].set(ptr); }
   void set_index(const SSAPtr &idx, int n) { (*this)[n].set(idx); }
 

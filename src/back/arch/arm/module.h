@@ -50,8 +50,21 @@ public:
     SetInsertPoint(BB, BB->inst_end());
   }
 
+  // see https://alisdair.mcdiarmid.org/arm-immediate-value-encoding/
+  inline bool can_encode_imm(int imm) {
+    unsigned encoding = imm;
+    for (int ror = 0; ror < 32; ror += 2) {
+      if (!(encoding & ~0xFFu)) {
+        return true;
+      }
+      encoding = (encoding << 2u) | (encoding >> 30u);
+    }
+    return false;
+  }
+
   /* Creators */
   LLOperandPtr  CreateOperand(const mid::SSAPtr &value);
+  LLOperandPtr  CreateImmediate(int value);
   LLFunctionPtr CreateFunction(const mid::FuncPtr &function);
   LLBlockPtr    CreateBasicBlock(const mid::BlockPtr &block, const LLFunctionPtr& parent);
 

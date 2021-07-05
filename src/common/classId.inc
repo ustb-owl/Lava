@@ -42,6 +42,11 @@ CLASS_ID(88, , LLLoad)
 CLASS_ID(89, , LLStore)
 CLASS_ID(90, , LLCompare)
 CLASS_ID(91, , LLCall)
+CLASS_ID(92, , LLComment)
+CLASS_ID(93, , LLFMA)
+CLASS_ID(94, , LLMLA)
+CLASS_ID(95, , LLMLS)
+
 
 
 #undef CLASS_ID

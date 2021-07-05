@@ -73,6 +73,7 @@ private:
 
 public:
   ArmShift() : _shift(0), _type(ShiftType::None) {}
+  ArmShift(int shift, ShiftType type) : _shift(shift), _type(type) {}
 
   bool is_none() const { return _type == ShiftType::None; }
 
@@ -122,6 +123,8 @@ public:
   mid::FuncPtr function()   const { return _function;    }
   std::size_t virtual_max() const { return _virtual_max; }
   std::size_t stack_size()  const { return _stack_size;  }
+
+  void SetVirtualMax(std::size_t virtual_max) { _virtual_max = virtual_max; }
 
   // classof used for dyn_cast
   CLASSOF(LLFunction)
@@ -220,7 +223,13 @@ public:
     // memory
     Load, Store, Move,
 
-    Compare, Call, Global
+    Compare, Call, Global,
+
+    // FMA
+    MLA, MLS,
+
+    // comment
+    Comment
   };
 
 private:
@@ -388,6 +397,59 @@ public:
     : LLInst(Opcode::Call, ClassId::LLCallId), _function(std::move(function)) {}
 };
 
+// comment
+class LLComment : public LLInst {
+private:
+  std::string _comment;
+
+public:
+  LLComment(const std::string &str) : LLInst(Opcode::Comment, ClassId::LLCommentId) {}
+
+  const std::string &comment() { return _comment; }
+
+  CLASSOF(LLComment)
+  CLASSOF_INST(LLComment)
+};
+
+class LLFMA : public LLInst {
+private:
+  LLOperandPtr _dst;
+  LLOperandPtr _lhs;
+  LLOperandPtr _rhs;
+  LLOperandPtr _acc;
+
+public:
+  LLFMA(Opcode opcode, const LLOperandPtr &dst, const LLOperandPtr &lhs, const LLOperandPtr &rhs, const LLOperandPtr &acc, ClassId classId)
+    : LLInst(opcode, classId), _dst(dst), _lhs(lhs), _rhs(rhs), _acc(acc) {}
+
+  LLOperandPtr dst() { return _dst; }
+  LLOperandPtr lhs() { return _lhs; }
+  LLOperandPtr rhs() { return _rhs; }
+  LLOperandPtr acc() { return _acc; }
+
+  CLASSOF(LLFMA)
+  CLASSOF_INST(LLFMA)
+};
+
+// mla rd, rm, rs, rn <--> rd := (rn + (rm * rs))
+class LLMLA : public LLFMA {
+public:
+  LLMLA(const LLOperandPtr &dst, const LLOperandPtr &lhs, const LLOperandPtr &rhs, const LLOperandPtr &acc)
+    : LLFMA(Opcode::MLA, dst, lhs, rhs, acc, ClassId::LLMLAId) {}
+
+  CLASSOF(LLMLA)
+  CLASSOF_INST(LLMLA)
+};
+
+// mls rd, rm, rs, rn <--> rd := (rn - (rm * rs))
+class LLMLS : public LLFMA {
+public:
+  LLMLS(const LLOperandPtr &dst, const LLOperandPtr &lhs, const LLOperandPtr &rhs, const LLOperandPtr &acc)
+      : LLFMA(Opcode::MLA, dst, lhs, rhs, acc, ClassId::LLMLAId) {}
+
+  CLASSOF(LLMLS)
+  CLASSOF_INST(LLMLS)
+};
 }
 
 #endif //LAVA_INSTDEF_H

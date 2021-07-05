@@ -602,7 +602,7 @@ void BranchInst::Dump(std::ostream &os, IdManager &id_mgr) const {
 void StoreInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   auto guard = InExpr();
   os << xIndent << "store ";
-  DumpWithType(os, id_mgr, value());
+  DumpWithType(os, id_mgr, data());
   os << ", ";
   DumpWithType(os, id_mgr, pointer());
   os << std::endl;

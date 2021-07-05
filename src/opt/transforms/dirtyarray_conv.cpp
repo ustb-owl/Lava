@@ -52,11 +52,11 @@ public:
 
                     // check if alloca is the dst
                     if (store->pointer() == alloca) {
-                      if (store->value()->IsArgument()) {
+                      if (store->data()->IsArgument()) {
                         auto new_type = MakePointer(MakePrimType(Type::Int32, pointeeType->IsRightValue()));
                         new_type = MakePointer(new_type);
                         alloca->set_type(new_type);
-                        store->value()->set_type(alloca->type()->GetDerefedType());
+                        store->data()->set_type(alloca->type()->GetDerefedType());
                       } else {
                         goto out;
                       }
