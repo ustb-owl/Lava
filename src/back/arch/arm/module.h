@@ -64,6 +64,7 @@ public:
 
   /* Creators */
   LLOperandPtr  CreateOperand(const mid::SSAPtr &value);
+  LLOperandPtr  CreateNoImmOperand(const mid::SSAPtr &value);
   LLOperandPtr  CreateImmediate(int value);
   LLFunctionPtr CreateFunction(const mid::FuncPtr &function);
   LLBlockPtr    CreateBasicBlock(const mid::BlockPtr &block, const LLFunctionPtr& parent);

@@ -120,11 +120,13 @@ public:
 
   bool is_decl() const { return _function->is_decl(); }
 
-  mid::FuncPtr function()   const { return _function;    }
-  std::size_t virtual_max() const { return _virtual_max; }
-  std::size_t stack_size()  const { return _stack_size;  }
+  mid::FuncPtr function()   const  { return _function;    }
+  std::size_t virtual_max() const  { return _virtual_max; }
+  std::size_t stack_size()  const  { return _stack_size;  }
+  std::vector<LLBlockPtr> blocks() { return _blocks;      }
 
   void SetVirtualMax(std::size_t virtual_max) { _virtual_max = virtual_max; }
+  void SetStackSize(std::size_t stack_size)   { _stack_size = stack_size;   }
 
   // classof used for dyn_cast
   CLASSOF(LLFunction)
@@ -301,6 +303,30 @@ public:
   CLASSOF_INST(LLMove)
 };
 
+// beq <true_block>
+// b  <false_block>
+class LLBranch : public LLInst {
+private:
+  ArmCond      _arm_cond;
+  LLOperandPtr _cond;
+  LLBlockPtr   _true_block;
+  LLBlockPtr   _false_block;
+
+public:
+  LLBranch(ArmCond arm_cond, LLOperandPtr cond, LLBlockPtr true_block, LLBlockPtr false_block)
+    : LLInst(Opcode::Branch, ClassId::LLBranchId),
+      _arm_cond(arm_cond), _cond(std::move(cond)), _true_block(std::move(true_block)), _false_block(std::move(false_block)) {}
+
+  ArmCond      arm_cond() const { return _arm_cond;    }
+  LLOperandPtr cond()           { return _cond;        }
+  LLBlockPtr   true_block()     { return _true_block;  }
+  LLBlockPtr   false_block()    { return _false_block; }
+
+  CLASSOF(LLBranch)
+  CLASSOF_INST(LLBranch)
+};
+
+// b label
 class LLJump : public LLInst {
 private:
   LLBlockPtr _target;

@@ -9,6 +9,18 @@ void LLModule::reset() {
   _glob_decl.clear();
 }
 
+LLOperandPtr LLModule::CreateNoImmOperand(const mid::SSAPtr &value) {
+  if (auto constValue = dyn_cast<mid::ConstantInt>(value)) {
+    // store the immediate to a register
+    auto dst = LLOperand::Virtual(_virtual_max);
+    auto imm = LLOperand::Immediate(constValue->value());
+    auto mv_inst = AddInst<LLMove>(dst, imm);
+    return dst;
+  } else {
+    return CreateOperand(value);
+  }
+}
+
 LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
   if (auto param = dyn_cast<mid::ArgRefSSA>(value)) {
     const auto &args = _insert_function->function()->args();
@@ -38,6 +50,8 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
 
     DBG_ASSERT(arg != nullptr, "create argument failed");
     return arg;
+  } else if (auto constValue = dyn_cast<mid::ConstantInt>(value)) {
+    return CreateImmediate(constValue->value());
   } else {
     auto it = _value_map.find(value);
     if (it == _value_map.end()) {
@@ -162,6 +176,109 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
         DBG_ASSERT(mla != nullptr, "create mla instruction failed in getelementptr instruction");
       }
       AddInst<LLComment>("create getelementptr end");
+    } else if (auto returnInst = dyn_cast<mid::ReturnInst>(inst)) {
+      if (returnInst->RetVal() != nullptr) {
+        auto ret_value = CreateOperand(returnInst->RetVal());
+
+        // move return value to R0
+        auto r0 = LLOperand::Register(ArmReg::r0);
+        auto move_inst = AddInst<LLMove>(r0, ret_value);
+        DBG_ASSERT(move_inst != nullptr, "create move instruction failed in return instruction");
+
+        // create return instruction
+        AddInst<LLReturn>();
+      } else {
+        AddInst<LLReturn>();
+      }
+    } else if (auto binaryInst = dyn_cast<mid::BinaryOperator>(inst)) {
+
+    } else if (auto branchInst = dyn_cast<mid::BranchInst>(inst)) {
+      auto cond = CreateOperand(branchInst->cond());
+
+      ArmCond armCond = ArmCond::Eq;
+      DBG_ASSERT(_block_map.find(dyn_cast<mid::BasicBlock>(branchInst->true_block())) != _block_map.end(), "can't find true block");
+      auto true_block = _block_map[dyn_cast<mid::BasicBlock>(branchInst->true_block())];
+      DBG_ASSERT(_block_map.find(dyn_cast<mid::BasicBlock>(branchInst->false_block())) != _block_map.end(), "can't find false block");
+      auto false_block = _block_map[dyn_cast<mid::BasicBlock>(branchInst->false_block())];
+
+      auto ll_branch = AddInst<LLBranch>(armCond, cond, true_block, false_block);
+    } else if (auto callInst = dyn_cast<mid::CallInst>(inst)) {
+      std::vector<LLOperandPtr> params;
+
+      // create parameters
+      std::size_t param_size = callInst->param_size();
+      for (int i = 0; i < param_size; i++) {
+        if (i < 4) {
+          // move args to r0-r3
+          auto rhs = CreateOperand(callInst->Param(i));
+          auto dst = LLOperand::Register((ArmReg)i);
+          auto mv_inst = AddInst<LLMove>(dst, rhs);
+          DBG_ASSERT(mv_inst != nullptr, "move param to register failed");
+        } else {
+          // store to [sp - (n - i) * 4]
+
+          // data
+          auto data = CreateNoImmOperand(callInst->Param(i));
+
+          // addr
+          auto addr = LLOperand::Register(ArmReg::sp);
+
+          // offset
+          auto offset = LLOperand::Immediate(-((param_size - i) * 4));
+          auto st_inst = AddInst<LLStore>(data, addr, offset);
+          DBG_ASSERT(st_inst != nullptr, "store parameter(%d) failed in calling %s",
+                     i, dyn_cast<mid::Function>(callInst->Callee())->GetFunctionName().c_str());
+        }
+      }
+
+      // create stack for callee
+      if (param_size > 4) {
+        // sub sp, sp, (n - 4) * 4
+        auto dst = LLOperand::Register(ArmReg::sp);
+        auto lhs = LLOperand::Register(ArmReg::sp);
+        auto rhs = LLOperand::Immediate(4 * (param_size - 4));
+        auto sub_inst = AddInst<LLBinaryInst>(LLInst::Opcode::Sub, dst, lhs, rhs);
+      }
+
+      // create call instruction
+      auto ll_call = AddInst<LLCall>(dyn_cast<mid::Function>(callInst->Callee()));
+      DBG_ASSERT(ll_call != nullptr, "create call instruction failed");
+
+      // recover stack
+      if (param_size > 4) {
+        // add sp, sp, (n - 4) * 4
+        auto dst = LLOperand::Register(ArmReg::sp);
+        auto lhs = LLOperand::Register(ArmReg::sp);
+        auto rhs = LLOperand::Immediate(4 * (param_size - 4));
+        auto sub_inst = AddInst<LLBinaryInst>(LLInst::Opcode::Add, dst, lhs, rhs);
+      }
+
+      // set return value
+      auto callee = dyn_cast<mid::Function>(callInst->Callee());
+      if (!callee->type()->GetReturnType(callee->type()->GetArgsType().value())->IsVoid()) {
+        // move r0 to dst
+        auto dst = CreateOperand(inst);
+        auto r0 = LLOperand::Register(ArmReg::r0);
+        auto mv_inst = AddInst<LLMove>(dst, r0);
+      }
+    } else if (auto allocaInst = dyn_cast<mid::AllocaInst>(inst)) {
+      // get size
+      int size = 4;
+      if (allocaInst->type()->IsArray()) {
+        size = allocaInst->type()->GetSize();
+      }
+
+      // get address on stack
+      auto dst = CreateOperand(inst);
+      auto offset = CreateImmediate(_insert_function->stack_size());
+      auto sp = LLOperand::Register(ArmReg::sp);
+      auto add_inst = AddInst<LLBinaryInst>(LLInst::Opcode::Add, dst, sp, offset);
+
+      // allocate size on sp
+      _insert_function->SetStackSize(_insert_function->stack_size() + size);
+
+    } else {
+      // TODO:
     }
   }
 

@@ -563,7 +563,9 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getter/setter
-  const SSAPtr & Callee() const { return (*this)[0].value(); }
+  const SSAPtr &Callee()     const { return (*this)[0].value();     }
+  const SSAPtr &Param(int i) const { return (*this)[i + 1].value(); }
+  int param_size()           const { return size() - 1;             }
 
   // methods for dyn_cast
   static inline bool classof(CallInst *) { return true; }
@@ -594,7 +596,7 @@ public:
   static unsigned GetNumOperands() { return 2; }
 
   // getter/setter
-  Operator             op()   const { return _op;              }
+  Operator             op()   const { return _op;                }
   const SSAPtr       &LHS()   const { return (*this)[0].value(); }
   const SSAPtr       &RHS()   const { return (*this)[1].value(); }
   std::string         opStr() const;

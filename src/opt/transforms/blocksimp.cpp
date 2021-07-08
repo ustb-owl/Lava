@@ -153,7 +153,7 @@ public:
         auto target = dyn_cast<BasicBlock>(jumpInst->target());
         if (BB->insts().size() == 1) {
           for (auto &it : *BB) {
-            auto pred = dyn_cast<BasicBlock>(it.data());
+            auto pred = dyn_cast<BasicBlock>(it.value());
             ReplaceSuccessor(pred, target, BB);
           }
 

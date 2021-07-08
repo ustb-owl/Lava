@@ -46,6 +46,7 @@ CLASS_ID(92, , LLComment)
 CLASS_ID(93, , LLFMA)
 CLASS_ID(94, , LLMLA)
 CLASS_ID(95, , LLMLS)
+CLASS_ID(96, , LLBranch)
 
 
 
