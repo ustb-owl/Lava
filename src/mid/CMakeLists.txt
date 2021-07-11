@@ -1,7 +1,7 @@
 add_library(mid
         ir/ssa.cpp
         ir/module.cpp
-        ir/idmanager.cpp
+        ../common/idmanager.cpp
         ir/usedef/use.cpp
         ir/usedef/value.cpp
         walker/analyzer/sema.cpp

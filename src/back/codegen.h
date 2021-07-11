@@ -28,6 +28,9 @@ public:
   // generate LLIR
   void CodeGene();
 
+  // dump asm
+  void DumpASM(std::ostream &os) const { _ll_module.DumpASM(os); }
+
   TargetArch targetArch() const { return _target_arch; }
 };
 

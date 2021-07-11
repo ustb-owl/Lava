@@ -63,7 +63,10 @@ public:
   void RunPasses();
 
   // generate code
-  void CodeGeneAction(std::ostream &os);
+  void CodeGeneAction();
+
+  // dump asm
+  void DumpASM(std::ostream &os) const { _codegen.DumpASM(os); }
 
   // setters
   void set_dump_ast(bool dump_ast)   { _dump_ast  = dump_ast;  }

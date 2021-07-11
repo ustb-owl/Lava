@@ -2,7 +2,7 @@
 #include "ssa.h"
 #include "common/casting.h"
 #include "constant.h"
-#include "idmanager.h"
+#include "common/idmanager.h"
 #include "lib/guard.h"
 #include "define/type.h"
 
@@ -418,13 +418,13 @@ inline void DumpBlockName(std::ostream &os, IdManager &id_mgr, const BasicBlock 
     os << name << id_mgr.GetId(block, IdType::_ID_LOOP_BODY);
   } else if (name.find("while.end") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_WHILE_END);
-  } else if (name.find("lhs.true")) {
+  } else if (name.find("lhs.true") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_LHS_TRUE);
-  } else if (name.find("lhs.false")) {
+  } else if (name.find("lhs.false") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_LHS_FALSE);
-  } else if (name.find("land.end")) {
+  } else if (name.find("land.end") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_LAND_END);
-  } else if (name.find("lor.end")) {
+  } else if (name.find("lor.end") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_LOR_END);
   }
   else if (name.find("block") != npos) {

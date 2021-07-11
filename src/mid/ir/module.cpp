@@ -2,7 +2,7 @@
 #include <string>
 #include "module.h"
 #include "constant.h"
-#include "idmanager.h"
+#include "common/idmanager.h"
 
 using namespace lava::define;
 

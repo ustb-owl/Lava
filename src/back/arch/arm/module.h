@@ -62,6 +62,8 @@ public:
     return false;
   }
 
+  void DumpASM(std::ostream &os) const;
+
   /* Creators */
   LLOperandPtr  CreateOperand(const mid::SSAPtr &value);
   LLOperandPtr  CreateNoImmOperand(const mid::SSAPtr &value);

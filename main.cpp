@@ -20,7 +20,8 @@ int main(int argc, char *argv[]) {
   comp.EmitIR();
   comp.RunPasses();
   comp.DumpIR(std::cout);
-  comp.CodeGeneAction(std::cout);
 
+  comp.CodeGeneAction();
+  comp.DumpASM(std::cout);
   return 0;
 }

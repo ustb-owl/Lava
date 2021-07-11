@@ -8,6 +8,9 @@
 #include "mid/ir/ssa.h"
 #include "common/classid.h"
 
+namespace lava {
+class IdManager;
+}
 
 #define CLASSOF(CLS) \
   static inline bool classof(CLS *) { return true; } \
@@ -127,6 +130,7 @@ public:
 
   void SetVirtualMax(std::size_t virtual_max) { _virtual_max = virtual_max; }
   void SetStackSize(std::size_t stack_size)   { _stack_size = stack_size;   }
+  void AddBlock(const LLBlockPtr &block)      { _blocks.push_back(block);   }
 
   // classof used for dyn_cast
   CLASSOF(LLFunction)
@@ -157,11 +161,11 @@ public:
     : _name(std::move(name)), _block(std::move(block)), _parent(std::move(parent)) {}
 
   // getter/setter
-   LLInstList    &insts()           { return _insts;         }
+  LLInstList          &insts()      { return _insts;         }
   LLInstList::iterator inst_begin() { return _insts.begin(); }
   LLInstList::iterator inst_end()   { return _insts.end();   }
-  const LLFunctionPtr &parent()     {return _parent;         }
-
+  const LLFunctionPtr &parent()     { return _parent;        }
+  const std::string   &name() const { return _name;          }
   CLASSOF(LLBasicBlock)
 };
 
@@ -207,7 +211,10 @@ public:
     return std::make_shared<LLOperand>(State::Immediate, n);
   }
 
-  State state() const { return _state; }
+  State  state()            const { return _state;       }
+  ArmReg reg()              const { return _reg;         }
+  std::size_t virtual_num() const { return _virtual_num; }
+  std::size_t imm_num()     const { return _imm_num;     }
 
   CLASSOF(LLOperand)
 };
@@ -262,7 +269,7 @@ private:
 public:
 
   LLBinaryInst(Opcode opcode, LLOperandPtr dst, LLOperandPtr lhs, LLOperandPtr rhs)
-    : LLInst(opcode, ClassId::BinaryOperatorId),
+    : LLInst(opcode, ClassId::LLBinaryInstId),
       _dst(std::move(dst)), _lhs(std::move(lhs)), _rhs(std::move(rhs)) {}
 
   // getter/setter
@@ -421,6 +428,11 @@ private:
 public:
   LLCall(mid::FuncPtr function)
     : LLInst(Opcode::Call, ClassId::LLCallId), _function(std::move(function)) {}
+
+  const mid::FuncPtr &function() { return _function; }
+
+  CLASSOF(LLCall)
+  CLASSOF_INST(LLCall)
 };
 
 // comment
@@ -476,6 +488,14 @@ public:
   CLASSOF(LLMLS)
   CLASSOF_INST(LLMLS)
 };
+
+/* Methods of dumping ASM codes */
+std::ostream &operator<<(std::ostream &os, const LLFunctionPtr &function);
+std::ostream &operator<<(std::ostream &os, const LLBlockPtr &block);
+std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst);
+std::ostream &operator<<(std::ostream &os, const LLOperandPtr &operand);
+std::ostream &operator<<(std::ostream &os, ArmReg armReg);
+std::ostream &operator<<(std::ostream &os, const ArmShift &shift);
 }
 
 #endif //LAVA_INSTDEF_H
