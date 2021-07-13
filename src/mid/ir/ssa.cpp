@@ -244,6 +244,7 @@ ICmpInst::ICmpInst(Operator op, const SSAPtr &lhs, const SSAPtr &rhs)
 AccessInst::AccessInst(AccessType acc_type, const SSAPtr &ptr, const SSAPtrList &indexs)
     : Instruction(Instruction::MemoryOps::Access, 0, ClassId::AccessInstId), _acc_type(acc_type) {
   AddValue(ptr);
+  DBG_ASSERT(indexs.size() <= 2, "index and multiplier out of range");
   for (const auto &it : indexs) {
     AddValue(it);
   }

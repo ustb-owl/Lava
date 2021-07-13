@@ -405,16 +405,17 @@ public:
 // cmp rn, <operand2>
 class LLCompare : public LLInst {
 private:
+  ArmCond      _cond;
   LLOperandPtr _lhs;
   LLOperandPtr _rhs;
-
 public:
-  LLCompare(LLOperandPtr lhs, LLOperandPtr rhs)
+  LLCompare(ArmCond cond, LLOperandPtr lhs, LLOperandPtr rhs)
     : LLInst(Opcode::Compare, ClassId::LLCompareId),
-      _lhs(std::move(lhs)), _rhs(std::move(rhs)) {}
+      _cond(cond), _lhs(std::move(lhs)), _rhs(std::move(rhs)) {}
 
-  LLOperandPtr lhs() { return _lhs; }
-  LLOperandPtr rhs() { return _rhs; }
+  ArmCond      cond() { return _cond; }
+  LLOperandPtr rhs()  { return _rhs;  }
+  LLOperandPtr lhs()  { return _lhs;  }
 
   CLASSOF(LLCompare)
   CLASSOF_INST(LLCompare)
@@ -441,7 +442,8 @@ private:
   std::string _comment;
 
 public:
-  LLComment(const std::string &str) : LLInst(Opcode::Comment, ClassId::LLCommentId) {}
+  LLComment(const std::string &str)
+    : LLInst(Opcode::Comment, ClassId::LLCommentId), _comment(str) {}
 
   const std::string &comment() { return _comment; }
 
@@ -496,6 +498,7 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst);
 std::ostream &operator<<(std::ostream &os, const LLOperandPtr &operand);
 std::ostream &operator<<(std::ostream &os, ArmReg armReg);
 std::ostream &operator<<(std::ostream &os, const ArmShift &shift);
+std::ostream &operator<<(std::ostream &os, const ArmCond &cond);
 }
 
 #endif //LAVA_INSTDEF_H

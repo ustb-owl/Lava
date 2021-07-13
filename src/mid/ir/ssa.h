@@ -219,6 +219,11 @@ public:
   static BinaryPtr createNeg(const SSAPtr &Op);
   static BinaryPtr createNot(const SSAPtr &Op);
 
+  // getter/sertter
+  const SSAPtr &LHS() const { return (*this)[0].value(); }
+  const SSAPtr &RHS() const { return (*this)[1].value(); }
+  BinaryOps opcode()  const { return BinaryOps(Instruction::opcode()); }
+
   // methods for dyn_cast
   static inline bool classof(BinaryOperator *) { return true; }
   static inline bool classof(const BinaryOperator *) { return true; }
@@ -711,6 +716,8 @@ public:
   const SSAPtr &multiplier() const { return (*this)[2].value(); }
   void set_ptr(const SSAPtr &ptr)          { (*this)[0].set(ptr); }
   void set_index(const SSAPtr &idx, int n) { (*this)[n].set(idx); }
+
+  bool has_multiplier() const { return this->size() == 3; }
 
   // methods for dyn_cast
   static inline bool classof(AccessInst *) { return true; }

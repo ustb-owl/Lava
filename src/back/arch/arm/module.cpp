@@ -6,7 +6,7 @@
 #define TAB          "\t"
 #define SPACE        " "
 #define TWO_SPACE    "  "
-#define INDENT       "\t\t"
+#define INDENT       "\t"
 #define TYPE_LABEL   ".type"
 #define GLOBAL_LABEL ".global"
 #define FUNC_TYPE    "%function"
@@ -135,7 +135,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       /* STORE */
       // create operands of store
       // store data, pointer
-      auto data = CreateOperand(storeInst->data());
+      auto data = CreateNoImmOperand(storeInst->data());
       DBG_ASSERT(data != nullptr, "create data failed in StoreInst");
       auto pointer = CreateOperand(storeInst->pointer());
       DBG_ASSERT(pointer != nullptr, "create pointer failed in StoreInst");
@@ -151,8 +151,13 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       auto ptr = CreateOperand(gepInst->ptr());
       DBG_ASSERT(ptr != nullptr, "create pointer in getelementptr instruction failed");
 
-      auto multiplier = dyn_cast<mid::ConstantInt>(gepInst->multiplier());
-      DBG_ASSERT(multiplier != nullptr, "create multiplier in getelementptr instruction failed");
+      std::shared_ptr<ConstantInt> multiplier = nullptr;
+      if (gepInst->has_multiplier()){
+        multiplier = dyn_cast<mid::ConstantInt>(gepInst->multiplier());
+      } else {
+        multiplier = std::make_shared<mid::ConstantInt>(1);
+      }
+      DBG_ASSERT(multiplier, "create multiplier failed in getelementptr instruction failed");
 
       // try to get const index
       auto constIdx = dyn_cast<mid::ConstantInt>(gepInst->index());
@@ -177,7 +182,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
         auto add_inst = AddInst<LLBinaryInst>(LLInst::Opcode::Add, dst, ptr, index);
         DBG_ASSERT(add_inst != nullptr, "create add instruction failed in getelementptr instruction");
         ArmShift shift(__builtin_ctz(multiplier->value()), ArmShift::ShiftType::Lsl);
-        add_inst->setShift(shift);
+        if (shift.shift() != 0) add_inst->setShift(shift);
       } else {
         // dst <- ptr
         auto index = CreateOperand(gepInst->index());
@@ -206,6 +211,57 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
         AddInst<LLReturn>();
       }
     } else if (auto binaryInst = dyn_cast<mid::BinaryOperator>(inst)) {
+      AddInst<LLComment>("--- binary here ---");
+
+
+      // TODO: generate binary instruction
+      using LLOpcode  = LLInst::Opcode;
+      using BinaryOps = BinaryOperator::BinaryOps;
+
+      BinaryOps opcode = binaryInst->opcode();
+      auto lhs = CreateNoImmOperand(binaryInst->LHS());
+      DBG_ASSERT(lhs != nullptr, "create lhs failed in binary instruction");
+      LLOperandPtr rhs = nullptr;
+      if (binaryInst->opcode() == BinaryOps::Mul ||
+          binaryInst->opcode() == BinaryOps::SDiv) {
+        rhs = CreateNoImmOperand(binaryInst->RHS());
+      } else {
+        rhs = CreateOperand(binaryInst->RHS());
+      }
+      DBG_ASSERT(rhs != nullptr, "create rhs failed in binary instruction");
+
+      LLOpcode bin_op;
+      switch (opcode) {
+        case BinaryOps::Add:  bin_op = LLOpcode::Add;  break;
+        case BinaryOps::Sub:  bin_op = LLOpcode::Sub;  break;
+        case BinaryOps::Mul:  bin_op = LLOpcode::Mul;  break;
+        case BinaryOps::SDiv: bin_op = LLOpcode::SDiv; break;
+        case BinaryOps::And:  bin_op = LLOpcode::And;  break;
+        case BinaryOps::Or:   bin_op = LLOpcode::Or;   break;
+        case BinaryOps::Xor:  bin_op = LLOpcode::Xor;  break;
+        case BinaryOps::Shl:  bin_op = LLOpcode::Shl;  break;
+        case BinaryOps::AShr: bin_op = LLOpcode::AShr; break;
+        case BinaryOps::LShr: bin_op = LLOpcode::LShr; break;
+        case BinaryOps::SRem: bin_op = LLOpcode::SRem; break;
+        default: ERROR("should not reach here");
+      }
+
+
+      // convert mod to sdiv and sub
+      // c = b % a
+      // sdiv r0, r1, r2
+      // mls r0, r0, r2, r1
+      // r1 - ((r1 / r2) * r2)
+      if (bin_op == LLOpcode::SRem) {
+        auto dst = CreateOperand(inst);
+        auto sdiv = AddInst<LLBinaryInst>(LLOpcode::SDiv, dst, lhs, rhs);
+        auto mls = AddInst<LLMLS>(dst, dst, rhs, lhs);
+        DBG_ASSERT(mls != nullptr, "create mod instruction failed");
+      } else {
+        auto dst = CreateOperand(inst);
+        auto bin_inst = AddInst<LLBinaryInst>(bin_op, dst, lhs, rhs);
+        DBG_ASSERT(bin_inst != nullptr, "create binary instruction failed");
+      }
 
     } else if (auto branchInst = dyn_cast<mid::BranchInst>(inst)) {
       auto cond = CreateOperand(branchInst->cond());
@@ -281,8 +337,8 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
     } else if (auto allocaInst = dyn_cast<mid::AllocaInst>(inst)) {
       // get size
       int size = 4;
-      if (allocaInst->type()->IsArray()) {
-        size = allocaInst->type()->GetSize();
+      if (allocaInst->type()->GetDerefedType()->IsArray()) {
+        size *= allocaInst->type()->GetDerefedType()->GetLength();
       }
 
       // get address on stack
@@ -294,6 +350,25 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       // allocate size on sp
       _insert_function->SetStackSize(_insert_function->stack_size() + size);
 
+    } else if (auto icmp_inst = dyn_cast<mid::ICmpInst>(inst)) {
+      ArmCond cond = ArmCond::Any;
+      auto lhs = CreateOperand(icmp_inst->LHS());
+      auto rhs = CreateOperand(icmp_inst->RHS());
+
+      switch (icmp_inst->op()) {
+        case front::Operator::SLess:
+        case front::Operator::ULess:    cond = ArmCond::Lt; break;
+        case front::Operator::SGreat:
+        case front::Operator::UGreat:   cond = ArmCond::Gt; break;
+        case front::Operator::SLessEq:
+        case front::Operator::ULessEq:  cond = ArmCond::Le; break;
+        case front::Operator::SGreatEq:
+        case front::Operator::UGreatEq: cond = ArmCond::Ge; break;
+        default:
+          ERROR("should not reach here");
+      }
+
+      auto ll_cmp = AddInst<LLCompare>(cond, lhs, rhs);
     } else {
       // TODO:
     }
@@ -385,9 +460,24 @@ std::ostream &operator<<(std::ostream &os, const LLBlockPtr &block) {
 std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
   auto guard = InInst();
   if (auto mv_inst = dyn_cast<LLMove>(inst)) {
-    os << INDENT << "mov" << TAB
-       << mv_inst->dst() << "," << SPACE << mv_inst->src()
-       << mv_inst->shift();
+    // limit of ARM immediate number
+    // https://stackoverflow.com/questions/10261300/invalid-constant-after-fixup
+    if ((mv_inst->src()->state() == LLOperand::State::Immediate) &&
+        !LLModule::can_encode_imm(mv_inst->src()->imm_num())) {
+      auto imm = mv_inst->src()->imm_num();
+      if ((uint32_t)imm >> 16u == 0) {
+        os << INDENT << "movw" << TAB
+           << mv_inst->dst() << ","<< SPACE <<"#" << imm;
+      } else {
+        // wider than 16 bits
+        os << INDENT << "ldr" << TAB
+           << mv_inst->dst() << "," << SPACE <<"=" << imm;
+      }
+    } else {
+      os << INDENT << "mov" << TAB
+         << mv_inst->dst() << "," << SPACE << mv_inst->src()
+         << mv_inst->shift();
+    }
   } else if (auto load_inst = dyn_cast<LLLoad>(inst)) {
     os << INDENT << "ldr" << TAB
        << load_inst->dst() << "," << SPACE
@@ -442,6 +532,16 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
     if (!binary_inst->shift().is_none()) {
       os << "," << SPACE << binary_inst->shift();
     }
+  } else if (auto cmp_inst = dyn_cast<LLCompare>(inst)) {
+    os << INDENT << "cmp" << cmp_inst->cond() << TAB;
+    os << cmp_inst->lhs() << "," << SPACE << cmp_inst->rhs();
+  } else if (auto mla_inst = dyn_cast<LLMLA>(inst)) {
+    os << INDENT << "mla" << TAB << mla_inst->dst()
+       << "," << SPACE << mla_inst->lhs()
+       << "," << SPACE << mla_inst->rhs()
+       << "," << SPACE << mla_inst->acc();
+  } else if (auto comment = dyn_cast<LLComment>(inst)) {
+    os << '@' << SPACE << comment->comment();
   }
 
   return os;
@@ -490,6 +590,28 @@ std::ostream &operator<<(std::ostream &os, const ArmReg armReg) {
 }
 
 std::ostream &operator<<(std::ostream &os, const ArmShift &shift) {
+  switch (shift.type()) {
+    case ArmShift::ShiftType::None: /* nil */ return os;
+    case ArmShift::ShiftType::Asr: os << "asr"; break;
+    case ArmShift::ShiftType::Lsl: os << "lsl"; break;
+    case ArmShift::ShiftType::Lsr: os << "lsr"; break;
+    case ArmShift::ShiftType::Ror: os << "ror"; break;
+    case ArmShift::ShiftType::Rrx: os << "rrx"; break;
+  }
+  os << SPACE << shift.shift();
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const ArmCond &cond) {
+  switch (cond) {
+    case ArmCond::Any: /* nil */  break;
+    case ArmCond::Eq: os << "eq"; break;
+    case ArmCond::Ne: os << "ne"; break;
+    case ArmCond::Ge: os << "ge"; break;
+    case ArmCond::Gt: os << "gt"; break;
+    case ArmCond::Le: os << "le"; break;
+    case ArmCond::Lt: os << "lt"; break;
+  }
   return os;
 }
 

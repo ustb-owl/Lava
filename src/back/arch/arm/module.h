@@ -51,7 +51,7 @@ public:
   }
 
   // see https://alisdair.mcdiarmid.org/arm-immediate-value-encoding/
-  inline bool can_encode_imm(int imm) {
+  static inline bool can_encode_imm(int imm) {
     unsigned encoding = imm;
     for (int ror = 0; ror < 32; ror += 2) {
       if (!(encoding & ~0xFFu)) {
