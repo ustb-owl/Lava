@@ -62,6 +62,8 @@ public:
     return false;
   }
 
+  void ClearVirtualMax() { _virtual_max = 0; }
+
   void DumpASM(std::ostream &os) const;
 
   /* Creators */
@@ -87,6 +89,14 @@ public:
   const_iterator        end()   const  { return _functions.end();   }
 
 };
+
+/* Methods of dumping ASM codes */
+std::ostream &operator<<(std::ostream &os, const LLFunctionPtr &function);
+std::ostream &operator<<(std::ostream &os, const LLBlockPtr &block);
+std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst);
+std::ostream &operator<<(std::ostream &os, const LLOperandPtr &operand);
+std::ostream &operator<<(std::ostream &os, ArmReg armReg);
+
 }
 
 #endif //LAVA_BACK_MODULE_H

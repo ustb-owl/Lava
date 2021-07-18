@@ -66,7 +66,9 @@ ASTPtr Compiler::PreBuild() {
 
 void Compiler::CodeGeneAction() {
   _codegen.SetModule(&_irbuilder->module());
+  _codegen.RegisterPasses();
   _codegen.CodeGene();
+  _codegen.RunPasses();
 }
 
 }

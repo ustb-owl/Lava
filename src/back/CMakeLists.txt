@@ -1,7 +1,10 @@
 add_library(back
+        slot.cpp
         codegen.cpp
-        arch/arm/instdef.cpp
         arch/arm/module.cpp
+        arch/arm/instdef.cpp
+        passes/spill.cpp
+        passes/fastalloc.cpp
 )
 
 target_compile_features(back PUBLIC cxx_std_17)

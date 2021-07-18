@@ -55,6 +55,7 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
           auto vreg = LLOperand::Virtual(_virtual_max);
           auto addr = LLOperand::Register(ArmReg::sp);
           auto load_arg = AddInst<LLLoad>(vreg, addr, offset);
+          arg = vreg;
         }
         break;
       }
@@ -364,6 +365,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
         case front::Operator::ULessEq:  cond = ArmCond::Le; break;
         case front::Operator::SGreatEq:
         case front::Operator::UGreatEq: cond = ArmCond::Ge; break;
+        case front::Operator::NotEqual: cond = ArmCond::Ne; break;
         default:
           ERROR("should not reach here");
       }
@@ -390,10 +392,13 @@ xstl::Guard InInst() {
 
 void LLModule::DumpASM(std::ostream &os) const {
   // TODO: dump head
+  os << ".arch" << SPACE << "armv7ve" << std::endl;
+  os << ".section" << SPACE << ".text" << std::endl;
+  os << std::endl;
 
-  std::string indent = "\t";
   // dump function
   for (const auto &function : _functions) {
+    if (function->is_decl()) continue;
     os << function << std::endl;
     id_mgr.Reset();
   }
@@ -492,6 +497,7 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
     os << INDENT << "b" << TAB
        << jump_inst->target();
   } else if (auto ret_inst = dyn_cast<LLReturn>(inst)) {
+//    os << INDENT << ""
     // TODO:
   } else if (auto store_inst = dyn_cast<LLStore>(inst)) {
     os << INDENT << "str" << TAB
@@ -553,9 +559,6 @@ std::ostream &operator<<(std::ostream &os, const LLOperandPtr &operand) {
       os << operand->reg();
       break;
     }
-    case LLOperand::State::Allocated: {
-      break;
-    }
     case LLOperand::State::Virtual: {
       os << "v" << operand->virtual_num();
       break;
@@ -563,6 +566,7 @@ std::ostream &operator<<(std::ostream &os, const LLOperandPtr &operand) {
     case LLOperand::State::Immediate:
       os << "#" << operand->imm_num();
       break;
+    default: break;
   }
   return os;
 }

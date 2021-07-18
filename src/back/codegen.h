@@ -1,7 +1,7 @@
 #ifndef LAVA_CODEGEN_H
 #define LAVA_CODEGEN_H
 
-#include "arch/arm/module.h"
+#include "passes/pass.h"
 #include "mid/ir/module.h"
 
 namespace lava::back {
@@ -13,9 +13,10 @@ enum class TargetArch {
 // consume IR and generate
 class CodeGenerator {
 private:
-  TargetArch   _target_arch;
-  mid::Module*  _module;
-  LLModule     _ll_module;
+  TargetArch            _target_arch;
+  mid::Module*          _module;
+  LLModule              _ll_module;
+  std::vector<PassPtr>  _passes;
 
 public:
   CodeGenerator() : _target_arch(TargetArch::ARM), _module(nullptr) {}
@@ -25,8 +26,15 @@ public:
   // set IR module
   void SetModule(mid::Module *module) { _module = module; }
 
+  LLModule &GetLLModule() { return _ll_module; }
+
   // generate LLIR
   void CodeGene();
+
+  // register passes
+  void RegisterPasses();
+
+  void RunPasses();
 
   // dump asm
   void DumpASM(std::ostream &os) const { _ll_module.DumpASM(os); }

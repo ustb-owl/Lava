@@ -104,6 +104,7 @@ using LLFunctionPtr = std::shared_ptr<LLFunction>;
 using LLInstPtr     = std::shared_ptr<LLInst>;
 using LLOperandPtr  = std::shared_ptr<LLOperand>;
 using LLInstList    = std::list<LLInstPtr>;
+using LLOperandList = std::vector<LLOperandPtr>;
 
 class LLFunction {
 private:
@@ -175,27 +176,25 @@ public:
     RealReg,
     Allocated,
     Virtual,
-    Immediate
+    Immediate,
   };
 
 private:
-  State       _state;       // state of operand
-  ArmReg      _reg;         // which register (state is RealReg)
-  std::size_t _virtual_num; // virtual register num (state is Virtual)
-  std::size_t _imm_num;     // number of immediate num (state is immediate)
+  State        _state;       // state of operand
+  ArmReg       _reg;         // which register (state is RealReg)
+  std::size_t  _virtual_num; // virtual register num (state is Virtual)
+  int          _imm_num;     // number of immediate num (state is Immediate)
+  LLOperandPtr _allocated;   // allocation result (state is virtual)
 
 public:
   LLOperand(State state)
-    : _state(state), _virtual_num(-1), _imm_num(-1) {}
+    : _state(state), _virtual_num(-1), _imm_num(-1), _allocated(nullptr) {}
 
-  LLOperand(State state, int n) : _state(state) {
-    switch (state) {
-      case State::Immediate: _imm_num = n;                  break;
-      case State::Virtual:   _virtual_num = n;              break;
-      case State::RealReg:   _reg = static_cast<ArmReg>(n); break;
-      default: break;
-    }
-  }
+  LLOperand(State state, int n);
+
+  bool IsVirtual()   const { return _state == State::Virtual;   }
+  bool IsRealReg()   const { return _state == State::RealReg;   }
+  bool IsImmediate() const { return _state == State::Immediate; }
 
   inline static LLOperandPtr Register(ArmReg reg) {
     auto n = (int)reg;
@@ -211,10 +210,18 @@ public:
     return std::make_shared<LLOperand>(State::Immediate, n);
   }
 
-  State  state()            const { return _state;       }
-  ArmReg reg()              const { return _reg;         }
-  std::size_t virtual_num() const { return _virtual_num; }
-  std::size_t imm_num()     const { return _imm_num;     }
+  void set_allocated(const LLOperandPtr &allocated) {
+    DBG_ASSERT(_state == State::Virtual, "this is not virtual reg");
+    _allocated = allocated;
+  }
+
+  void ReplaceWith(const LLOperandPtr &V);
+
+  State        state()       const { return _state;       }
+  ArmReg       reg()         const { return _reg;         }
+  int          imm_num()     const { return _imm_num;     }
+  std::size_t  virtual_num() const { return _virtual_num; }
+  LLOperandPtr allocated()   const { return _allocated;   }
 
   CLASSOF(LLOperand)
 };
@@ -250,10 +257,19 @@ public:
   explicit LLInst(Opcode opcode, ClassId id = ClassId::LLInstId)
     : _opcode(opcode), _class_id(id) {}
 
+  virtual ~LLInst() {}
+
   Opcode opcode() const { return _opcode; }
   LLBlockPtr &parent()  { return _block;  }
 
   void SetParent(const LLBlockPtr &parent) { _block = parent; }
+
+  virtual LLOperandList  operands() = 0;
+  virtual LLOperandPtr       dest() { return nullptr; };
+  virtual void set_dst(const LLOperandPtr &dst) { };
+  virtual void set_operand(const LLOperandPtr &opr, std::size_t index) {
+    ERROR("should not reach here");
+  }
 
   ClassId classId() const { return _class_id; }
   CLASSOF(LLInst)
@@ -277,6 +293,14 @@ public:
   const LLOperandPtr &lhs() { return _lhs;   }
   const LLOperandPtr &rhs() { return _rhs;   }
   ArmShift shift()    const { return _shift; }
+
+  LLOperandList operands() final;
+  LLOperandPtr dest() final { return dst(); }
+  void set_dst(const LLOperandPtr &dst) final {
+    _dst = dst;
+  }
+
+  void set_operand(const LLOperandPtr &opr, std::size_t index) override;
 
   void setShift(ArmShift shift) { _shift = shift; }
   void setShiftNum(int num) { _shift.setShift(num); }
@@ -306,6 +330,13 @@ public:
   void setShiftNum(int num)                   { _shift.setShift(num); }
   void setShiftType(ArmShift::ShiftType type) { _shift.setType(type); }
 
+  LLOperandList operands() final;
+  LLOperandPtr dest() final { return dst(); }
+  void set_operand(const LLOperandPtr &opr, std::size_t index) override;
+  void set_dst(const LLOperandPtr &dst) final {
+    _dst = dst;
+  }
+
   CLASSOF(LLMove)
   CLASSOF_INST(LLMove)
 };
@@ -329,6 +360,9 @@ public:
   LLBlockPtr   true_block()     { return _true_block;  }
   LLBlockPtr   false_block()    { return _false_block; }
 
+  LLOperandList operands() final;
+  void set_operand(const LLOperandPtr &opr, std::size_t index) override;
+
   CLASSOF(LLBranch)
   CLASSOF_INST(LLBranch)
 };
@@ -344,6 +378,8 @@ public:
 
   LLBlockPtr target() { return _target; }
 
+  LLOperandList operands() final { return LLOperandList(); }
+
   CLASSOF(LLJump)
   CLASSOF_INST(LLJump)
 };
@@ -353,6 +389,8 @@ class LLReturn : public LLInst {
 public:
   LLReturn()
     : LLInst(Opcode::Return, ClassId::LLReturnId) {}
+
+  LLOperandList operands() final { return LLOperandList(); }
 
   CLASSOF(LLReturn)
   CLASSOF_INST(LLReturn)
@@ -373,6 +411,13 @@ public:
   LLOperandPtr dst()    { return _dst;    }
   LLOperandPtr addr()   { return _addr;   }
   LLOperandPtr offset() { return _offset; }
+
+  LLOperandPtr  dest()     final { return dst(); }
+  LLOperandList operands() final;
+  void set_operand(const LLOperandPtr &opr, std::size_t index) override;
+  void set_dst(const LLOperandPtr &dst) final {
+    _dst = dst;
+  }
 
   void SetDst(const LLOperandPtr &dst)       { _dst    = dst;    }
   void SetAddr(const LLOperandPtr &addr)     { _addr   = addr;   }
@@ -398,6 +443,9 @@ public:
   LLOperandPtr addr()   { return _addr;   }
   LLOperandPtr offset() { return _offset; }
 
+  LLOperandList operands() final;
+  void set_operand(const LLOperandPtr &opr, std::size_t index) override;
+
   CLASSOF(LLStore)
   CLASSOF_INST(LLStore)
 };
@@ -417,6 +465,9 @@ public:
   LLOperandPtr rhs()  { return _rhs;  }
   LLOperandPtr lhs()  { return _lhs;  }
 
+  LLOperandList operands() final;
+  void set_operand(const LLOperandPtr &opr, std::size_t index) override;
+
   CLASSOF(LLCompare)
   CLASSOF_INST(LLCompare)
 };
@@ -430,7 +481,8 @@ public:
   LLCall(mid::FuncPtr function)
     : LLInst(Opcode::Call, ClassId::LLCallId), _function(std::move(function)) {}
 
-  const mid::FuncPtr &function() { return _function; }
+  const mid::FuncPtr &function() { return _function;       }
+  LLOperandList operands() final { return LLOperandList(); }
 
   CLASSOF(LLCall)
   CLASSOF_INST(LLCall)
@@ -445,7 +497,8 @@ public:
   LLComment(const std::string &str)
     : LLInst(Opcode::Comment, ClassId::LLCommentId), _comment(str) {}
 
-  const std::string &comment() { return _comment; }
+  const std::string &comment()   { return _comment; }
+  LLOperandList operands() final { return LLOperandList(); }
 
   CLASSOF(LLComment)
   CLASSOF_INST(LLComment)
@@ -467,6 +520,13 @@ public:
   LLOperandPtr rhs() { return _rhs; }
   LLOperandPtr acc() { return _acc; }
 
+  LLOperandList operands() override;
+  LLOperandPtr dest() override { return dst(); }
+  void set_operand(const LLOperandPtr &opr, std::size_t index) override;
+  void set_dst(const LLOperandPtr &dst) override {
+    _dst = dst;
+  }
+
   CLASSOF(LLFMA)
   CLASSOF_INST(LLFMA)
 };
@@ -476,6 +536,17 @@ class LLMLA : public LLFMA {
 public:
   LLMLA(const LLOperandPtr &dst, const LLOperandPtr &lhs, const LLOperandPtr &rhs, const LLOperandPtr &acc)
     : LLFMA(Opcode::MLA, dst, lhs, rhs, acc, ClassId::LLMLAId) {}
+
+  LLOperandPtr dest() final { return LLFMA::dst(); }
+  LLOperandList operands() override { return LLFMA::operands(); }
+
+  void set_operand(const LLOperandPtr &opr, std::size_t index) override {
+    LLFMA::set_operand(opr, index);
+  }
+
+  void set_dst(const LLOperandPtr &dst) final {
+    LLFMA::set_dst(dst);
+  }
 
   CLASSOF(LLMLA)
   CLASSOF_INST(LLMLA)
@@ -487,18 +558,23 @@ public:
   LLMLS(const LLOperandPtr &dst, const LLOperandPtr &lhs, const LLOperandPtr &rhs, const LLOperandPtr &acc)
       : LLFMA(Opcode::MLA, dst, lhs, rhs, acc, ClassId::LLMLAId) {}
 
+  LLOperandPtr dest() final { return LLFMA::dst(); }
+  LLOperandList operands() override { return LLFMA::operands(); }
+
+  void set_operand(const LLOperandPtr &opr, std::size_t index) override {
+    LLFMA::set_operand(opr, index);
+  }
+
+  void set_dst(const LLOperandPtr &dst) final {
+    LLFMA::set_dst(dst);
+  }
+
   CLASSOF(LLMLS)
   CLASSOF_INST(LLMLS)
 };
 
-/* Methods of dumping ASM codes */
-std::ostream &operator<<(std::ostream &os, const LLFunctionPtr &function);
-std::ostream &operator<<(std::ostream &os, const LLBlockPtr &block);
-std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst);
-std::ostream &operator<<(std::ostream &os, const LLOperandPtr &operand);
-std::ostream &operator<<(std::ostream &os, ArmReg armReg);
-std::ostream &operator<<(std::ostream &os, const ArmShift &shift);
-std::ostream &operator<<(std::ostream &os, const ArmCond &cond);
+
+
 }
 
 #endif //LAVA_INSTDEF_H

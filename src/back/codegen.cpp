@@ -1,7 +1,11 @@
 #include "codegen.h"
 #include "common/casting.h"
+#include "back/passes/spill.h"
+#include "back/passes/fastalloc.h"
 
-namespace lava::back{
+#include <iostream>
+
+namespace lava::back {
 
 
 void CodeGenerator::CodeGene() {
@@ -15,7 +19,24 @@ void CodeGenerator::CodeGene() {
 
     // update vreg number
     ll_function->SetVirtualMax(_ll_module.VirtualMax());
+    _ll_module.ClearVirtualMax();
   }
+}
+
+void CodeGenerator::RunPasses() {
+  DumpASM(std::cout);
+  for (const auto &pass : _passes) {
+    for (const auto &function : _ll_module.Functions()) {
+      pass->runOn(function);
+    }
+  }
+}
+
+void CodeGenerator::RegisterPasses() {
+  auto spill = std::make_shared<Spill>(_ll_module);
+  auto fast_alloc = std::make_shared<FastAllocation>(_ll_module);
+  _passes.push_back(fast_alloc);
+  _passes.push_back(spill);
 }
 
 }
