@@ -183,14 +183,18 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
 
       SSAPtr init_expr;
       auto init_ssa = init->CodeGeneAction(this);
-      auto def = init_ssa->type()->GetDerefedType();
-      if (def && def->IsArray()) {
-        init_expr = init_ssa;
-        var->set_type(init_ssa->type());
+      if (init_ssa == nullptr) {
+        init_expr = nullptr;
       } else {
-        init_expr = _module.CreateCastInst(init_ssa, type);
+        auto def = init_ssa->type()->GetDerefedType();
+        if (def && def->IsArray()) {
+          init_expr = init_ssa;
+          var->set_type(init_ssa->type());
+        } else {
+          init_expr = _module.CreateCastInst(init_ssa, type);
+        }
       }
-      DBG_ASSERT(init_expr != nullptr, "emit init of global variable failed");
+//      DBG_ASSERT(init_expr != nullptr, "emit init of global variable failed");
       var->set_init(init_expr);
     } else {
       if (type->IsArray()) {
@@ -289,6 +293,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
 
     /* handle empty initial list */
     if (node->exprs().empty()) {
+      if (is_root) return nullptr;
       isEmpty = true;
 
       // init array with const zero
@@ -304,6 +309,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
       /* create a global const array if this is a global array */
       // add to global symbol table
       if (is_root) {
+
         // generate new type of linear array
         auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
         const_array = _module.CreateArray(exprs, new_type, arr_name);
@@ -472,7 +478,8 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     auto lhs_true = _module.CreateBlock(func, "lhs.true");
     auto lhs_false = _module.CreateBlock(func, "lhs.false");
     auto land_end = _module.CreateBlock(func, "land.end");
-    _module.CreateBranch(lhs, lhs_true, lhs_false);
+    auto cond = _module.CreateICmpInst(BinaryStmt::Operator::NotEqual, zero, lhs);
+    _module.CreateBranch(cond, lhs_true, lhs_false);
 
     /* LHS true */
     // generate rhs in lhs_true block
@@ -518,7 +525,8 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     auto lhs_true = _module.CreateBlock(func, "lhs.true");
     auto lhs_false = _module.CreateBlock(func, "lhs.false");
     auto lor_end = _module.CreateBlock(func, "lor.end");
-    _module.CreateBranch(lhs, lhs_true, lhs_false);
+    auto cond = _module.CreateICmpInst(BinaryStmt::Operator::NotEqual, zero, lhs);
+    _module.CreateBranch(cond, lhs_true, lhs_false);
 
     /* LHS false */
     _module.SetInsertPoint(lhs_false);
