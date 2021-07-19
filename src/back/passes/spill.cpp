@@ -57,7 +57,7 @@ void Spill::runOn(const LLFunctionPtr &func) {
       /* ------ spill dst ------ */
       auto dst = inst->dest();
       if ((dst != nullptr) && dst->IsVirtual()) {
-        auto tmp = GetTmpReg(mask);
+        auto tmp = LLOperand::Register(ArmReg::r12);
         InsertStoreInst(it, dst->allocated(), tmp);
         inst->set_dst(tmp);
       }
@@ -71,11 +71,14 @@ LLOperandPtr Spill::GetTmpReg(std::uint32_t &reg_mask) {
   if (!(reg_mask & (1 << static_cast<int>(ArmReg::r12)))) {
     reg_mask |= 1 << static_cast<int>(ArmReg::r12);
     temp = LLOperand::Register(ArmReg::r12);
+  } else if (!(reg_mask & (1 << static_cast<int>(ArmReg::r3)))) {
+    reg_mask |= 1 << static_cast<int>(ArmReg::r3);
+    temp = LLOperand::Register(ArmReg::r3);
   } else if (!(reg_mask & (1 << static_cast<int>(ArmReg::r10)))) {
     reg_mask |= 1 << static_cast<int>(ArmReg::r10);
     temp = LLOperand::Register(ArmReg::r10);
   }
-  DBG_ASSERT(temp != nullptr, "get tmp register(r10/r12) failed");
+  DBG_ASSERT(temp != nullptr, "get tmp register(r3/r10/r12) failed");
   return temp;
 }
 
@@ -98,14 +101,14 @@ void Spill::InsertLoadInst(LLInstList::iterator &it,
 
   // set insert point
   _module.SetInsertPoint(_cur_block, it);
-  _module.AddInst<LLComment>("load virtual register from memory");
+//  _module.AddInst<LLComment>("load virtual register from memory");
 
   // create operand
   DBG_ASSERT(slot->IsImmediate(), "slot offset is not immediate number");
-  auto fp = LLOperand::Register(ArmReg::fp);
+  auto sp = LLOperand::Register(ArmReg::sp);
 
   // create load instruction
-  auto load_inst = _module.AddInst<LLLoad>(dst, fp, slot);
+  auto load_inst = _module.AddInst<LLLoad>(dst, sp, slot);
   DBG_ASSERT(load_inst, "create load instruction failed");
 
 //  it = _module.InsertPos();
@@ -116,13 +119,13 @@ void Spill::InsertStoreInst(LLInstList::iterator &it,
 
   // set insert point
   _module.SetInsertPoint(_cur_block, ++it);
-  _module.AddInst<LLComment>("store virtual register into memory");
+//  _module.AddInst<LLComment>("store virtual register into memory");
 
   // create operand
   DBG_ASSERT(slot->IsImmediate(), "slot offset is not immediate number");
-  auto fp = LLOperand::Register(ArmReg::fp);
+  auto sp = LLOperand::Register(ArmReg::sp);
 
-  auto store_inst = _module.AddInst<LLStore>(tmp, fp, slot);
+  auto store_inst = _module.AddInst<LLStore>(tmp, sp, slot);
   DBG_ASSERT(store_inst, "create store instruction failed");
 
   it = --_module.InsertPos();

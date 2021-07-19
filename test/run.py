@@ -9,10 +9,10 @@ import subprocess
 dirs = [
     './cases',
     # 'custom_test',
-    'sysyruntimelibrary/section1/functional_test',
-    'sysyruntimelibrary/section1/performance_test',
-    'sysyruntimelibrary/section2/functional_test',
-    'sysyruntimelibrary/section2/performance_test',
+    # 'sysyruntimelibrary/section1/functional_test',
+    # 'sysyruntimelibrary/section1/performance_test',
+    # 'sysyruntimelibrary/section2/functional_test',
+    # 'sysyruntimelibrary/section2/performance_test',
 ]
 
 # init compiler config
@@ -24,8 +24,15 @@ exe = 'temp'
 # temporary generated IR
 ir = '1.ll'
 
+# temporary generated asm
+asm = '1.asm'
+
 # sysy lib
 sylib = "sysy.c"
+
+# cross compiler
+cross_cc = f'arm-linux-gnueabihf-gcc -x assembler {asm} -O3 -Werror -o {exe}' + \
+           ' -static -Lsysyruntimelibrary -lsysy'
 
 
 def info(dataType, data):
@@ -80,16 +87,16 @@ def get_case(sy_file):
 # run single test case
 def run_ir_case(sy_file, in_file, out_file):
     # compile to executable
-    lacc_cmd = lacc.split(' ') + [sy_file]
+    lacc_cmd = lacc.split(' ') + [sy_file, "-I", "-o", ir]
     result = subprocess.run(lacc_cmd, stdout=subprocess.PIPE)
 
     if result.returncode:
         return False
 
-    # save output ir file
-    with open(ir, 'w+') as f:
-        f.write(result.stdout.decode("utf-8").strip())
-        f.close()
+    # # save output ir file
+    # with open(ir, 'w+') as f:
+    #     f.write(result.stdout.decode("utf-8").strip())
+    #     f.close()
 
     # run compiled file
     if in_file:
@@ -99,7 +106,7 @@ def run_ir_case(sy_file, in_file, out_file):
         inputs = None
 
     # link output file with sysy.c IR
-    link_cmd = ["llvm-link", '-S', "1.ll", "sysy.ll", "-o", "1.ll"]
+    link_cmd = ["llvm-link", '-S', ir, "sysy.ll", "-o", ir]
     res = subprocess.run(link_cmd)
     if res.returncode:
         return False
@@ -111,6 +118,36 @@ def run_ir_case(sy_file, in_file, out_file):
     # remove temporary file
     # if os.path.exists(ir):
     #     os.unlink(ir)
+
+    # compare to reference
+    with open(out_file) as f:
+        ref = f.read().strip()
+    return out == ref
+
+# run asm test case
+def run_asm_case(sy_file, in_file, out_file):
+    # compile to executable
+    lacc_cmd = lacc.split(' ') + [sy_file, "-S", "-o", asm]
+    result = subprocess.run(lacc_cmd, stdout=subprocess.PIPE)
+
+    if result.returncode:
+        return False
+
+    result = subprocess.run(cross_cc.split(' '))
+    if result.returncode:
+        return False
+
+    # run compiled file
+    if in_file:
+        with open(in_file) as f:
+            inputs = f.read().encode('utf-8')
+    else:
+        inputs = None
+
+
+    result = subprocess.run(f'./{exe}', input=inputs, stdout=subprocess.PIPE)
+    out = f'{result.stdout.decode("utf-8").strip()}\n{result.returncode}'
+    out = out.strip()
 
     # compare to reference
     with open(out_file) as f:
@@ -148,7 +185,35 @@ def run_ir_test(cases):
         eprint(f'\033[0;31mFAIL\033[0m ({passed}/{total})')
 
 
-# def Compile(file):
+# run all test cases
+def run_asm_test(cases):
+    total = 0
+    passed = 0
+    try:
+        for sy_file, in_file, out_file in cases:
+            # run test case
+            eprint(f'running test "{sy_file}" ... ', end='')
+            if run_asm_case(sy_file, in_file, out_file):
+                eprint(f'\033[0;32mPASS\033[0m')
+                passed += 1
+            else:
+                eprint(f'\033[0;31mFAIL\033[0m')
+            total += 1
+    except KeyboardInterrupt:
+        eprint(f'\033[0;33mINTERRUPT\033[0m')
+    except Exception as e:
+        eprint(f'\033[0;31mERROR\033[0m')
+        eprint(e)
+        exit(1)
+    # remove temporary file
+    if os.path.exists(exe):
+        os.unlink(exe)
+    # print result
+    if passed == total:
+        eprint(f'\033[0;32mPASS\033[0m ({passed}/{total})')
+    else:
+        eprint(f'\033[0;31mFAIL\033[0m ({passed}/{total})')
+
 
 if __name__ == '__main__':
     # initialize argument parser
@@ -166,6 +231,9 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--location',
                         default='../cmake-build-debug/lacc',
                         help='specify location of lacc')
+
+    parser.add_argument('-c', '--cross', action="store_true", default=False,
+                        help='cross-compile mode')
     # parse arguments
     args = parser.parse_args()
 
@@ -192,7 +260,10 @@ if __name__ == '__main__':
             eprint(f'output file "{case[2]}" does not exist')
             exit(1)
         # run test case
-        run_ir_test([case])
+        if args.cross:
+            run_asm_test([case])
+        else:
+            run_ir_test([case])
     else:
         if args.dir:
             os.chdir(os.path.dirname(args.dir))
@@ -204,4 +275,8 @@ if __name__ == '__main__':
         # run test cases in configuration
         # run_test(scan_cases(dirs))
         # info("cases", cases)
-        run_ir_test(cases)
+
+        if args.cross:
+            run_asm_test(cases)
+        else:
+            run_ir_test(cases)

@@ -3,6 +3,7 @@
 
 /* Low-Level Intermediate representation (LLIR) */
 
+#include <set>
 #include <array>
 #include <utility>
 #include "mid/ir/ssa.h"
@@ -52,6 +53,11 @@ enum class ArmReg {
 };
 
 enum class ArmCond { Any, Eq, Ne, Ge, Gt, Le, Lt };
+inline ArmCond opposite_cond(ArmCond c) {
+  constexpr static ArmCond OPPOSITE[] = {ArmCond::Any, ArmCond::Ne, ArmCond::Eq, ArmCond::Lt,
+                                         ArmCond::Le,  ArmCond::Gt, ArmCond::Ge};
+  return OPPOSITE[(int)c];
+}
 
 class ArmShift {
 public:
@@ -117,21 +123,30 @@ private:
   // size of stack allocated for local alloca and spilled regisiters
   std::size_t                _stack_size{};
 
-  std::unordered_set<ArmReg> _callee_saved_regs;
+  std::set<ArmReg>           _callee_saved_regs;
+
+  bool                       _has_call_inst;
 
 public:
-  explicit LLFunction(mid::FuncPtr func) : _function(std::move(func)) {}
+  explicit LLFunction(mid::FuncPtr func)
+    : _function(std::move(func)), _has_call_inst(false) {}
 
   bool is_decl() const { return _function->is_decl(); }
 
-  mid::FuncPtr function()   const  { return _function;    }
-  std::size_t virtual_max() const  { return _virtual_max; }
-  std::size_t stack_size()  const  { return _stack_size;  }
-  std::vector<LLBlockPtr> blocks() { return _blocks;      }
+  mid::FuncPtr function()       const { return _function;          }
+  std::size_t virtual_max()     const { return _virtual_max;       }
+  std::size_t stack_size()      const { return _stack_size;        }
+  std::set<ArmReg> saved_regs() const { return _callee_saved_regs; }
+  std::vector<LLBlockPtr> blocks()    { return _blocks;            }
+  const LLBlockPtr &entry()           { return _blocks[0];         }
+  bool has_call_inst()          const { return _has_call_inst;     }
 
-  void SetVirtualMax(std::size_t virtual_max) { _virtual_max = virtual_max; }
-  void SetStackSize(std::size_t stack_size)   { _stack_size = stack_size;   }
-  void AddBlock(const LLBlockPtr &block)      { _blocks.push_back(block);   }
+  void SetVirtualMax(std::size_t virtual_max) { _virtual_max = virtual_max;     }
+  void SetStackSize(std::size_t stack_size)   { _stack_size = stack_size;       }
+  void AddBlock(const LLBlockPtr &block)      { _blocks.push_back(block);       }
+  void AddSavedRegister(ArmReg reg)           { _callee_saved_regs.insert(reg); }
+  void SetHasCallInst(bool value)             { _has_call_inst = value;         }
+
 
   // classof used for dyn_cast
   CLASSOF(LLFunction)
@@ -244,6 +259,9 @@ public:
     // FMA
     MLA, MLS,
 
+    // stack
+    PUSH, POP,
+
     // comment
     Comment
   };
@@ -315,20 +333,25 @@ private:
   LLOperandPtr _dst;
   LLOperandPtr _src;
   ArmShift     _shift;
+  bool         _is_arg;
+  ArmCond      _cond;
 
 public:
-  LLMove(LLOperandPtr dst, LLOperandPtr src)
+  LLMove(LLOperandPtr dst, LLOperandPtr src, ArmCond cond = ArmCond::Any)
     : LLInst(Opcode::Move, ClassId::LLMoveId),
-      _dst(std::move(dst)), _src(std::move(src)) {}
+      _dst(std::move(dst)), _src(std::move(src)), _cond(cond) {}
 
   // getter/setter
-  const LLOperandPtr &dst() { return _dst;   }
-  const LLOperandPtr &src() { return _src;   }
-  ArmShift shift()    const { return _shift; }
+  bool             is_arg() { return _is_arg; }
+  const LLOperandPtr &dst() { return _dst;    }
+  const LLOperandPtr &src() { return _src;    }
+  ArmShift shift()    const { return _shift;  }
+  ArmCond cond()      const { return _cond;   }
 
   void setShift(ArmShift shift)               { _shift = shift;       }
   void setShiftNum(int num)                   { _shift.setShift(num); }
   void setShiftType(ArmShift::ShiftType type) { _shift.setType(type); }
+  void SetIsArg(bool value)                   { _is_arg = value;      }
 
   LLOperandList operands() final;
   LLOperandPtr dest() final { return dst(); }
@@ -360,7 +383,7 @@ public:
   LLBlockPtr   true_block()     { return _true_block;  }
   LLBlockPtr   false_block()    { return _false_block; }
 
-  LLOperandList operands() final;
+  LLOperandList operands() final { return LLOperandList(); }
   void set_operand(const LLOperandPtr &opr, std::size_t index) override;
 
   CLASSOF(LLBranch)
@@ -403,11 +426,14 @@ private:
   LLOperandPtr _addr;
   LLOperandPtr _offset;
 
+  bool         _is_arg;
+
 public:
   LLLoad(LLOperandPtr dst, LLOperandPtr addr, LLOperandPtr offset)
     : LLInst(Opcode::Load, ClassId::LLLoadId),
       _dst(std::move(dst)), _addr(std::move(addr)), _offset(std::move(offset)) {}
 
+  bool         is_arg() { return _is_arg; }
   LLOperandPtr dst()    { return _dst;    }
   LLOperandPtr addr()   { return _addr;   }
   LLOperandPtr offset() { return _offset; }
@@ -419,6 +445,7 @@ public:
     _dst = dst;
   }
 
+  void SetIsArg(bool value)                  { _is_arg = value;  }
   void SetDst(const LLOperandPtr &dst)       { _dst    = dst;    }
   void SetAddr(const LLOperandPtr &addr)     { _addr   = addr;   }
   void SetOffset(const LLOperandPtr &offset) { _offset = offset; }
@@ -556,7 +583,7 @@ public:
 class LLMLS : public LLFMA {
 public:
   LLMLS(const LLOperandPtr &dst, const LLOperandPtr &lhs, const LLOperandPtr &rhs, const LLOperandPtr &acc)
-      : LLFMA(Opcode::MLA, dst, lhs, rhs, acc, ClassId::LLMLAId) {}
+      : LLFMA(Opcode::MLA, dst, lhs, rhs, acc, ClassId::LLMLSId) {}
 
   LLOperandPtr dest() final { return LLFMA::dst(); }
   LLOperandList operands() override { return LLFMA::operands(); }
@@ -573,6 +600,57 @@ public:
   CLASSOF_INST(LLMLS)
 };
 
+// push {reg-list}
+class LLPush : public LLInst {
+private:
+  std::vector<ArmReg> _reg_list;
+public:
+  LLPush(std::vector<ArmReg> reglist)
+    : LLInst(Opcode::PUSH, ClassId::LLPushId), _reg_list(std::move(reglist)) {}
+
+  LLOperandList operands() final { return LLOperandList(); }
+  std::vector<ArmReg> &reg_list() { return _reg_list; }
+
+  CLASSOF(LLPush)
+  CLASSOF_INST(LLPush)
+};
+
+// pop {reg-list}
+class LLPop : public LLInst {
+private:
+  std::vector<ArmReg> _reg_list;
+public:
+  LLPop(std::vector<ArmReg> reglist)
+      : LLInst(Opcode::PUSH, ClassId::LLPopId), _reg_list(std::move(reglist)) {}
+
+  LLOperandList operands() final { return LLOperandList(); }
+  std::vector<ArmReg> &reg_list() { return _reg_list; }
+
+  CLASSOF(LLPop)
+  CLASSOF_INST(LLPop)
+};
+
+
+class LLGlobal : public LLInst {
+private:
+  LLOperandPtr         _dst;
+  mid::GlobalVariable *_glob_var;
+
+public:
+  LLGlobal(const LLOperandPtr &dst, mid::GlobalVariable *glob)
+    : LLInst(Opcode::Global, ClassId::LLGlobalId), _dst(dst), _glob_var(glob) {}
+
+  mid::GlobalVariable *global_variable() { return _glob_var; }
+  LLOperandPtr dst() { return _dst; }
+
+  LLOperandPtr dest() final { return _dst; }
+  LLOperandList operands() final { return LLOperandList(); }
+
+  void set_dst(const LLOperandPtr &dst) { _dst = dst; }
+
+  CLASSOF(LLGlobal)
+  CLASSOF_INST(LLGlobal)
+};
 
 
 }

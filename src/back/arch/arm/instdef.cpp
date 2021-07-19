@@ -116,12 +116,6 @@ LLOperandList LLMove::operands() {
   return ops;
 }
 
-LLOperandList LLBranch::operands() {
-  std::vector<LLOperandPtr> ops;
-  ops.push_back(_cond);
-  return ops;
-}
-
 LLOperandList LLLoad::operands() {
   std::vector<LLOperandPtr> ops;
   ops.push_back(_addr);

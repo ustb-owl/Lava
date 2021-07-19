@@ -624,7 +624,7 @@ public:
 class  CastInst : public Instruction {
 public:
   explicit CastInst(CastOps op, const SSAPtr &opr)
-  : Instruction(op, 1, ClassId::CallInstId) {
+  : Instruction(op, 1, ClassId::CastInstId) {
     AddValue(opr);
   }
 
@@ -666,15 +666,15 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getter/setter
-  bool               isVar()  const { return _is_var;          }
+  bool               isVar()  const { return _is_var;            }
   const SSAPtr      &init()   const { return (*this)[0].value(); }
-  const std::string &name()   const { return _name;            }
+  const std::string &name()   const { return _name;              }
 
-  void set_is_var(bool is_var)      { _is_var = is_var;        }
-  void set_init(const SSAPtr &init) { (*this)[0].set(init);    }
+  void set_is_var(bool is_var)      { _is_var = is_var;          }
+  void set_init(const SSAPtr &init) { (*this)[0].set(init);      }
 
   // methods for dyn_cast
-  static inline bool classof(GlobalVariable *) { return true; }
+  static inline bool classof(GlobalVariable *) { return true;       }
   static inline bool classof(const GlobalVariable *) { return true; }
   static bool classof(Value *value) {
     if (value->classId() == ClassId::GlobalVariableId) return true;

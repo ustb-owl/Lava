@@ -16,7 +16,7 @@ LLOperandPtr SlotAllocator::AllocSlot(const LLFunctionPtr &func, const LLOperand
   }
 
   // set offset
-  auto offset = LLOperand::Immediate(-res);
+  auto offset = LLOperand::Immediate(res);
   operand->set_allocated(offset);
 
   return offset;

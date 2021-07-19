@@ -18,6 +18,9 @@ private:
   LLInstList::iterator                           _insert_pos;
   std::unordered_map<mid::BlockPtr, LLBlockPtr>  _block_map;
   std::unordered_map<mid::SSAPtr, LLOperandPtr>  _value_map;
+
+  std::unordered_map<mid::SSAPtr, std::pair<LLInstPtr, ArmCond>>  _cond_map;
+  std::unordered_map<std::shared_ptr<mid::GlobalVariable>, LLOperandPtr> _glob_map;
 public:
 
   // create a new LLIR
@@ -48,6 +51,10 @@ public:
 
   void SetInsertPoint(const LLBlockPtr &BB) {
     SetInsertPoint(BB, BB->inst_end());
+  }
+
+  void SetGlobalVariables(std:: vector<mid::GlobalVariable *> glob_decl) {
+    _glob_decl = glob_decl;
   }
 
   // see https://alisdair.mcdiarmid.org/arm-immediate-value-encoding/

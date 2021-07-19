@@ -4,6 +4,7 @@ add_library(back
         arch/arm/module.cpp
         arch/arm/instdef.cpp
         passes/spill.cpp
+        passes/funcfix.cpp
         passes/fastalloc.cpp
 )
 
