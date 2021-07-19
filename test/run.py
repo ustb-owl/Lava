@@ -25,7 +25,7 @@ exe = 'temp'
 ir = '1.ll'
 
 # temporary generated asm
-asm = '1.asm'
+asm = '1.s'
 
 # sysy lib
 sylib = "sysy.c"
@@ -175,9 +175,8 @@ def run_ir_test(cases):
         eprint(f'\033[0;31mERROR\033[0m')
         eprint(e)
         exit(1)
-    # remove temporary file
-    if os.path.exists(exe):
-        os.unlink(exe)
+
+
     # print result
     if passed == total:
         eprint(f'\033[0;32mPASS\033[0m ({passed}/{total})')
@@ -206,8 +205,9 @@ def run_asm_test(cases):
         eprint(e)
         exit(1)
     # remove temporary file
-    if os.path.exists(exe):
-        os.unlink(exe)
+    # if os.path.exists(exe):
+    #     os.unlink(exe)
+
     # print result
     if passed == total:
         eprint(f'\033[0;32mPASS\033[0m ({passed}/{total})')

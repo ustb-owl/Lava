@@ -30,6 +30,9 @@ void CodeGenerator::CodeGene() {
     // update vreg number
     ll_function->SetVirtualMax(_ll_module.VirtualMax());
     _ll_module.ClearVirtualMax();
+
+    // create global map
+    _ll_module.ClearGlobalMap();
   }
 }
 

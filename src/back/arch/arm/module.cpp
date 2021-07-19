@@ -463,7 +463,7 @@ void LLModule::DumpASM(std::ostream &os) const {
   for (const auto &function : _functions) {
     if (function->is_decl()) continue;
     os << function << std::endl;
-    id_mgr.Reset();
+//    id_mgr.Reset();
   }
 
   if (_glob_decl.empty()) return;

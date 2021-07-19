@@ -69,7 +69,8 @@ public:
     return false;
   }
 
-  void ClearVirtualMax() { _virtual_max = 0; }
+  void ClearGlobalMap()  { _glob_map.clear(); }
+  void ClearVirtualMax() { _virtual_max = 0;  }
 
   void DumpASM(std::ostream &os) const;
 
