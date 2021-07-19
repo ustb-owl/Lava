@@ -21,8 +21,6 @@ int main(int argc, const char *argv[]) {
 
   // parser command line arguments
   ArgumentParser parser("lacc", "lacc parser");
-  parser.add_argument("filename", "input filename")
-      .position(0).required(true);
 
   parser.add_argument()
       .names({"-o", "--output"})
@@ -43,6 +41,9 @@ int main(int argc, const char *argv[]) {
       .names({"-T", "--dump-ast"})
       .description("generate ast file")
       .required(false);
+
+  parser.add_argument("filename", "input filename")
+      .position(ArgumentParser::Argument::Position::LAST).required(true);
   parser.enable_help();
 
   auto err = parser.parse(argc, argv);
