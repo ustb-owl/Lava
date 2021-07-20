@@ -6,8 +6,22 @@
 git clone --recursive https://gitlab.eduxiji.net/cafebabe/compiler
 cd compiler && mkdir build && cd build
 cmake .. && make -j8
-./lacc a.sy
+./lacc -h
 ```
+
+## usage
+
+```
+Usage: lacc [options...] [filename]
+Options:
+    -o, --output           set output file name
+    -S, --dump-asm         generate asm file
+    -I, --dump-ir          generate ir file
+    -T, --dump-ast         generate ast file
+    filename               input filename          (Required)
+    -h, --help             Shows this page
+```
+
 
 ## EBNF of the Extended SysY Lang
    

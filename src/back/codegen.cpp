@@ -37,7 +37,7 @@ void CodeGenerator::CodeGene() {
 }
 
 void CodeGenerator::RunPasses() {
-  DumpASM(std::cout);
+//  DumpASM(std::cout);
   for (const auto &pass : _passes) {
     for (const auto &function : _ll_module.Functions()) {
       if (function->is_decl()) continue;
