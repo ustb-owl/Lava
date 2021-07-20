@@ -454,6 +454,25 @@ public:
   CLASSOF_INST(LLLoad)
 };
 
+// TODO: dirty hack
+class LLLoadPseudo : public LLInst {
+private:
+  LLOperandPtr _dst;
+  int          _imm;
+
+public:
+  LLLoadPseudo(LLOperandPtr dst, int number)
+    : LLInst(Opcode::Load, ClassId::LLLoadPseudoId), _dst(std::move(dst)), _imm(number){}
+
+  LLOperandPtr dst() { return _dst; }
+  int          imm() { return _imm; }
+
+  LLOperandList operands() final { return LLOperandList(); }
+
+  CLASSOF(LLLoadPseudo)
+  CLASSOF_INST(LLLoadPseudo)
+};
+
 // str rd, [rn {, offset}]
 class LLStore : public LLInst {
 private:

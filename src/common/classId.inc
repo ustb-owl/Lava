@@ -50,7 +50,7 @@ CLASS_ID(96, , LLBranch)
 CLASS_ID(97, , LLPush)
 CLASS_ID(98, , LLPop)
 CLASS_ID(99, , LLGlobal)
-
+CLASS_ID(100, , LLLoadPseudo)
 
 
 #undef CLASS_ID

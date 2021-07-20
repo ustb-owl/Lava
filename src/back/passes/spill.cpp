@@ -7,11 +7,12 @@ namespace lava::back {
 void Spill::runOn(const LLFunctionPtr &func) {
   if (func->is_decl()) return;
 
+  _cur_func = func;
   for (const auto &block : func->blocks()) {
     _cur_block = block;
     for (auto it = block->inst_begin(); it != block->inst_end(); it++) {
       auto inst = *it;
-      auto mask = GetTmpMask(inst);
+     _mask = GetTmpMask(inst);
       if (auto mv_inst = dyn_cast<LLMove>(inst)) {
         if (mv_inst->src()->IsVirtual()) {
           auto allocated = mv_inst->src()->allocated();
@@ -43,7 +44,7 @@ void Spill::runOn(const LLFunctionPtr &func) {
           if (allocated_value->IsRealReg()) {
             inst->set_operand(allocated_value, index);
           } else {
-            auto dst = GetTmpReg(mask);
+            auto dst = GetTmpReg(_mask);
             InsertLoadInst(it, opr->allocated(), dst);
             inst->set_operand(dst, index);
           }
@@ -78,7 +79,7 @@ LLOperandPtr Spill::GetTmpReg(std::uint32_t &reg_mask) {
     reg_mask |= 1 << static_cast<int>(ArmReg::r10);
     temp = LLOperand::Register(ArmReg::r10);
   }
-  DBG_ASSERT(temp != nullptr, "get tmp register(r3/r10/r12) failed");
+  DBG_ASSERT(temp != nullptr, "get tmp register(r3/r10/r12/fp) failed");
   return temp;
 }
 
@@ -107,8 +108,16 @@ void Spill::InsertLoadInst(LLInstList::iterator &it,
   DBG_ASSERT(slot->IsImmediate(), "slot offset is not immediate number");
   auto sp = LLOperand::Register(ArmReg::sp);
 
+  LLOperandPtr offset = slot;
+  if (slot->imm_num() >= 4096) {
+    _cur_func->AddSavedRegister(ArmReg::fp);
+    auto tmp = LLOperand::Register(ArmReg::fp);
+    _module.AddInst<LLMove>(tmp, slot);
+    offset = tmp;
+  }
+
   // create load instruction
-  auto load_inst = _module.AddInst<LLLoad>(dst, sp, slot);
+  auto load_inst = _module.AddInst<LLLoad>(dst, sp, offset);
   DBG_ASSERT(load_inst, "create load instruction failed");
 
 //  it = _module.InsertPos();
@@ -125,7 +134,15 @@ void Spill::InsertStoreInst(LLInstList::iterator &it,
   DBG_ASSERT(slot->IsImmediate(), "slot offset is not immediate number");
   auto sp = LLOperand::Register(ArmReg::sp);
 
-  auto store_inst = _module.AddInst<LLStore>(tmp, sp, slot);
+  LLOperandPtr offset = slot;
+  if (slot->imm_num() >= 4096) {
+    _cur_func->AddSavedRegister(ArmReg::fp);
+    auto dst = LLOperand::Register(ArmReg::fp);
+    _module.AddInst<LLMove>(dst, slot);
+    offset = dst;
+  }
+
+  auto store_inst = _module.AddInst<LLStore>(tmp, sp, offset);
   DBG_ASSERT(store_inst, "create store instruction failed");
 
   it = --_module.InsertPos();

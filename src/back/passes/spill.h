@@ -7,7 +7,9 @@ namespace lava::back {
 
 class Spill : public PassBase {
 private:
-  LLBlockPtr _cur_block;
+  std::uint32_t _mask;
+  LLBlockPtr    _cur_block;
+  LLFunctionPtr _cur_func;
 
 public:
   explicit Spill(LLModule &module)
@@ -23,7 +25,11 @@ public:
   void InsertStoreInst(LLInstList::iterator &it,
                        const LLOperandPtr &slot, const LLOperandPtr &tmp);
 
-  void Reset() final { _cur_block = nullptr; }
+  void Reset() final {
+    _mask = 0;
+    _cur_block = nullptr;
+    _cur_func = nullptr;
+  }
 
   void runOn(const LLFunctionPtr &func) final;
 };

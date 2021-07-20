@@ -183,18 +183,32 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
 
       SSAPtr init_expr;
       auto init_ssa = init->CodeGeneAction(this);
-      if (init_ssa == nullptr) {
-        init_expr = nullptr;
-      } else {
-        auto def = init_ssa->type()->GetDerefedType();
-        if (def && def->IsArray()) {
-          init_expr = init_ssa;
-          var->set_type(init_ssa->type());
-        } else {
-          init_expr = _module.CreateCastInst(init_ssa, type);
+
+      auto def = init_ssa->type()->GetDerefedType();
+      if (def && def->IsArray()) {
+        init_expr = init_ssa;
+        var->set_type(init_ssa->type());
+
+        DBG_ASSERT(init_expr != nullptr, "emit init of global variable failed");
+
+        // set init array to nullptr is this array is all zero
+        bool is_all_zero = true;
+        for (const auto &init_value : (*dyn_cast<ConstantArray>(init_ssa))) {
+          auto elem = dyn_cast<ConstantInt>(init_value.value());
+          DBG_ASSERT(elem != nullptr, "elem is null ptr");
+          if (!elem->IsZero()) {
+            is_all_zero = false;
+            break;
+          }
         }
+        if (is_all_zero) init_expr = nullptr;
+
+      } else {
+        init_expr = _module.CreateCastInst(init_ssa, type);
+        DBG_ASSERT(init_expr != nullptr, "emit init of global variable failed");
       }
-//      DBG_ASSERT(init_expr != nullptr, "emit init of global variable failed");
+
+
       var->set_init(init_expr);
     } else {
       if (type->IsArray()) {
@@ -293,7 +307,6 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
 
     /* handle empty initial list */
     if (node->exprs().empty()) {
-      if (is_root) return nullptr;
       isEmpty = true;
 
       // init array with const zero
@@ -309,7 +322,6 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
       /* create a global const array if this is a global array */
       // add to global symbol table
       if (is_root) {
-
         // generate new type of linear array
         auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
         const_array = _module.CreateArray(exprs, new_type, arr_name);

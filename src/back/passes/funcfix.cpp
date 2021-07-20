@@ -26,7 +26,7 @@ void FunctionFix::runOn(const LLFunctionPtr &func) {
   std::sort(_saved_regs.begin(), _saved_regs.end());
 
   // get offset
-  _gap = 4 * _saved_regs.size();
+  _gap = 4 * _saved_regs.size() + func->stack_size();
 
   AddPrologue(func);
   AddEpilogue(func);
@@ -45,12 +45,23 @@ void FunctionFix::AddPrologue(const LLFunctionPtr &func) {
   if (!_saved_regs.empty()) {
     auto push_inst = _module.AddInst<LLPush>(_saved_regs);
   }
-//  auto update_fp = _module.AddInst<LLMove>(LLOperand::Register(ArmReg::fp), LLOperand::Register(ArmReg::sp));
 
-  auto stack_size = _module.CreateImmediate(func->stack_size());
+
+  LLOperandPtr stack_size;
+  if (_module.can_encode_imm(func->stack_size())) {
+    stack_size = _module.CreateImmediate(func->stack_size());
+  } else {
+    auto dst = LLOperand::Register(ArmReg::r12);
+    _module.AddInst<LLLoadPseudo>(dst, func->stack_size());
+    stack_size = dst;
+  }
+  DBG_ASSERT(stack_size != nullptr, "create stack size failed");
+
   auto update_sp = _module.AddInst<LLBinaryInst>(LLInst::Opcode::Sub,
                                                  LLOperand::Register(ArmReg::sp),
                                                  LLOperand::Register(ArmReg::sp), stack_size);
+
+  DBG_ASSERT(update_sp != nullptr, "update sp register failed");
 
   for (const auto &inst : entry->insts()) {
     if (auto move_inst = dyn_cast<LLMove>(inst)) {
@@ -69,17 +80,27 @@ void FunctionFix::AddPrologue(const LLFunctionPtr &func) {
 void FunctionFix::AddEpilogue(const LLFunctionPtr &func) {
   _module.SetInsertPoint(_ret_block, _ret_pos);
 
-//  auto update_sp = _module.AddInst<LLMove>(LLOperand::Register(ArmReg::sp), LLOperand::Register(ArmReg::fp));
-  auto stack_size = _module.CreateImmediate(func->stack_size());
+  LLOperandPtr stack_size;
+  if (_module.can_encode_imm(func->stack_size())) {
+    stack_size = _module.CreateImmediate(func->stack_size());
+  } else {
+    auto dst = LLOperand::Register(ArmReg::r12);
+    _module.AddInst<LLLoadPseudo>(dst, func->stack_size());
+    stack_size = dst;
+  }
+  DBG_ASSERT(stack_size != nullptr, "create stack size failed");
+
   auto update_sp = _module.AddInst<LLBinaryInst>(LLInst::Opcode::Add,
                                                  LLOperand::Register(ArmReg::sp),
                                                  LLOperand::Register(ArmReg::sp), stack_size);
+
+  DBG_ASSERT(update_sp != nullptr, "update sp register failed");
 
   if (!_saved_regs.empty()) {
     auto pop_inst = _module.AddInst<LLPop>(_saved_regs);
     DBG_ASSERT(pop_inst != nullptr, "create pop instruction failed");
   }
-//  auto
+
 }
 
 

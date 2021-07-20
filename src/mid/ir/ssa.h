@@ -254,6 +254,10 @@ public:
     _args[i] = arg;
   }
 
+  void SetName(const std::string &name) {
+    _function_name = name;
+  }
+
   // getters
   const std::string &GetFunctionName() const { return _function_name; }
 

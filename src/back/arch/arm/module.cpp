@@ -54,7 +54,7 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
 
           // load rn, [sp, rm]
           auto vreg = LLOperand::Virtual(_virtual_max);
-          auto addr = LLOperand::Register(ArmReg::fp);
+          auto addr = LLOperand::Register(ArmReg::sp);
           auto load_arg = AddInst<LLLoad>(vreg, addr, offset);
 
           // set load is argument
@@ -513,6 +513,8 @@ std::ostream &operator<<(std::ostream &os, const LLFunctionPtr &function) {
     os << block << std::endl;
   }
 
+  // 4. insert literal pool
+  os << INDENT << ".pool" << std::endl;
   return os;
 }
 
@@ -546,6 +548,9 @@ std::ostream &operator<<(std::ostream &os, const LLBlockPtr &block) {
       os << "lor_end" << id_mgr.GetId(block, IdType::_ID_LL_LOR_END);
     } else if (name.find("block") != npos) {
       os << "block" << id_mgr.GetId(block, IdType::_ID_LL_BLOCK);
+    } else if (name.find("func_exit") != npos) {
+      auto func_name = block->parent()->function()->GetFunctionName();
+      os << func_name << "_exit";
     } else {
       os << name;
     }
@@ -576,6 +581,12 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
         // wider than 16 bits
         os << INDENT << "ldr" << TAB
            << mv_inst->dst() << "," << SPACE <<"=" << imm;
+#if 0
+        os << INDENT << "movw" << TAB
+           << mv_inst->dst() << "," << SPACE << "#" << 65535 << std::endl;
+        os << INDENT << "movt" << TAB
+           << mv_inst->dst() << "," << SPACE << "#" << (imm >> 16);
+#endif
       }
     } else {
       os << INDENT << "mov" << mv_inst->cond() << TAB
@@ -594,7 +605,10 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
     os << "]";
   } else if (auto jump_inst = dyn_cast<LLJump>(inst)) {
     os << INDENT << "b" << TAB
-       << jump_inst->target();
+       << jump_inst->target() << std::endl;
+
+    // TODO: insert literal pool
+    os << INDENT << ".pool";
   } else if (auto ret_inst = dyn_cast<LLReturn>(inst)) {
     os << INDENT << "bx" << TAB << ArmReg::lr;
     // TODO:
@@ -610,7 +624,10 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
     os << "]";
   } else if (auto branch_inst = dyn_cast<LLBranch>(inst)) {
     os << INDENT << "b" << branch_inst->arm_cond() << TAB << branch_inst->true_block() << std::endl;
-    os << INDENT << "b" << TAB << branch_inst->false_block();
+    os << INDENT << "b" << TAB << branch_inst->false_block() << std::endl;
+
+    // output literal pool
+    os << INDENT << ".pool";
   } else if (auto call_inst = dyn_cast<LLCall>(inst)) {
     os << INDENT << "bl" << TAB << call_inst->function()->GetFunctionName();
   } else if (auto binary_inst = dyn_cast<LLBinaryInst>(inst)) {
@@ -671,6 +688,13 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
     os << INDENT << "ldr" << TAB
        << global_inst->dst() << ","
        << SPACE << "=" << global_inst->global_variable()->name();
+  } else if (auto load_pseudo = dyn_cast<LLLoadPseudo>(inst)) {
+    os << INDENT << "movw" << TAB
+       << load_pseudo->dst() << ","
+       << SPACE << "#" << (load_pseudo->imm() & 0xffff) << std::endl;
+    os << INDENT << "movt" << TAB
+       << load_pseudo->dst() << ","
+       << SPACE << "#" << (load_pseudo->imm() >> 16);
   } else if (auto comment = dyn_cast<LLComment>(inst)) {
     os << '@' << SPACE << comment->comment();
   }
