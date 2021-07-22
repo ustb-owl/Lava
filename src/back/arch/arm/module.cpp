@@ -514,7 +514,7 @@ std::ostream &operator<<(std::ostream &os, const LLFunctionPtr &function) {
   }
 
   // 4. insert literal pool
-  os << INDENT << ".pool" << std::endl;
+//  os << INDENT << ".pool" << std::endl;
   return os;
 }
 
@@ -579,14 +579,14 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
            << mv_inst->dst() << ","<< SPACE <<"#" << imm;
       } else {
         // wider than 16 bits
+#if 0
         os << INDENT << "ldr" << TAB
            << mv_inst->dst() << "," << SPACE <<"=" << imm;
-#if 0
-        os << INDENT << "movw" << TAB
-           << mv_inst->dst() << "," << SPACE << "#" << 65535 << std::endl;
+#endif
+        os << INDENT << "mov" << TAB
+           << mv_inst->dst() << "," << SPACE << "#" << (imm & 0xffff) << std::endl;
         os << INDENT << "movt" << TAB
            << mv_inst->dst() << "," << SPACE << "#" << (imm >> 16);
-#endif
       }
     } else {
       os << INDENT << "mov" << mv_inst->cond() << TAB
@@ -608,7 +608,7 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
        << jump_inst->target() << std::endl;
 
     // TODO: insert literal pool
-    os << INDENT << ".pool";
+//    os << INDENT << ".pool";
   } else if (auto ret_inst = dyn_cast<LLReturn>(inst)) {
     os << INDENT << "bx" << TAB << ArmReg::lr;
     // TODO:
@@ -627,7 +627,7 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
     os << INDENT << "b" << TAB << branch_inst->false_block() << std::endl;
 
     // output literal pool
-    os << INDENT << ".pool";
+//    os << INDENT << ".pool";
   } else if (auto call_inst = dyn_cast<LLCall>(inst)) {
     os << INDENT << "bl" << TAB << call_inst->function()->GetFunctionName();
   } else if (auto binary_inst = dyn_cast<LLBinaryInst>(inst)) {
@@ -685,11 +685,15 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
     }
     os << " }";
   } else if (auto global_inst = dyn_cast<LLGlobal>(inst)) {
-    os << INDENT << "ldr" << TAB
-       << global_inst->dst() << ","
-       << SPACE << "=" << global_inst->global_variable()->name();
-  } else if (auto load_pseudo = dyn_cast<LLLoadPseudo>(inst)) {
     os << INDENT << "movw" << TAB
+       << global_inst->dst() << ","
+       << SPACE << "#:lower16:" << global_inst->global_variable()->name();
+    os << std::endl;
+    os << INDENT << "movt" << TAB
+       << global_inst->dst() << ","
+       << SPACE << "#:upper16:" << global_inst->global_variable()->name();
+  } else if (auto load_pseudo = dyn_cast<LLLoadPseudo>(inst)) {
+    os << INDENT << "mov" << TAB
        << load_pseudo->dst() << ","
        << SPACE << "#" << (load_pseudo->imm() & 0xffff) << std::endl;
     os << INDENT << "movt" << TAB
