@@ -267,6 +267,8 @@ TypePtr Analyzer::AnalyzeOn(VariableDefAST &ast) {
     auto init = ast.init()->SemaAnalyze(*this);
     if (!init) return nullptr;
     if (!CheckInit(log, type, init, ast.id())) return nullptr;
+  } else {
+    is_top_dim_ = false;
   }
   // check if is conflicted
   if (symbols_->GetItem(ast.id(), false)) {
