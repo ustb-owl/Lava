@@ -73,6 +73,9 @@ class Analyzer {
                               const define::ASTPtrList &arr_lens,
                               std::string_view id, bool is_param);
 
+  define::ASTPtrList GetLinearInitList(define::ASTPtrList &result);
+  define::ASTPtrList ListToMatrix(std::deque<int> dim, define::ASTPtrList &initList, bool is_top = false);
+
   // base type of all enumerators
   static define::TypePtr enum_base_;
 
@@ -84,6 +87,10 @@ class Analyzer {
   define::TypePtr var_type_;
   // used when analyzing initializer list
   std::stack<define::TypePtr> final_types_;
+  // array length list
+  std::deque<int> array_lens_;
+  // is the top dimension of init list
+  bool is_top_dim_ = false;
   // used when analyzing function related stuffs
   bool in_func_;
   define::TypePtr cur_ret_;

@@ -39,6 +39,116 @@ inline bool CheckInit(const LoggerPtr &log, const TypePtr &type,
 
 }  // namespace
 
+ASTPtrList Analyzer::GetLinearInitList(ASTPtrList &initList) {
+  ASTPtrList result;
+
+  // update dimension information
+  int current_dim = array_lens_.front();
+  array_lens_.pop_front();
+
+  // get current dim size
+  int rest_size = 1;
+  for (const auto &it : array_lens_) rest_size *= it;
+
+  // get current dim size
+  int current_size = current_dim * rest_size;
+
+  auto init = initList.begin();
+  while (true) {
+    if (init == initList.end()) break;
+
+    if ((*init)->ast_type()->IsInteger()) {
+      int loc = result.size();
+      for (int size = result.size(); size < loc + rest_size; size++) {
+        if ((init != initList.end()) && (*init)->ast_type()->IsInteger()) {
+          result.push_back(std::move(*init));
+          init++;
+        } else {
+          auto zero = std::make_unique<IntAST>(0);
+          zero->set_ast_type(MakePrimType(Type::Int32, true));
+          result.push_back(std::move(zero));
+        }
+      }
+//      break;
+    }
+
+    if (init == initList.end()) break;
+    if ((*init)->ast_type()->IsArray()) {
+      auto res = GetLinearInitList(static_cast<InitListAST *>((*init).get())->exprs());
+      DBG_ASSERT(res.size() == rest_size, "size of sub list is incorrect");
+
+      // concat result
+      result.insert(
+          result.end(),
+          std::make_move_iterator(res.begin()),
+          std::make_move_iterator(res.end())
+      );
+      init++;
+    }
+  }
+
+  // padding with 0
+  while ((int)result.size() < current_size) {
+    auto zero = std::make_unique<IntAST>(0);
+    zero->set_ast_type(MakePrimType(Type::Int32, true));
+    result.push_back(std::move(zero));
+  }
+  DBG_ASSERT(result.size() == current_size, "size of list is incorrect");
+
+  array_lens_.push_front(current_dim);
+  return result;
+}
+
+ASTPtrList Analyzer::ListToMatrix(std::deque<int> dims, ASTPtrList &initList, bool is_top) {
+  auto current_dim = dims.front();
+  dims.pop_front();
+
+  ASTPtrList result;
+  if (dims.empty()) {
+    int count = 0;
+    for (auto it = initList.begin(); it != initList.end(); ) {
+      ASTPtrList tmp;
+      for (int i = 0; i < current_dim; i++, it++, count++) {
+        tmp.push_back(std::move(*it));
+      }
+      DBG_ASSERT(tmp.size() == current_dim, "tmp list size is incorrect");
+
+      auto initListNode = std::make_unique<InitListAST>(std::move(tmp));
+      auto type = std::make_shared<ArrayType>(MakePrimType(Type::Int32, true), current_dim , true);
+      initListNode->set_ast_type(type);
+      result.push_back(std::move(initListNode));
+    }
+
+    DBG_ASSERT(count == initList.size(), "didn't handle all initList elements");
+  } else {
+    int count = 0;
+    auto sub = ListToMatrix(dims, initList);
+
+    if (is_top) return sub;
+
+    for (auto it = sub.begin(); it != sub.end();) {
+      ASTPtrList tmp;
+      for (int i = 0; i < current_dim; i++, it++, count++) {
+        tmp.push_back(std::move(*it));
+      }
+      DBG_ASSERT(tmp.size() == current_dim, "tmp list size is incorrect");
+
+      auto initListNode = std::make_unique<InitListAST>(std::move(tmp));
+
+      // make type
+      auto sub_type = initListNode->exprs()[0]->ast_type()->GetValueType(true);
+      DBG_ASSERT(sub_type != nullptr, "create sub type failed");
+      auto type = std::make_shared<ArrayType>(sub_type, current_dim, true);
+      initListNode->set_ast_type(type);
+      result.push_back(std::move(initListNode));
+    }
+
+    DBG_ASSERT(count == sub.size(), "didn't handle all sub list elements");
+  }
+
+  return result;
+}
+
 // definition of static properties
 TypePtr Analyzer::enum_base_ = MakePrimType(Type::Int32, false);
 
@@ -57,6 +167,7 @@ xstl::Guard Analyzer::NewEnv() {
 
 TypePtr Analyzer::HandleArray(TypePtr base, const ASTPtrList &arr_lens,
                               std::string_view id, bool is_param) {
+
   for (int i = arr_lens.size() - 1; i >= 0; --i) {
     const auto &expr = arr_lens[i];
     // analyze expression
@@ -84,6 +195,20 @@ TypePtr Analyzer::HandleArray(TypePtr base, const ASTPtrList &arr_lens,
       base = std::make_shared<ArrayType>(std::move(base), *len, false);
     }
   }
+
+  if (base->IsArray()) {
+    DBG_ASSERT(is_top_dim_ == false, "top dim flag is incorrect");
+    is_top_dim_ = true;
+    array_lens_.clear();
+    auto it = base;
+    while (it->GetDerefedType()) {
+      array_lens_.push_back(it->GetLength());
+      it = it->GetDerefedType();
+    }
+
+    DBG_ASSERT(arr_lens.size() == array_lens_.size(), "get array length failed");
+  }
+
   return base;
 }
 
@@ -154,6 +279,53 @@ TypePtr Analyzer::AnalyzeOn(VariableDefAST &ast) {
 }
 
 TypePtr Analyzer::AnalyzeOn(InitListAST &ast) {
+
+  auto getArrayLinearBaseType = [](const TypePtr &type) -> TypePtr {
+    DBG_ASSERT(type->IsArray(), "not array type");
+    TypePtr base_type = type->GetDerefedType();
+    while (base_type->GetDerefedType()) {
+      base_type = base_type->GetDerefedType();
+    }
+    return base_type;
+  };
+
+  auto &exprs = ast.exprs();
+  const auto &type = final_types_.top();
+  auto base_type = getArrayLinearBaseType(type);
+  DBG_ASSERT(!array_lens_.empty(), "arrary length list is empty");
+
+  // get type
+  bool is_top_dim = is_top_dim_;
+  is_top_dim_ = false;
+  for (const auto &it : ast.exprs()) {
+    it->SemaAnalyze(*this);
+  }
+
+
+  /* ---------- rebuild linear array ---------- */
+  if (is_top_dim) {
+    // get total size
+    int total_size = 1;
+    for (const auto &it : array_lens_) total_size *= it;
+
+    // get linear array list
+    auto result = GetLinearInitList(exprs);
+    DBG_ASSERT(total_size = result.size(), "init list size is incorrect");
+
+    ASTPtrList final_init_list = std::move(result);
+    if (array_lens_.size() > 1) {
+      auto matrix = ListToMatrix(array_lens_, final_init_list, true);
+      final_init_list = std::move(matrix);
+    }
+    ast.set_exprs(std::move(final_init_list));
+  } else {
+    return ast.set_ast_type(type->GetValueType(true));
+  }
+
+  return ast.set_ast_type(type->GetValueType(true));
+
+
+#if 0
   // NOTE: this process will rebuild initializer list. what this process
   //       does is NOT quite same as what normal C/C++ compilers do.
   const auto &type = final_types_.top();
@@ -197,6 +369,7 @@ TypePtr Analyzer::AnalyzeOn(InitListAST &ast) {
   // reset expressions
   ast.set_exprs(std::move(new_exprs));
   return ast.set_ast_type(type->GetValueType(true));
+#endif
 }
 
 TypePtr Analyzer::AnalyzeOn(ProtoTypeAST &ast) {

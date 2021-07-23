@@ -624,12 +624,14 @@ SSAPtr IRBuilder::visit(UnaryStmt *node) {
       return res;
     }
     case Op::LNot: {
-      // TODO: didn't implement
+      // convert value to bool type if necessary
       SSAPtr tobool = opr;
       if (opr->type()->IsInteger() || (opr->type()->GetDerefedType() && opr->type()->GetDerefedType()->IsInteger())) {
         auto zero = _module.GetZeroValue(type->GetType());
         tobool = _module.CreateICmpInst(Op::NotEqual, zero, opr);
       }
+
+      // logic not
       auto trueConst = _module.CreateConstInt(1, Type::Bool);
       auto lnot = _module.CreateBinaryOperator(Op::Xor, trueConst, tobool);
       return lnot;
