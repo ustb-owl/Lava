@@ -289,10 +289,18 @@ SSAPtr Module::CreatePureBinaryInst(Instruction::BinaryOps opcode,
 
   auto lhs = (load_s1 != nullptr) ? load_s1 : S1;
   auto rhs = (load_s2 != nullptr) ? load_s2 : S2;
-  auto rhs_res = CreateCastInst(rhs, lhs->type());
-  DBG_ASSERT(rhs_res != nullptr, "cast rhs failed");
 
-  auto bin_inst = BinaryOperator::Create(opcode,lhs, rhs_res);
+  const auto &lty = lhs->type();
+  const auto &rty = rhs->type();
+  SSAPtr LHS = lhs, RHS = rhs;
+  if (lty->IsInteger() && rty->IsInteger()) {
+    const auto &ty = GetCommonType(lty, rty);
+    LHS = CreateCastInst(lhs, ty);
+    RHS = CreateCastInst(rhs, ty);
+  }
+
+
+  auto bin_inst = BinaryOperator::Create(opcode, LHS, RHS);
 
   DBG_ASSERT(bin_inst != nullptr, "emit binary instruction failed");
 

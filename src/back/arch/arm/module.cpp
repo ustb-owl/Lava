@@ -433,6 +433,10 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
         auto imm = CreateImmediate(1);
         auto src = CreateNoImmOperand(cast_inst->operand());
         AddInst<LLBinaryInst>(LLInst::Opcode::And, dst, src, imm);
+      } else if (cast_inst->opcode() == mid::Instruction::CastOps::ZExt) {
+        auto dst = CreateOperand(inst);
+        auto src = CreateOperand(cast_inst->operand());
+        AddInst<LLMove>(dst, src);
       }
     } else {
       // TODO:

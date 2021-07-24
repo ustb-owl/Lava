@@ -614,8 +614,12 @@ SSAPtr IRBuilder::visit(UnaryStmt *node) {
     case Op::Pos:
       return opr;
     case Op::Neg: {
-      auto zero = _module.GetZeroValue(type->GetType());
-      auto res = _module.CreateBinaryOperator(Op::Sub, zero, opr);
+      auto operand = opr;
+      if (operand->type()->GetSize() == 1) {
+        operand = _module.CreateCastInst(operand, MakePrimType(define::Type::Int32, operand->type()->IsRightValue()));
+      }
+      auto zero = _module.GetZeroValue(Type::Int32);
+      auto res = _module.CreateBinaryOperator(Op::Sub, zero, operand);
       return res;
     }
     case Op::Not: {
