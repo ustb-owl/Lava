@@ -341,7 +341,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
           auto addr = LLOperand::Register(ArmReg::sp);
 
           // offset
-          auto offset = LLOperand::Immediate(-((param_size - i) * 4));
+          auto offset = CreateImmediate(-((param_size - i) * 4));
           auto st_inst = AddInst<LLStore>(data, addr, offset);
           DBG_ASSERT(st_inst != nullptr, "store parameter(%lu) failed in calling %s",
                      i, dyn_cast<mid::Function>(callInst->Callee())->GetFunctionName().c_str());
@@ -590,9 +590,9 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
            << mv_inst->dst() << "," << SPACE <<"=" << imm;
 #endif
         os << INDENT << "mov" << TAB
-           << mv_inst->dst() << "," << SPACE << "#" << (imm & 0xffff) << std::endl;
+           << mv_inst->dst() << "," << SPACE << "#" << ((uint32_t)imm & 0xffff) << std::endl;
         os << INDENT << "movt" << TAB
-           << mv_inst->dst() << "," << SPACE << "#" << (imm >> 16);
+           << mv_inst->dst() << "," << SPACE << "#" << ((uint32_t)imm >> 16);
       }
     } else {
       os << INDENT << "mov" << mv_inst->cond() << TAB
@@ -701,10 +701,10 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
   } else if (auto load_pseudo = dyn_cast<LLLoadPseudo>(inst)) {
     os << INDENT << "mov" << TAB
        << load_pseudo->dst() << ","
-       << SPACE << "#" << (load_pseudo->imm() & 0xffff) << std::endl;
+       << SPACE << "#" << ((uint32_t)(load_pseudo->imm()) & 0xffff) << std::endl;
     os << INDENT << "movt" << TAB
        << load_pseudo->dst() << ","
-       << SPACE << "#" << (load_pseudo->imm() >> 16);
+       << SPACE << "#" << ((uint32_t)(load_pseudo->imm()) >> 16);
   } else if (auto comment = dyn_cast<LLComment>(inst)) {
     os << '@' << SPACE << comment->comment();
   }
