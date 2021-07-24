@@ -9,6 +9,8 @@
 
 namespace lava::mid {
 
+bool NeedLoad(const SSAPtr &ptr);
+
 // operands: pred1, pred2 ...
 class BasicBlock : public User {
 private:

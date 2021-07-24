@@ -256,7 +256,7 @@ static unsigned OpToOpcode(front::Operator op) {
 
 // S1 = S2;
 SSAPtr Module::CreateAssign(const SSAPtr &S1, const SSAPtr &S2) {
-  if (S2->type()->IsConst() || IsBinaryOperator(S2) || IsCallInst(S2)) {
+  if (!NeedLoad(S2)) {
     // S1 = C ---> store C, s1
     auto store_inst = CreateStore(S2, S1);
     DBG_ASSERT(store_inst != nullptr, "emit store inst failed");
@@ -277,12 +277,12 @@ SSAPtr Module::CreatePureBinaryInst(Instruction::BinaryOps opcode,
   DBG_ASSERT(opcode >= Instruction::BinaryOps::Add, "opcode is not pure binary operator");
   SSAPtr load_s1 = nullptr;
   SSAPtr load_s2 = nullptr;
-  if (!S1->type()->IsConst() && !IsBinaryOperator(S1) && !IsCallInst(S1) && S1->type()->IsPointer()) {
+  if (NeedLoad(S1)) {
     load_s1 = CreateLoad(S1);
     DBG_ASSERT(load_s1 != nullptr, "emit load S1 failed");
   }
 
-  if (!S2->type()->IsConst() && !IsBinaryOperator(S2) && !IsCallInst(S2) && S2->type()->IsPointer()) {
+  if (NeedLoad(S2)) {
     load_s2 = CreateLoad(S2);
     DBG_ASSERT(load_s2 != nullptr, "emit load S2 failed");
   }

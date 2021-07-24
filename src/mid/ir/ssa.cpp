@@ -281,6 +281,12 @@ bool Instruction::NeedLoad() const {
   if (this->opcode() == Instruction::Call) {
     res &= false;
   }
+  if (this->opcode() == Instruction::ICmp) {
+    res &= false;
+  }
+  if (!this->type()->IsPointer()) {
+    res &= false;
+  }
   return res;
 }
 
@@ -359,6 +365,16 @@ bool IsCmp(const SSAPtr &ptr) {
     return true;
   }
   return false;
+}
+
+bool NeedLoad(const SSAPtr &ptr) {
+  if (auto inst = dyn_cast<Instruction>(ptr)) {
+    return inst->NeedLoad();
+  } else {
+    if (ptr->type()->IsConst()) return false;
+    if (!ptr->type()->IsPointer()) return false;
+  }
+  return true;
 }
 
 

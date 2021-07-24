@@ -486,7 +486,7 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
   const auto &func = _module.InsertPoint()->parent();
   auto zero = _module.GetZeroValue(type->GetType());
   if (node->op() == front::Operator::LAnd) {
-    bin_inst = _module.CreateAlloca(type);
+    bin_inst = _module.CreateAlloca(MakePrimType(Type::Bool, false));
     auto lhs_true = _module.CreateBlock(func, "lhs.true");
     auto lhs_false = _module.CreateBlock(func, "lhs.false");
     auto land_end = _module.CreateBlock(func, "land.end");
@@ -499,6 +499,7 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     rhs = node->rhs()->CodeGeneAction(this);
     DBG_ASSERT(rhs != nullptr, "rhs generate failed");
 
+#if 0
     const auto &lty = lhs->type();
     const auto &rty = rhs->type();
     SSAPtr LHS = lhs, RHS = rhs;
@@ -511,9 +512,16 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     // create land statement
     auto landInst = _module.CreateBinaryOperator(node->op(), LHS, RHS);
     DBG_ASSERT(landInst != nullptr, "logic-and statement generate failed");
+#endif
 
     // save result
-    _module.CreateStore(landInst, bin_inst);
+    if (!NeedLoad(rhs)) {
+      _module.CreateStore(rhs, bin_inst);
+    } else {
+      auto tmp = _module.CreateLoad(rhs);
+      _module.CreateStore(tmp, bin_inst);
+    }
+
     // jump to land end
     _module.CreateJump(land_end);
 
@@ -533,7 +541,7 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     bin_inst = _module.CreateLoad(bin_inst);
 
   } else if (node->op() == front::Operator::LOr) {
-    bin_inst = _module.CreateAlloca(type);
+    bin_inst = _module.CreateAlloca(MakePrimType(Type::Bool, false));
     auto lhs_true = _module.CreateBlock(func, "lhs.true");
     auto lhs_false = _module.CreateBlock(func, "lhs.false");
     auto lor_end = _module.CreateBlock(func, "lor.end");
@@ -545,6 +553,7 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     rhs = node->rhs()->CodeGeneAction(this);
     DBG_ASSERT(rhs != nullptr, "rhs generate failed");
 
+#if 0
     const auto &lty = lhs->type();
     const auto &rty = rhs->type();
     SSAPtr LHS = lhs, RHS = rhs;
@@ -557,9 +566,15 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     // create lor statement
     auto lorInst = _module.CreateBinaryOperator(node->op(), LHS, RHS);
     DBG_ASSERT(lorInst != nullptr, "logic-or statement generate failed");
+#endif
 
     // save result
-    _module.CreateStore(lorInst, bin_inst);
+    if (!NeedLoad(rhs)) {
+      _module.CreateStore(rhs, bin_inst);
+    } else {
+      auto tmp = _module.CreateLoad(rhs);
+      _module.CreateStore(tmp, bin_inst);
+    }
 
     // jump to land end
     _module.CreateJump(lor_end);
