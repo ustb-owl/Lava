@@ -399,31 +399,30 @@ SSAPtr Module::CreateICmpInst(define::BinaryStmt::Operator opcode, const SSAPtr 
   DBG_ASSERT(rhs != nullptr, "rhs SSA is null ptr");
 
   SSAPtr icmp_inst, lhs_ssa, rhs_ssa;
-  bool lhs_not_need_load = false, rhs_not_need_load = false;
 
-  if (lhs->isInstruction()) {
-    auto lhs_inst = std::static_pointer_cast<Instruction>(lhs);
-    lhs_not_need_load = !lhs_inst->NeedLoad();
-  }
-
-  if (rhs->isInstruction()) {
-    auto rhs_inst = std::static_pointer_cast<Instruction>(rhs);
-    rhs_not_need_load = !rhs_inst->NeedLoad();
-  }
-
-  if (lhs->type()->IsConst() || lhs_not_need_load || !lhs->type()->IsPointer()) {
+  if (!NeedLoad(lhs)) {
     lhs_ssa = lhs;
   } else {
     lhs_ssa = CreateLoad(lhs);
   }
 
-  if (rhs->type()->IsConst() || rhs_not_need_load || !rhs->type()->IsPointer()) {
+  if (!NeedLoad(rhs)) {
     rhs_ssa = rhs;
   } else {
     rhs_ssa = CreateLoad(rhs);
   }
 
-  icmp_inst = AddInst<ICmpInst>(opcode, lhs_ssa, rhs_ssa);
+  // cast before compare
+  const auto &lty = lhs_ssa->type();
+  const auto &rty = rhs_ssa->type();
+  SSAPtr LHS = lhs_ssa, RHS = rhs_ssa;
+  if (lty->IsInteger() && rty->IsInteger()) {
+    const auto &ty = GetCommonType(lty, rty);
+    LHS = CreateCastInst(lhs_ssa, ty);
+    RHS = CreateCastInst(rhs_ssa, ty);
+  }
+
+  icmp_inst = AddInst<ICmpInst>(opcode, LHS, RHS);
   DBG_ASSERT(icmp_inst != nullptr, "emit ICmp instruction failed");
   icmp_inst->set_type(MakePrimType(Type::Bool, true));
 

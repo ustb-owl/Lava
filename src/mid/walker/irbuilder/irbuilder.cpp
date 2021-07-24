@@ -499,6 +499,15 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     rhs = node->rhs()->CodeGeneAction(this);
     DBG_ASSERT(rhs != nullptr, "rhs generate failed");
 
+    SSAPtr RHS = rhs;
+    if (NeedLoad(rhs)) RHS = _module.CreateLoad(rhs);
+
+    // convert to bool if necessary
+    if (RHS->type()->GetSize() > 1) {
+      zero = _module.GetZeroValue(type->GetType());
+      RHS = _module.CreateICmpInst(front::Operator::NotEqual, zero, RHS);
+    }
+
 #if 0
     const auto &lty = lhs->type();
     const auto &rty = rhs->type();
@@ -515,12 +524,7 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
 #endif
 
     // save result
-    if (!NeedLoad(rhs)) {
-      _module.CreateStore(rhs, bin_inst);
-    } else {
-      auto tmp = _module.CreateLoad(rhs);
-      _module.CreateStore(tmp, bin_inst);
-    }
+    _module.CreateStore(RHS, bin_inst);
 
     // jump to land end
     _module.CreateJump(land_end);
@@ -553,6 +557,15 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     rhs = node->rhs()->CodeGeneAction(this);
     DBG_ASSERT(rhs != nullptr, "rhs generate failed");
 
+    SSAPtr RHS = rhs;
+    if (NeedLoad(rhs)) RHS = _module.CreateLoad(rhs);
+
+    // convert to bool if necessary
+    if (RHS->type()->GetSize() > 1) {
+      zero = _module.GetZeroValue(type->GetType());
+      RHS = _module.CreateICmpInst(front::Operator::NotEqual, zero, RHS);
+    }
+
 #if 0
     const auto &lty = lhs->type();
     const auto &rty = rhs->type();
@@ -569,12 +582,7 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
 #endif
 
     // save result
-    if (!NeedLoad(rhs)) {
-      _module.CreateStore(rhs, bin_inst);
-    } else {
-      auto tmp = _module.CreateLoad(rhs);
-      _module.CreateStore(tmp, bin_inst);
-    }
+    _module.CreateStore(RHS, bin_inst);
 
     // jump to land end
     _module.CreateJump(lor_end);
