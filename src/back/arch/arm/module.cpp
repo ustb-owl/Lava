@@ -582,7 +582,7 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
       auto imm = mv_inst->src()->imm_num();
       if ((uint32_t)imm >> 16u == 0) {
         os << INDENT << "movw" << TAB
-           << mv_inst->dst() << ","<< SPACE <<"#" << imm;
+           << mv_inst->dst() << ","<< SPACE <<"#" << (uint32_t)imm;
       } else {
         // wider than 16 bits
 #if 0
