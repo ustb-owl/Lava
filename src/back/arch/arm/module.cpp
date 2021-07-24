@@ -47,10 +47,12 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
           /* read from sp + (i-4)*4 in entry block */
 
           // mov rm, (i - 4) * 4
+
           auto offset = LLOperand::Virtual(_virtual_max);
           auto src = LLOperand::Immediate((i - 4) * 4);
           auto moveInst = AddInst<LLMove>(offset, src);
           moveInst->SetIsArg(true);
+
 
           // load rn, [sp, rm]
           auto vreg = LLOperand::Virtual(_virtual_max);
@@ -351,7 +353,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
         // sub sp, sp, (n - 4) * 4
         auto dst = LLOperand::Register(ArmReg::sp);
         auto lhs = LLOperand::Register(ArmReg::sp);
-        auto rhs = LLOperand::Immediate(4 * (param_size - 4));
+        auto rhs = CreateImmediate(4 * (param_size - 4));
         auto sub_inst = AddInst<LLBinaryInst>(LLInst::Opcode::Sub, dst, lhs, rhs);
       }
 
@@ -365,7 +367,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
         // add sp, sp, (n - 4) * 4
         auto dst = LLOperand::Register(ArmReg::sp);
         auto lhs = LLOperand::Register(ArmReg::sp);
-        auto rhs = LLOperand::Immediate(4 * (param_size - 4));
+        auto rhs = CreateImmediate(4 * (param_size - 4));
         auto sub_inst = AddInst<LLBinaryInst>(LLInst::Opcode::Add, dst, lhs, rhs);
       }
 
