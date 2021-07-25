@@ -582,7 +582,7 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
       auto imm = mv_inst->src()->imm_num();
       if ((uint32_t)imm >> 16u == 0) {
         os << INDENT << "movw" << TAB
-           << mv_inst->dst() << ","<< SPACE <<"#" << (uint32_t)imm;
+           << mv_inst->dst() << ","<< SPACE <<"#" << (uint16_t)imm;
       } else {
         // wider than 16 bits
 #if 0
@@ -590,9 +590,9 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
            << mv_inst->dst() << "," << SPACE <<"=" << imm;
 #endif
         os << INDENT << "mov" << TAB
-           << mv_inst->dst() << "," << SPACE << "#" << ((uint32_t)(imm & 0xffff)) << std::endl;
+           << mv_inst->dst() << "," << SPACE << "#" << (imm & 0xffff) << std::endl;
         os << INDENT << "movt" << TAB
-           << mv_inst->dst() << "," << SPACE << "#" << ((uint32_t)(imm >> 16));
+           << mv_inst->dst() << "," << SPACE << "#" << (uint16_t (imm >> 16));
       }
     } else {
       os << INDENT << "mov" << mv_inst->cond() << TAB
@@ -704,7 +704,7 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
        << SPACE << "#" << ((uint32_t)(load_pseudo->imm()) & 0xffff) << std::endl;
     os << INDENT << "movt" << TAB
        << load_pseudo->dst() << ","
-       << SPACE << "#" << ((uint32_t)(load_pseudo->imm()) >> 16);
+       << SPACE << "#" << ((uint16_t)(load_pseudo->imm()) >> 16);
   } else if (auto comment = dyn_cast<LLComment>(inst)) {
     os << '@' << SPACE << comment->comment();
   }

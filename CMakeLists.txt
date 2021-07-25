@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-#add_definitions (-DBUILD_LAVA)
+add_definitions (-DBUILD_LAVA)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     MESSAGE(STATUS "Debug mode is open")
