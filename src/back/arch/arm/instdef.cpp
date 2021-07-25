@@ -42,6 +42,7 @@ ArmShift::operator std::string() const {
       name = "rrx";
       break;
     default:
+      name = "";
       ERROR("should not reach here");
   }
   return std::string(name) + " #" + std::to_string(_shift);

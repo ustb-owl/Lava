@@ -24,6 +24,9 @@ set(LAVA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 add_compile_options(-Wall -Werror)
 
+set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+
 include_directories(${LAVA_INCLUDE_DIR})
 
 add_subdirectory("${LAVA_SOURCE_DIR}/define")

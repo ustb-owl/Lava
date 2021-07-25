@@ -50,7 +50,7 @@
 #define TRACE(fmt, ...)
 #define DBG_WARN(cond, fmt, ...)
 #define DBG_ASSERT(cond, fmt, ...)
-#define ERROR(fmt, ...)
+#define ERROR(fmt, ...) __builtin_unreachable()
 #endif // Is_True_On
 
 #define REL_ASSERT(cond, fmt, ...) \

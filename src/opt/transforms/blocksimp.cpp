@@ -152,10 +152,14 @@ public:
       if (auto jumpInst = dyn_cast<JumpInst>(BB->insts().back())) {
         auto target = dyn_cast<BasicBlock>(jumpInst->target());
         if (BB->insts().size() == 1) {
-          for (auto &it : *BB) {
-            auto pred = dyn_cast<BasicBlock>(it.value());
+          std::unordered_set<SSAPtr> preds;
+          for (auto it = BB->begin(); it != BB->end(); it++) {
+            auto pred = dyn_cast<BasicBlock>(it->value());
+            preds.insert(pred);
             ReplaceSuccessor(pred, target, BB);
           }
+
+          for (auto &it : preds) BB->RemoveValue(it);
 
           // remove this block from its successor's predecessor list
           target->RemoveValue(BB);
@@ -199,13 +203,23 @@ public:
   }
 
   void ReplaceSuccessor(BlockPtr &predecessor, BlockPtr &successor, BasicBlock *cur) {
-    auto termInst = predecessor->insts().back();
+    if (auto jumpInst = dyn_cast<JumpInst>(predecessor->insts().back())) {
+      jumpInst->RemoveValue(cur);
+      jumpInst->AddValue(successor);
+    } else if (auto branchInst = dyn_cast<BranchInst>(predecessor->insts().back())) {
+      auto true_block = branchInst->true_block();
+      auto false_block = branchInst->false_block();
+      if (cur == true_block.get()) {
+        branchInst->SetTrueBlock(successor);
+      } else if (cur == false_block.get()) {
+        branchInst->SetFalseBlock(successor);
+      } else {
+        ERROR("should not reach here");
+      }
+    }
 
     // add predecessor into target's predecessor list
     successor->AddValue(predecessor);
-
-    // pred from BB's predecessor list
-    cur->RemoveValue(predecessor);
   }
 
   void MergeBlocks(BasicBlock *pred, BasicBlock *succ) {
