@@ -149,7 +149,9 @@ SSAPtr IRBuilder::visit(VariableDecl *node) {
     it->CodeGeneAction(this);
   }
 
-  _module.SetInsertPoint(cur_insert);
+  if (cur_insert != nullptr) {
+    _module.SetInsertPoint(cur_insert);
+  }
 
   return nullptr;
 }
