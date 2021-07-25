@@ -590,9 +590,9 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
            << mv_inst->dst() << "," << SPACE <<"=" << imm;
 #endif
         os << INDENT << "mov" << TAB
-           << mv_inst->dst() << "," << SPACE << "#" << ((uint32_t)imm & 0xffff) << std::endl;
+           << mv_inst->dst() << "," << SPACE << "#" << ((uint32_t)(imm & 0xffff)) << std::endl;
         os << INDENT << "movt" << TAB
-           << mv_inst->dst() << "," << SPACE << "#" << ((uint32_t)imm >> 16);
+           << mv_inst->dst() << "," << SPACE << "#" << ((uint32_t)(imm >> 16));
       }
     } else {
       os << INDENT << "mov" << mv_inst->cond() << TAB

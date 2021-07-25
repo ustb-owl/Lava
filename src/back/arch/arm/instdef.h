@@ -339,7 +339,7 @@ private:
 public:
   LLMove(LLOperandPtr dst, LLOperandPtr src, ArmCond cond = ArmCond::Any)
     : LLInst(Opcode::Move, ClassId::LLMoveId),
-      _dst(std::move(dst)), _src(std::move(src)), _cond(cond) {}
+      _dst(std::move(dst)), _src(std::move(src)),  _is_arg(false), _cond(cond) {}
 
   // getter/setter
   bool             is_arg() { return _is_arg; }
