@@ -1,6 +1,7 @@
 #debug
 build
 cmake-build-debug
+test
 .idea
 .vscode
 

@@ -1,7 +1,8 @@
 #define DIRTY_ARRAY_CONV              1
-#define BLOCK_SIMPLIFICATION          2
-#define DEAD_GLOBAL_CODE_ELIMINATION  3
-#define DEAD_CODE_ELIMINATION         4
+#define DIRTY_FUNCTION_CONV           2
+#define BLOCK_SIMPLIFICATION          3
+#define DEAD_GLOBAL_CODE_ELIMINATION  4
+#define DEAD_CODE_ELIMINATION         5
 
 
 // analysis

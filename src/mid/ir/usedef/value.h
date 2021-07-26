@@ -5,12 +5,15 @@
 
 #include "define/type.h"
 #include "front/logger.h"
-#include "mid/ir/classid.h"
+#include "common/classid.h"
 #include "mid/ir/usedef/use.h"
+
+namespace lava {
+  class IdManager;
+}
 
 namespace lava::mid {
 
-class IdManager;
 
 class Constant;
 class Argument;

@@ -2,7 +2,7 @@
 #include <string>
 #include "module.h"
 #include "constant.h"
-#include "idmanager.h"
+#include "common/idmanager.h"
 
 using namespace lava::define;
 
@@ -256,7 +256,7 @@ static unsigned OpToOpcode(front::Operator op) {
 
 // S1 = S2;
 SSAPtr Module::CreateAssign(const SSAPtr &S1, const SSAPtr &S2) {
-  if (S2->type()->IsConst() || IsBinaryOperator(S2) || IsCallInst(S2)) {
+  if (!NeedLoad(S2)) {
     // S1 = C ---> store C, s1
     auto store_inst = CreateStore(S2, S1);
     DBG_ASSERT(store_inst != nullptr, "emit store inst failed");
@@ -277,18 +277,30 @@ SSAPtr Module::CreatePureBinaryInst(Instruction::BinaryOps opcode,
   DBG_ASSERT(opcode >= Instruction::BinaryOps::Add, "opcode is not pure binary operator");
   SSAPtr load_s1 = nullptr;
   SSAPtr load_s2 = nullptr;
-  if (!S1->type()->IsConst() && !IsBinaryOperator(S1) && !IsCallInst(S1) && S1->type()->IsPointer()) {
+  if (NeedLoad(S1)) {
     load_s1 = CreateLoad(S1);
     DBG_ASSERT(load_s1 != nullptr, "emit load S1 failed");
   }
 
-  if (!S2->type()->IsConst() && !IsBinaryOperator(S2) && !IsCallInst(S2) && S2->type()->IsPointer()) {
+  if (NeedLoad(S2)) {
     load_s2 = CreateLoad(S2);
     DBG_ASSERT(load_s2 != nullptr, "emit load S2 failed");
   }
-  auto bin_inst = BinaryOperator::Create(opcode,
-                                         ((load_s1 != nullptr) ? load_s1 : S1),
-                                         ((load_s2 != nullptr) ? load_s2 : S2));
+
+  auto lhs = (load_s1 != nullptr) ? load_s1 : S1;
+  auto rhs = (load_s2 != nullptr) ? load_s2 : S2;
+
+  const auto &lty = lhs->type();
+  const auto &rty = rhs->type();
+  SSAPtr LHS = lhs, RHS = rhs;
+  if (lty->IsInteger() && rty->IsInteger()) {
+    const auto &ty = GetCommonType(lty, rty);
+    LHS = CreateCastInst(lhs, ty);
+    RHS = CreateCastInst(rhs, ty);
+  }
+
+
+  auto bin_inst = BinaryOperator::Create(opcode, LHS, RHS);
 
   DBG_ASSERT(bin_inst != nullptr, "emit binary instruction failed");
 
@@ -387,31 +399,30 @@ SSAPtr Module::CreateICmpInst(define::BinaryStmt::Operator opcode, const SSAPtr 
   DBG_ASSERT(rhs != nullptr, "rhs SSA is null ptr");
 
   SSAPtr icmp_inst, lhs_ssa, rhs_ssa;
-  bool lhs_not_need_load = false, rhs_not_need_load = false;
 
-  if (lhs->isInstruction()) {
-    auto lhs_inst = std::static_pointer_cast<Instruction>(lhs);
-    lhs_not_need_load = !lhs_inst->NeedLoad();
-  }
-
-  if (rhs->isInstruction()) {
-    auto rhs_inst = std::static_pointer_cast<Instruction>(rhs);
-    rhs_not_need_load = !rhs_inst->NeedLoad();
-  }
-
-  if (lhs->type()->IsConst() || lhs_not_need_load || !lhs->type()->IsPointer()) {
+  if (!NeedLoad(lhs)) {
     lhs_ssa = lhs;
   } else {
     lhs_ssa = CreateLoad(lhs);
   }
 
-  if (rhs->type()->IsConst() || rhs_not_need_load || !rhs->type()->IsPointer()) {
+  if (!NeedLoad(rhs)) {
     rhs_ssa = rhs;
   } else {
     rhs_ssa = CreateLoad(rhs);
   }
 
-  icmp_inst = AddInst<ICmpInst>(opcode, lhs_ssa, rhs_ssa);
+  // cast before compare
+  const auto &lty = lhs_ssa->type();
+  const auto &rty = rhs_ssa->type();
+  SSAPtr LHS = lhs_ssa, RHS = rhs_ssa;
+  if (lty->IsInteger() && rty->IsInteger()) {
+    const auto &ty = GetCommonType(lty, rty);
+    LHS = CreateCastInst(lhs_ssa, ty);
+    RHS = CreateCastInst(rhs_ssa, ty);
+  }
+
+  icmp_inst = AddInst<ICmpInst>(opcode, LHS, RHS);
   DBG_ASSERT(icmp_inst != nullptr, "emit ICmp instruction failed");
   icmp_inst->set_type(MakePrimType(Type::Bool, true));
 

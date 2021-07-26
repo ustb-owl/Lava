@@ -5,7 +5,7 @@
 #include "opt/blkwalker.h"
 #include "opt/pass_manager.h"
 #include "lib/bitvec.h"
-#include "mid/ir/castssa.h"
+#include "common/casting.h"
 
 namespace lava::opt {
 

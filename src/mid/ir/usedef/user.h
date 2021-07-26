@@ -44,15 +44,23 @@ public:
   }
 
   void RemoveValue(const SSAPtr& V) {
-    RemoveValue(V.get());
+    return RemoveValue(V.get());
   }
 
   void RemoveValue(Value *V) {
+//    for (auto it = _operands.begin(); it != _operands.end();) {
+//      if (it->value().get() == V) {
+//        it = _operands.erase(it);
+//      } else {
+//        it++;
+//      }
+//    }
+//
     _operands.erase(
         std::remove_if(_operands.begin(), _operands.end(),
-               [&V](const Use &use) {
-                 return use.value().get() == V;
-               }), _operands.end());
+              [&V](const Use &use) {
+                  return use.value().get() == V;
+              }),_operands.end());
   }
 
   // clear all uses

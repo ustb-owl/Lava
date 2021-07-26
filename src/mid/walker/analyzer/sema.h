@@ -60,7 +60,9 @@ private:
   define::TypePtr             _cur_ret;
 
 public:
-  explicit SemAnalyzer(ASTPtr &ast) : _rootNode(ast) {}
+  explicit SemAnalyzer(ASTPtr &ast) : _rootNode(ast) {
+    TRACE0();
+  }
 
   TypePtr visit(IntAST              *) override;
   TypePtr visit(CharAST             *) override;

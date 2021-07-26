@@ -9,6 +9,8 @@
 
 namespace lava::mid {
 
+bool NeedLoad(const SSAPtr &ptr);
+
 // operands: pred1, pred2 ...
 class BasicBlock : public User {
 private:
@@ -219,6 +221,11 @@ public:
   static BinaryPtr createNeg(const SSAPtr &Op);
   static BinaryPtr createNot(const SSAPtr &Op);
 
+  // getter/sertter
+  const SSAPtr &LHS() const { return (*this)[0].value(); }
+  const SSAPtr &RHS() const { return (*this)[1].value(); }
+  BinaryOps opcode()  const { return BinaryOps(Instruction::opcode()); }
+
   // methods for dyn_cast
   static inline bool classof(BinaryOperator *) { return true; }
   static inline bool classof(const BinaryOperator *) { return true; }
@@ -247,6 +254,10 @@ public:
   void set_arg(std::size_t i, const SSAPtr &arg) {
     _args.resize(i + 1);
     _args[i] = arg;
+  }
+
+  void SetName(const std::string &name) {
+    _function_name = name;
   }
 
   // getters
@@ -423,7 +434,7 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getters
-  const SSAPtr &value() const { return (*this)[0].value(); }
+  const SSAPtr &data() const { return (*this)[0].value(); }
 
   const SSAPtr &pointer() const { return (*this)[1].value(); }
 
@@ -563,7 +574,9 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getter/setter
-  const SSAPtr & Callee() const { return (*this)[0].value(); }
+  const SSAPtr &Callee()     const { return (*this)[0].value();     }
+  const SSAPtr &Param(int i) const { return (*this)[i + 1].value(); }
+  int param_size()           const { return size() - 1;             }
 
   // methods for dyn_cast
   static inline bool classof(CallInst *) { return true; }
@@ -594,7 +607,7 @@ public:
   static unsigned GetNumOperands() { return 2; }
 
   // getter/setter
-  Operator             op()   const { return _op;              }
+  Operator             op()   const { return _op;                }
   const SSAPtr       &LHS()   const { return (*this)[0].value(); }
   const SSAPtr       &RHS()   const { return (*this)[1].value(); }
   std::string         opStr() const;
@@ -617,7 +630,7 @@ public:
 class  CastInst : public Instruction {
 public:
   explicit CastInst(CastOps op, const SSAPtr &opr)
-  : Instruction(op, 1, ClassId::CallInstId) {
+  : Instruction(op, 1, ClassId::CastInstId) {
     AddValue(opr);
   }
 
@@ -659,15 +672,15 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getter/setter
-  bool               isVar()  const { return _is_var;          }
+  bool               isVar()  const { return _is_var;            }
   const SSAPtr      &init()   const { return (*this)[0].value(); }
-  const std::string &name()   const { return _name;            }
+  const std::string &name()   const { return _name;              }
 
-  void set_is_var(bool is_var)      { _is_var = is_var;        }
-  void set_init(const SSAPtr &init) { (*this)[0].set(init);    }
+  void set_is_var(bool is_var)      { _is_var = is_var;          }
+  void set_init(const SSAPtr &init) { (*this)[0].set(init);      }
 
   // methods for dyn_cast
-  static inline bool classof(GlobalVariable *) { return true; }
+  static inline bool classof(GlobalVariable *) { return true;       }
   static inline bool classof(const GlobalVariable *) { return true; }
   static bool classof(Value *value) {
     if (value->classId() == ClassId::GlobalVariableId) return true;
@@ -685,7 +698,7 @@ bool IsBinaryOperator(const SSAPtr &ptr);
 
 
 // element accessing (load effective address)
-// operands: ptr, index1, index2, ...
+// operands: ptr, index1, multiplier, ...
 class AccessInst : public Instruction {
 public:
   enum class AccessType { Pointer, Element };
@@ -704,9 +717,13 @@ public:
   // getter/setter
   AccessType acc_type()      const { return _acc_type;        }
   const SSAPtr &ptr()        const { return (*this)[0].value(); }
+  const SSAPtr &index()      const { return (*this)[1].value(); }
   const SSAPtr &index(int n) const { return (*this)[n].value(); }
+  const SSAPtr &multiplier() const { return (*this)[2].value(); }
   void set_ptr(const SSAPtr &ptr)          { (*this)[0].set(ptr); }
   void set_index(const SSAPtr &idx, int n) { (*this)[n].set(idx); }
+
+  bool has_multiplier() const { return this->size() == 3; }
 
   // methods for dyn_cast
   static inline bool classof(AccessInst *) { return true; }

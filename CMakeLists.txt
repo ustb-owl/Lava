@@ -24,12 +24,16 @@ set(LAVA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 add_compile_options(-Wall -Werror)
 
+set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
+set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
+
 include_directories(${LAVA_INCLUDE_DIR})
 
 add_subdirectory("${LAVA_SOURCE_DIR}/define")
 add_subdirectory("${LAVA_SOURCE_DIR}/front")
 add_subdirectory("${LAVA_SOURCE_DIR}/mid")
 add_subdirectory("${LAVA_SOURCE_DIR}/opt")
+add_subdirectory("${LAVA_SOURCE_DIR}/back")
 add_subdirectory("${LAVA_SOURCE_DIR}/driver")
 
 # executable
@@ -41,6 +45,7 @@ IF (APPLE)
         lava::definelib
         lava::mid
         lava::opt
+        lava::back
         lava::driver
     )
 ELSEIF (UNIX)
@@ -50,6 +55,7 @@ ELSEIF (UNIX)
         lava::definelib
         lava::mid
         lava::opt
+        lava::back
         lava::driver
         -Wl,--end-group
 )

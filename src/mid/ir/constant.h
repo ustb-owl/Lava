@@ -13,7 +13,7 @@ using lava::define::PrimType;
 // Constant int value ssa
 class ConstantInt : public Value {
 private:
-  unsigned int _value;
+  int _value;
 
 public:
   explicit ConstantInt(unsigned int value)
@@ -24,9 +24,17 @@ public:
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
-  unsigned int value() const { return _value; }
+  int value()                       const { return _value;      }
+  bool IsZero()                     const { return _value == 0; }
 
-  bool IsZero() const { return _value == 0; }
+  static inline bool classof(ConstantInt *)       { return true;        }
+  static inline bool classof(const ConstantInt *) { return true;        }
+  static bool classof(Value *value) {
+    return value->classId() == ClassId::ConstantIntId;
+  }
+  static bool classof(const Value *value) {
+    return value->classId() == ClassId::ConstantIntId;
+  }
 };
 
 // Constant string value ssa

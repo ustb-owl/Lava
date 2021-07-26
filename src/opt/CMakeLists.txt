@@ -9,6 +9,7 @@ add_library(opt
         transforms/dce.cpp
         transforms/hello.cpp
         transforms/blocksimp.cpp
+        transforms/dirtyname_conv.cpp
         transforms/dirtyarray_conv.cpp
 )
 

@@ -1,5 +1,5 @@
 #include "irbuilder.h"
-#include "mid/ir/castssa.h"
+#include "common/casting.h"
 
 #include <deque>
 #include <iostream>
@@ -149,7 +149,9 @@ SSAPtr IRBuilder::visit(VariableDecl *node) {
     it->CodeGeneAction(this);
   }
 
-  _module.SetInsertPoint(cur_insert);
+  if (cur_insert != nullptr) {
+    _module.SetInsertPoint(cur_insert);
+  }
 
   return nullptr;
 }
@@ -183,14 +185,32 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
 
       SSAPtr init_expr;
       auto init_ssa = init->CodeGeneAction(this);
+
       auto def = init_ssa->type()->GetDerefedType();
       if (def && def->IsArray()) {
         init_expr = init_ssa;
         var->set_type(init_ssa->type());
+
+        DBG_ASSERT(init_expr != nullptr, "emit init of global variable failed");
+
+        // set init array to nullptr is this array is all zero
+        bool is_all_zero = true;
+        for (const auto &init_value : (*dyn_cast<ConstantArray>(init_ssa))) {
+          auto elem = dyn_cast<ConstantInt>(init_value.value());
+          DBG_ASSERT(elem != nullptr, "elem is null ptr");
+          if (!elem->IsZero()) {
+            is_all_zero = false;
+            break;
+          }
+        }
+        if (is_all_zero) init_expr = nullptr;
+
       } else {
         init_expr = _module.CreateCastInst(init_ssa, type);
+        DBG_ASSERT(init_expr != nullptr, "emit init of global variable failed");
       }
-      DBG_ASSERT(init_expr != nullptr, "emit init of global variable failed");
+
+
       var->set_init(init_expr);
     } else {
       if (type->IsArray()) {
@@ -468,11 +488,12 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
   const auto &func = _module.InsertPoint()->parent();
   auto zero = _module.GetZeroValue(type->GetType());
   if (node->op() == front::Operator::LAnd) {
-    bin_inst = _module.CreateAlloca(type);
+    bin_inst = _module.CreateAlloca(MakePrimType(Type::Bool, false));
     auto lhs_true = _module.CreateBlock(func, "lhs.true");
     auto lhs_false = _module.CreateBlock(func, "lhs.false");
     auto land_end = _module.CreateBlock(func, "land.end");
-    _module.CreateBranch(lhs, lhs_true, lhs_false);
+    auto cond = _module.CreateICmpInst(BinaryStmt::Operator::NotEqual, zero, lhs);
+    _module.CreateBranch(cond, lhs_true, lhs_false);
 
     /* LHS true */
     // generate rhs in lhs_true block
@@ -480,6 +501,16 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     rhs = node->rhs()->CodeGeneAction(this);
     DBG_ASSERT(rhs != nullptr, "rhs generate failed");
 
+    SSAPtr RHS = rhs;
+    if (NeedLoad(rhs)) RHS = _module.CreateLoad(rhs);
+
+    // convert to bool if necessary
+    if (RHS->type()->GetSize() > 1) {
+      zero = _module.GetZeroValue(type->GetType());
+      RHS = _module.CreateICmpInst(front::Operator::NotEqual, zero, RHS);
+    }
+
+#if 0
     const auto &lty = lhs->type();
     const auto &rty = rhs->type();
     SSAPtr LHS = lhs, RHS = rhs;
@@ -492,9 +523,11 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     // create land statement
     auto landInst = _module.CreateBinaryOperator(node->op(), LHS, RHS);
     DBG_ASSERT(landInst != nullptr, "logic-and statement generate failed");
+#endif
 
     // save result
-    _module.CreateStore(landInst, bin_inst);
+    _module.CreateStore(RHS, bin_inst);
+
     // jump to land end
     _module.CreateJump(land_end);
 
@@ -514,17 +547,28 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     bin_inst = _module.CreateLoad(bin_inst);
 
   } else if (node->op() == front::Operator::LOr) {
-    bin_inst = _module.CreateAlloca(type);
+    bin_inst = _module.CreateAlloca(MakePrimType(Type::Bool, false));
     auto lhs_true = _module.CreateBlock(func, "lhs.true");
     auto lhs_false = _module.CreateBlock(func, "lhs.false");
     auto lor_end = _module.CreateBlock(func, "lor.end");
-    _module.CreateBranch(lhs, lhs_true, lhs_false);
+    auto cond = _module.CreateICmpInst(BinaryStmt::Operator::NotEqual, zero, lhs);
+    _module.CreateBranch(cond, lhs_true, lhs_false);
 
     /* LHS false */
     _module.SetInsertPoint(lhs_false);
     rhs = node->rhs()->CodeGeneAction(this);
     DBG_ASSERT(rhs != nullptr, "rhs generate failed");
 
+    SSAPtr RHS = rhs;
+    if (NeedLoad(rhs)) RHS = _module.CreateLoad(rhs);
+
+    // convert to bool if necessary
+    if (RHS->type()->GetSize() > 1) {
+      zero = _module.GetZeroValue(type->GetType());
+      RHS = _module.CreateICmpInst(front::Operator::NotEqual, zero, RHS);
+    }
+
+#if 0
     const auto &lty = lhs->type();
     const auto &rty = rhs->type();
     SSAPtr LHS = lhs, RHS = rhs;
@@ -537,9 +581,10 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     // create lor statement
     auto lorInst = _module.CreateBinaryOperator(node->op(), LHS, RHS);
     DBG_ASSERT(lorInst != nullptr, "logic-or statement generate failed");
+#endif
 
     // save result
-    _module.CreateStore(lorInst, bin_inst);
+    _module.CreateStore(RHS, bin_inst);
 
     // jump to land end
     _module.CreateJump(lor_end);
@@ -594,8 +639,12 @@ SSAPtr IRBuilder::visit(UnaryStmt *node) {
     case Op::Pos:
       return opr;
     case Op::Neg: {
-      auto zero = _module.GetZeroValue(type->GetType());
-      auto res = _module.CreateBinaryOperator(Op::Sub, zero, opr);
+      auto operand = opr;
+      if (operand->type()->GetSize() == 1) {
+        operand = _module.CreateCastInst(operand, MakePrimType(define::Type::Int32, operand->type()->IsRightValue()));
+      }
+      auto zero = _module.GetZeroValue(Type::Int32);
+      auto res = _module.CreateBinaryOperator(Op::Sub, zero, operand);
       return res;
     }
     case Op::Not: {
@@ -604,9 +653,14 @@ SSAPtr IRBuilder::visit(UnaryStmt *node) {
       return res;
     }
     case Op::LNot: {
-      // TODO: didn't implement
-      auto zero = _module.GetZeroValue(type->GetType());
-      auto tobool = _module.CreateICmpInst(Op::NotEqual, zero, opr);
+      // convert value to bool type if necessary
+      SSAPtr tobool = opr;
+      if (opr->type()->IsInteger() || (opr->type()->GetDerefedType() && opr->type()->GetDerefedType()->IsInteger())) {
+        auto zero = _module.GetZeroValue(type->GetType());
+        tobool = _module.CreateICmpInst(Op::NotEqual, zero, opr);
+      }
+
+      // logic not
       auto trueConst = _module.CreateConstInt(1, Type::Bool);
       auto lnot = _module.CreateBinaryOperator(Op::Xor, trueConst, tobool);
       return lnot;

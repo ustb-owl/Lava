@@ -64,4 +64,11 @@ ASTPtr Compiler::PreBuild() {
   return std::move(tmp_paser.ast());
 }
 
+void Compiler::CodeGeneAction() {
+  _codegen.SetModule(&_irbuilder->module());
+  _codegen.RegisterPasses();
+  _codegen.CodeGene();
+  _codegen.RunPasses();
+}
+
 }

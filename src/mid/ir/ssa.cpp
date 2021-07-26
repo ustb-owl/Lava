@@ -1,8 +1,8 @@
 #include <define/ast.h>
 #include "ssa.h"
-#include "castssa.h"
+#include "common/casting.h"
 #include "constant.h"
-#include "idmanager.h"
+#include "common/idmanager.h"
 #include "lib/guard.h"
 #include "define/type.h"
 
@@ -244,6 +244,7 @@ ICmpInst::ICmpInst(Operator op, const SSAPtr &lhs, const SSAPtr &rhs)
 AccessInst::AccessInst(AccessType acc_type, const SSAPtr &ptr, const SSAPtrList &indexs)
     : Instruction(Instruction::MemoryOps::Access, 0, ClassId::AccessInstId), _acc_type(acc_type) {
   AddValue(ptr);
+  DBG_ASSERT(indexs.size() <= 2, "index and multiplier out of range");
   for (const auto &it : indexs) {
     AddValue(it);
   }
@@ -278,6 +279,12 @@ bool Instruction::NeedLoad() const {
     res &= false;
   }
   if (this->opcode() == Instruction::Call) {
+    res &= false;
+  }
+  if (this->opcode() == Instruction::ICmp) {
+    res &= false;
+  }
+  if (!this->type()->IsPointer()) {
     res &= false;
   }
   return res;
@@ -360,6 +367,16 @@ bool IsCmp(const SSAPtr &ptr) {
   return false;
 }
 
+bool NeedLoad(const SSAPtr &ptr) {
+  if (auto inst = dyn_cast<Instruction>(ptr)) {
+    return inst->NeedLoad();
+  } else {
+    if (ptr->type()->IsConst()) return false;
+    if (!ptr->type()->IsPointer()) return false;
+  }
+  return true;
+}
+
 
 /* ---------------------------- Methods of dumping IR ------------------------------- */
 
@@ -418,13 +435,13 @@ inline void DumpBlockName(std::ostream &os, IdManager &id_mgr, const BasicBlock 
     os << name << id_mgr.GetId(block, IdType::_ID_LOOP_BODY);
   } else if (name.find("while.end") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_WHILE_END);
-  } else if (name.find("lhs.true")) {
+  } else if (name.find("lhs.true") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_LHS_TRUE);
-  } else if (name.find("lhs.false")) {
+  } else if (name.find("lhs.false") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_LHS_FALSE);
-  } else if (name.find("land.end")) {
+  } else if (name.find("land.end") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_LAND_END);
-  } else if (name.find("lor.end")) {
+  } else if (name.find("lor.end") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_LOR_END);
   }
   else if (name.find("block") != npos) {
@@ -602,7 +619,7 @@ void BranchInst::Dump(std::ostream &os, IdManager &id_mgr) const {
 void StoreInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   auto guard = InExpr();
   os << xIndent << "store ";
-  DumpWithType(os, id_mgr, value());
+  DumpWithType(os, id_mgr, data());
   os << ", ";
   DumpWithType(os, id_mgr, pointer());
   os << std::endl;

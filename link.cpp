@@ -4,6 +4,7 @@
 extern int HelloXY;
 extern int BlockMerge;
 extern int DirtyArrayConvert;
+extern int DirtyFunctionConvert;
 extern int DeadGlobalCodeElimination;
 extern int DeadCodeElimination;
 
@@ -14,6 +15,7 @@ extern int PostDominance;
 int HelloLinked          = HelloXY;
 int BlockMergeLinked     = BlockMerge;
 int DirtyArrayLinked     = DirtyArrayConvert;
+int DirtyFunctionLinked  = DirtyFunctionConvert;
 int DeadGlobalCodeLinked = DeadGlobalCodeElimination;
 int DeadCodeLinked       = DeadCodeElimination;
 
