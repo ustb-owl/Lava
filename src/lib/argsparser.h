@@ -473,20 +473,21 @@ private:
       }
     } else {
       Result r;
-      if (arg_name.length() == 1) {
+//      if (arg_name.length() == 1) {
         return _begin_argument(arg, true, position);
-      } else {
-        for (char &c : arg_name) {
-          r = _begin_argument(std::string(1, c), true, position);
-          if (r) {
-            return r;
-          }
-          r = _end_argument();
-          if (r) {
-            return r;
-          }
-        }
-      }
+//      }
+//      else {
+//        for (char &c : arg_name) {
+//          r = _begin_argument(std::string(1, c), true, position);
+//          if (r) {
+//            return r;
+//          }
+//          r = _end_argument();
+//          if (r) {
+//            return r;
+//          }
+//        }
+//      }
     }
     return Result();
   }
