@@ -85,6 +85,7 @@ void FunctionFix::AddEpilogue(const LLFunctionPtr &func) {
     stack_size = _module.CreateImmediate(func->stack_size());
   } else {
     auto dst = LLOperand::Register(ArmReg::r12);
+    _module.AddInst<LLComment>("split stack size: " + std::to_string(func->stack_size()));
     _module.AddInst<LLLoadPseudo>(dst, func->stack_size());
     stack_size = dst;
   }

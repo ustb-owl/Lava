@@ -699,12 +699,18 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
        << global_inst->dst() << ","
        << SPACE << "#:upper16:" << global_inst->global_variable()->name();
   } else if (auto load_pseudo = dyn_cast<LLLoadPseudo>(inst)) {
-    os << INDENT << "mov" << TAB
-       << load_pseudo->dst() << ","
-       << SPACE << "#" << ((uint32_t)(load_pseudo->imm()) & 0xffff) << std::endl;
-    os << INDENT << "movt" << TAB
-       << load_pseudo->dst() << ","
-       << SPACE << "#" << ((uint16_t)(load_pseudo->imm()) >> 16);
+
+    auto imm = load_pseudo->imm();
+    if ((uint32_t)imm >> 16u == 0) {
+      os << INDENT << "movw" << TAB
+         << load_pseudo->dst() << ","<< SPACE <<"#" << (uint16_t)imm;
+    } else {
+      // wider than 16 bits
+      os << INDENT << "mov" << TAB
+         << load_pseudo->dst() << "," << SPACE << "#" << (imm & 0xffff) << std::endl;
+      os << INDENT << "movt" << TAB
+         << load_pseudo->dst() << "," << SPACE << "#" << (uint16_t (imm >> 16));
+    }
   } else if (auto comment = dyn_cast<LLComment>(inst)) {
     os << '@' << SPACE << comment->comment();
   }
