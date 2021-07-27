@@ -2,7 +2,7 @@
 #include "common/casting.h"
 #include "opt/pass_manager.h"
 
-#include "opt/analysis/postdominance.h"
+#include "opt/analysis/dominance.h"
 
 int DeadCodeElimination;
 
@@ -21,7 +21,7 @@ public:
   bool runOnFunction(const FuncPtr &F) final {
     _changed = false;
 
-    auto AA = PassManager::GetAnalysis<PostDominanceInfo>("PostDominanceInfo");
+    auto AA = PassManager::GetAnalysis<DominanceInfo>("DominanceInfo");
 
     auto domInfo = AA->GetDomInfo();
     return _changed;
@@ -58,11 +58,11 @@ public:
         std::make_shared<PassInfo>(pass, "DeadCodeElimination", false, false, DEAD_CODE_ELIMINATION);
 
     // add requires pass
-//    passinfo->Requires("PostDominanceInfo");
+    passinfo->Requires("DominanceInfo");
     return passinfo;
   }
 };
 
-static PassRegisterFactory<DeadCodeEliminationFactory> registry;
+//static PassRegisterFactory<DeadCodeEliminationFactory> registry;
 
 }

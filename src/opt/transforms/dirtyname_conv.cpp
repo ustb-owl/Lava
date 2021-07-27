@@ -17,6 +17,8 @@ class DirtyFunctionNameConvert : public FunctionPass {
 private:
   bool _changed = false;
 
+  SSAPtr _start_time = nullptr;
+
 public:
   bool runOnFunction(const FuncPtr &F) final {
     if (F->GetFunctionName() == "starttime") {
@@ -30,8 +32,8 @@ public:
       // find all call instruction
       for (const auto &BB : *F) {
         auto block = dyn_cast<BasicBlock>(BB.value());
-        for (auto &it : block->insts()) {
-          if (auto call_inst = dyn_cast<CallInst>(it)) {
+        for (auto it = block->inst_begin(); it !=block->insts().end(); it++) {
+          if (auto call_inst = dyn_cast<CallInst>(*it)) {
             auto callee = dyn_cast<Function>(call_inst->Callee());
             DBG_ASSERT(callee != nullptr, "callee is not function");
             auto name = callee->GetFunctionName();
@@ -41,7 +43,15 @@ public:
               zero->set_type(MakePrimType(Type::Int32, true));
               call_inst->AddParam(zero);
             }
-//            if (callee->GetFunctionName() == "_sysy_starttime")
+
+#if 0
+            if (name == "_sysy_starttime") {
+              _start_time = call_inst;
+              it = block->insts().erase(it);
+            } else if (name == "_sysy_stoptime") {
+              it = block->insts().insert(it, _start_time);
+            }
+#endif
           }
         }
       }

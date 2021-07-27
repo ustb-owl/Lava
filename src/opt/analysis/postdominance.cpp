@@ -107,7 +107,7 @@ void PostDominanceInfo::SolveImmediateDom() {
   }
 
   // check the result
-//  DBG_ASSERT(info.doms.size() == po.size(), "doms size not equals to basic block numbers");
+  DBG_ASSERT(info.doms.size() == po.size(), "doms size not equals to basic block numbers");
   DBG_ASSERT(info.idom.size() == po.size() - 1, "idom set number is wrong");
   DBG_ASSERT(info.idom.find(exit) == info.idom.end(), "entry should not have idom");
 }
