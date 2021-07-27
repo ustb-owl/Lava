@@ -235,6 +235,11 @@ CallInst::CallInst(const SSAPtr &callee, const std::vector<SSAPtr> &args) :
   for (const auto &it : args) AddValue(it);
 }
 
+void CallInst::AddParam(const SSAPtr &param) {
+  this->SetOperandNum(size() + 1);
+  this->AddValue(param);
+}
+
 ICmpInst::ICmpInst(Operator op, const SSAPtr &lhs, const SSAPtr &rhs)
     : Instruction(Instruction::OtherOps::ICmp, 2, ClassId::ICmpInstId), _op(op) {
   AddValue(lhs);

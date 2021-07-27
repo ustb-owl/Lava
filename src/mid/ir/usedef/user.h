@@ -28,6 +28,10 @@ public:
 
   unsigned operandNum() const { return _operands.size(); }
 
+  void SetOperandNum(std::size_t size) {
+    _operands_num = size;
+  }
+
   virtual SSAPtr GetOperand(unsigned i) const {
     DBG_ASSERT(i < _operands_num, "getOperand() out of range");
     return _operands[i].value();

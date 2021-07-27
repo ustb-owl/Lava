@@ -21,12 +21,49 @@ public:
   bool runOnFunction(const FuncPtr &F) final {
     if (F->GetFunctionName() == "starttime") {
       F->SetName("_sysy_starttime");
+      FixTypeAndParam(F);
+
     } else if (F->GetFunctionName() == "stoptime") {
       F->SetName("_sysy_stoptime");
+      FixTypeAndParam(F);
     } else {
+      // find all call instruction
+      for (const auto &BB : *F) {
+        auto block = dyn_cast<BasicBlock>(BB.value());
+        for (auto &it : block->insts()) {
+          if (auto call_inst = dyn_cast<CallInst>(it)) {
+            auto callee = dyn_cast<Function>(call_inst->Callee());
+            DBG_ASSERT(callee != nullptr, "callee is not function");
+            auto name = callee->GetFunctionName();
+            if (name == "_sysy_starttime" || name == "_sysy_stoptime") {
+              if (call_inst->size() == 2) continue;
+              auto zero = std::make_shared<ConstantInt>(0);
+              zero->set_type(MakePrimType(Type::Int32, true));
+              call_inst->AddParam(zero);
+            }
+//            if (callee->GetFunctionName() == "_sysy_starttime")
+          }
+        }
+      }
       return _changed;
     }
     return true;
+  }
+
+  // _sysy_starttime(int lineno);
+  void FixTypeAndParam(const FuncPtr &F) {
+    // 1. set function type
+    define::TypePtrList params;
+    auto param_type = MakePrimType(Type::Int32, false);
+    params.push_back(param_type);
+    auto ret_type = MakePrimType(Type::Void, false);
+    F->set_type(std::make_shared<define::FuncType>(std::move(params), ret_type, false));
+
+    // 2. add argument
+    auto arg_type = MakePrimType(Type::Int32, false);
+    auto arg = std::make_shared<ArgRefSSA>(F, 0, "lineno");
+    arg->set_type(arg_type);
+    F->set_arg(0, arg);
   }
 };
 

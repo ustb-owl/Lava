@@ -2,6 +2,7 @@
 #include <string>
 #include "module.h"
 #include "constant.h"
+#include "common/casting.h"
 #include "common/idmanager.h"
 
 using namespace lava::define;
@@ -151,7 +152,7 @@ SSAPtr Module::CreateArgRef(const SSAPtr &func, std::size_t index, const std::st
   arg_ref->set_type(args_type[index]);
 
   // update function
-  std::dynamic_pointer_cast<Function>(func)->set_arg(index, arg_ref);
+  dyn_cast<Function>(func)->set_arg(index, arg_ref);
   return arg_ref;
 }
 

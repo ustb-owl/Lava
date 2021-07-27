@@ -578,6 +578,8 @@ public:
   const SSAPtr &Param(int i) const { return (*this)[i + 1].value(); }
   int param_size()           const { return size() - 1;             }
 
+  void AddParam(const SSAPtr &param);
+
   // methods for dyn_cast
   static inline bool classof(CallInst *) { return true; }
   static inline bool classof(const CallInst *) { return true; }
