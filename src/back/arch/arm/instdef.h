@@ -241,6 +241,8 @@ public:
   CLASSOF(LLOperand)
 };
 
+bool operator==(const LLOperandPtr &lhs, const LLOperandPtr &rhs);
+
 // Low level instruction
 class LLInst {
 public:
@@ -333,13 +335,14 @@ private:
   LLOperandPtr _dst;
   LLOperandPtr _src;
   ArmShift     _shift;
-  bool         _is_arg;
   ArmCond      _cond;
+  bool         _is_arg;
 
 public:
   LLMove(LLOperandPtr dst, LLOperandPtr src, ArmCond cond = ArmCond::Any)
     : LLInst(Opcode::Move, ClassId::LLMoveId),
-      _dst(std::move(dst)), _src(std::move(src)),  _is_arg(false), _cond(cond) {}
+      _dst(std::move(dst)), _src(std::move(src)),
+      _shift(ArmShift()), _cond(cond), _is_arg(false){}
 
   // getter/setter
   bool             is_arg() { return _is_arg; }
@@ -352,6 +355,8 @@ public:
   void setShiftNum(int num)                   { _shift.setShift(num); }
   void setShiftType(ArmShift::ShiftType type) { _shift.setType(type); }
   void SetIsArg(bool value)                   { _is_arg = value;      }
+
+  bool IsSimple() { return (_cond == ArmCond::Any && _shift.is_none()); }
 
   LLOperandList operands() final;
   LLOperandPtr dest() final { return dst(); }

@@ -5,6 +5,7 @@ add_library(back
         arch/arm/instdef.cpp
         passes/spill.cpp
         passes/funcfix.cpp
+        passes/peephole.cpp
         passes/fastalloc.cpp
 )
 

@@ -23,6 +23,22 @@ void LLOperand::ReplaceWith(const LLOperandPtr &V) {
   _allocated = V->_allocated;
 }
 
+bool operator==(const LLOperandPtr &lhs, const LLOperandPtr &rhs) {
+  if (lhs.get() == rhs.get() && lhs == nullptr) return true;
+  if (lhs->state() == rhs->state()) {
+    if (lhs->IsRealReg() && rhs->IsRealReg()) {
+      return lhs->reg() == rhs->reg();
+    } else if (lhs->IsVirtual() && rhs->IsVirtual()) {
+      return lhs->virtual_num() == rhs->virtual_num();
+    } else if (lhs->IsImmediate() && rhs->IsImmediate()) {
+      return lhs->imm_num() == rhs->imm_num();
+    } else {
+      ERROR("should not reach here");
+    }
+  }
+  return false;
+}
+
 ArmShift::operator std::string() const {
   const char *name;
   switch (_type) {
