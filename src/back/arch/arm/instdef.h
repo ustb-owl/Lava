@@ -137,15 +137,20 @@ public:
   std::size_t virtual_max()     const { return _virtual_max;       }
   std::size_t stack_size()      const { return _stack_size;        }
   std::set<ArmReg> saved_regs() const { return _callee_saved_regs; }
-  std::vector<LLBlockPtr> blocks()    { return _blocks;            }
+  std::vector<LLBlockPtr> &blocks()   { return _blocks;            }
   const LLBlockPtr &entry()           { return _blocks[0];         }
   bool has_call_inst()          const { return _has_call_inst;     }
 
-  void SetVirtualMax(std::size_t virtual_max) { _virtual_max = virtual_max;     }
-  void SetStackSize(std::size_t stack_size)   { _stack_size = stack_size;       }
-  void AddBlock(const LLBlockPtr &block)      { _blocks.push_back(block);       }
-  void AddSavedRegister(ArmReg reg)           { _callee_saved_regs.insert(reg); }
-  void SetHasCallInst(bool value)             { _has_call_inst = value;         }
+  std::vector<LLBlockPtr>::iterator block_begin() { return _blocks.begin(); }
+  std::vector<LLBlockPtr>::iterator block_end()   { return _blocks.end();   }
+
+
+  void SetVirtualMax(std::size_t virtual_max)    { _virtual_max = virtual_max;     }
+  void SetStackSize(std::size_t stack_size)      { _stack_size = stack_size;       }
+  void AddBlock(const LLBlockPtr &block)         { _blocks.push_back(block);       }
+  void AddSavedRegister(ArmReg reg)              { _callee_saved_regs.insert(reg); }
+  void SetHasCallInst(bool value)                { _has_call_inst = value;         }
+  void SetBlocks(std::vector<LLBlockPtr> blocks) { _blocks = std::move(blocks);    }
 
 
   // classof used for dyn_cast
@@ -377,16 +382,20 @@ private:
   LLOperandPtr _cond;
   LLBlockPtr   _true_block;
   LLBlockPtr   _false_block;
+  bool         _need_out_false;
 
 public:
   LLBranch(ArmCond arm_cond, LLOperandPtr cond, LLBlockPtr true_block, LLBlockPtr false_block)
     : LLInst(Opcode::Branch, ClassId::LLBranchId),
-      _arm_cond(arm_cond), _cond(std::move(cond)), _true_block(std::move(true_block)), _false_block(std::move(false_block)) {}
+      _arm_cond(arm_cond), _cond(std::move(cond)), _true_block(std::move(true_block)), _false_block(std::move(false_block)),
+      _need_out_false(true) {}
 
-  ArmCond      arm_cond() const { return _arm_cond;    }
-  LLOperandPtr cond()           { return _cond;        }
-  LLBlockPtr   true_block()     { return _true_block;  }
-  LLBlockPtr   false_block()    { return _false_block; }
+  ArmCond      arm_cond() const { return _arm_cond;       }
+  LLOperandPtr cond()           { return _cond;           }
+  LLBlockPtr   true_block()     { return _true_block;     }
+  LLBlockPtr   false_block()    { return _false_block;    }
+  bool         need_out_false() { return _need_out_false; }
+  void set_out_false(bool val)  { _need_out_false = val;  }
 
   LLOperandList operands() final { return LLOperandList(); }
   void set_operand(const LLOperandPtr &opr, std::size_t index) override;

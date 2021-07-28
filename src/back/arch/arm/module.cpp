@@ -630,7 +630,9 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
     os << "]";
   } else if (auto branch_inst = dyn_cast<LLBranch>(inst)) {
     os << INDENT << "b" << branch_inst->arm_cond() << TAB << branch_inst->true_block() << std::endl;
-    os << INDENT << "b" << TAB << branch_inst->false_block() << std::endl;
+    if (branch_inst->need_out_false()) {
+      os << INDENT << "b" << TAB << branch_inst->false_block() << std::endl;
+    }
 
     // output literal pool
 //    os << INDENT << ".pool";

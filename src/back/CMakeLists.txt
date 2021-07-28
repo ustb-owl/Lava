@@ -7,6 +7,7 @@ add_library(back
         passes/funcfix.cpp
         passes/peephole.cpp
         passes/fastalloc.cpp
+        passes/blkrearrange.cpp
 )
 
 target_compile_features(back PUBLIC cxx_std_17)

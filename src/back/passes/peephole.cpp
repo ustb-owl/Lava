@@ -6,8 +6,8 @@ namespace lava::back {
 
 
 void PeepHole::runOn(const LLFunctionPtr &func) {
-
-  for (auto &block : func->blocks()) {
+  for (auto BB = func->blocks().begin(); BB != func->blocks().end(); BB++) {
+    auto block = *BB;
     for (auto it = block->inst_begin(); it != block->inst_end(); it++) {
       // 1. eliminate useless move instruction
       if (auto mv_inst = dyn_cast<LLMove>(*it)) {
@@ -60,6 +60,16 @@ void PeepHole::runOn(const LLFunctionPtr &func) {
           }
         }
 
+      } else if (auto jump_inst = dyn_cast<LLJump>(*it)) {
+        auto next_block = std::next(BB);
+        if (jump_inst->target() == *next_block) {
+          it = block->insts().erase(it);
+        }
+      } else if (auto branch_inst = dyn_cast<LLBranch>(*it)) {
+        auto next_block = std::next(BB);
+        if (branch_inst->false_block() == *next_block) {
+          branch_inst->set_out_false(false);
+        }
       }
 
 
