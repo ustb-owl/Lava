@@ -55,7 +55,7 @@ void DominanceInfo::SolveDominance(const FuncPtr &F) {
 
   // TODO: fix bug: handle dead block
   // check result
-//  DBG_ASSERT(info.domBy.size() == rpo.size(), "domBy size not equals to basic block numbers");
+  DBG_ASSERT(info.domBy.size() == rpo.size(), "domBy size not equals to basic block numbers");
 
   // solve idom
   SolveImmediateDom();

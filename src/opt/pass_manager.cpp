@@ -52,7 +52,8 @@ bool PassManager::RunPass(const PassPtr &pass) {
       changed = pass->runOnFunction(func);
     }
   }
-
+  // perform finalization
+  pass->finalize();
   return changed;
 }
 

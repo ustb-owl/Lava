@@ -49,4 +49,14 @@ void BlockWalker::TraversePO(BasicBlock *BB) {
   _po.push_back(BB);
 }
 
+BasicBlock *BlockWalker::GetExitBlock(const std::list<BasicBlock *> &bb_list) {
+  for (const auto &BB : bb_list) {
+    for (const auto &it : BB->insts()) {
+      if (it->classId() == ClassId::ReturnInstId) return BB;
+   }
+  }
+  ERROR("should not reach here");
+  return nullptr;
+}
+
 }

@@ -9,7 +9,7 @@ void PostDominanceInfo::SolveDominance(const FuncPtr &F) {
   auto &info = _dom_info[_cur_func];
   auto entry = dyn_cast<BasicBlock>(F->entry());
   auto po = _blkWalker.POTraverse(entry.get());
-  BasicBlock *exit = po.front();
+  BasicBlock *exit = _blkWalker.GetExitBlock(po);
 
   // init the dom set
   // set exit -> { exit }
@@ -23,9 +23,10 @@ void PostDominanceInfo::SolveDominance(const FuncPtr &F) {
   }
 
   // set Dom(i) <- all
-  auto it = po.begin();
-  for (it++; it != po.end(); it++) {
-    info.domBy[*it] = all;
+  for (auto & it : po) {
+    if (it != exit){
+      info.domBy[it] = all;
+    }
   }
 
   bool changed = true;
@@ -33,8 +34,9 @@ void PostDominanceInfo::SolveDominance(const FuncPtr &F) {
     changed = false;
 
     // traverse all blocks except exit
-    auto BB = po.begin();
-    for (BB++; BB != po.end(); BB++) {
+    for (auto BB = po.begin(); BB != po.end(); BB++) {
+      if (*BB == exit) continue;
+
       auto block = *BB;
       // validate if the post-dominators exist in all of its successors
       for (auto post_dominator = info.domBy[block].begin(); post_dominator != info.domBy[block].end();) {
@@ -73,13 +75,15 @@ void PostDominanceInfo::SolveImmediateDom() {
   auto &info = _dom_info[_cur_func];
   auto entry = dyn_cast<BasicBlock>(_cur_func->entry()).get();
   auto po = _blkWalker.POTraverse(entry);
-  BasicBlock *exit = po.front();
+  BasicBlock *exit = _blkWalker.GetExitBlock(po);
 
   // insert exit itself into its post-dominatee set
   info.doms[exit].insert(exit);
 
-  auto it = po.begin();
-  for (it++; it != po.end(); it++) {
+  for (auto it = po.begin(); it != po.end(); it++) {
+    // except for exit
+    if (*it == exit) continue;
+
     BasicBlock *BB = *it;
 
     // insert this BB into exit block's dominatees set

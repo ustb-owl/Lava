@@ -9,6 +9,22 @@
 
 namespace lava::opt {
 
+// dominance information of each function
+struct DominanceResult {
+  // dominators set of basic blocks
+  std::unordered_map<mid::BasicBlock *, std::unordered_set<mid::BasicBlock * >> domBy;
+
+  // immediate dominator
+  std::unordered_map<mid::BasicBlock *, mid::BasicBlock *> idom;
+
+  // dominatees set of basic blocks
+  std::unordered_map<mid::BasicBlock *, std::unordered_set<mid::BasicBlock * >> doms;
+
+  std::unordered_map<mid::BasicBlock *, std::unordered_set<mid::BasicBlock * >> DF;
+};
+
+typedef std::unordered_map<mid::User *, DominanceResult> DomInfo;
+
 class DominanceBase : public FunctionPass {
 protected:
   bool _changed;
@@ -16,20 +32,6 @@ protected:
   BlockWalker _blkWalker;
 
   virtual void SolveDominance(const FuncPtr &F) = 0;
-
-  // dominance information of each function
-  struct DominanceResult {
-    // dominators set of basic blocks
-    std::unordered_map<mid::BasicBlock *, std::unordered_set<mid::BasicBlock * >> domBy;
-
-    // immediate dominator
-    std::unordered_map<mid::BasicBlock *, mid::BasicBlock *> idom;
-
-    // dominatees set of basic blocks
-    std::unordered_map<mid::BasicBlock *, std::unordered_set<mid::BasicBlock * >> doms;
-
-    std::unordered_map<mid::BasicBlock *, std::unordered_set<mid::BasicBlock * >> DF;
-  };
 
   // check if dominator strictly dominates BB
   bool IsStrictlyDom(BasicBlock *dominator, BasicBlock *BB);
@@ -44,10 +46,10 @@ protected:
   virtual void SolveDominanceFrontier() = 0;
 
   // dominance information for each function
-  std::unordered_map<mid::User *, DominanceResult> _dom_info;
+  DomInfo _dom_info;
 
 public:
-  const std::unordered_map<mid::User *, DominanceResult> &
+  const DomInfo &
   GetDomInfo() const {
     return _dom_info;
   }

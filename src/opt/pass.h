@@ -33,6 +33,9 @@ public:
   // initialize before run pass
   virtual void initialize() = 0;
 
+  // finalize after run pass
+  virtual void finalize() = 0;
+
   // print - Print out the internal state of the pass.  This is called by
   // Analyze to print out the contents of an analysis.  Otherwise it is not
   // necessary to implement this method.  Beware that the module pointer MAY be
@@ -63,6 +66,9 @@ public:
 
   // subclass can override this method to perform initialization
   void initialize() override {};
+
+  // subclass can override this method to perform finalization
+  void finalize() override {};
 
   ModulePass() = default;
   // Force out-of-line virtual method.
@@ -96,9 +102,8 @@ public:
   // subclass can override this method to perform initialization
   void initialize() override {};
 
-  // doFinalization - Virtual method overriden by subclasses to do any post
-  // processing needed after all passes have run.
-  virtual bool doFinalization(Module &M) { return false; }
+  // subclass can override this method to perform finalization
+  void finalize() override {};
 };
 
 using PassPtr = std::shared_ptr<Pass>;

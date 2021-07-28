@@ -31,6 +31,8 @@ public:
     _visited.clear();
   }
 
+  BasicBlock *GetExitBlock(const std::list<BasicBlock *>& bb_list);
+
   std::list<BasicBlock *> RPOTraverse(BasicBlock *entry) {
     init();
     TraverseRPO(entry);
