@@ -3,6 +3,7 @@
 #include "back/passes/spill.h"
 #include "back/passes/funcfix.h"
 #include "back/passes/peephole.h"
+#include "back/passes/liveness.h"
 #include "back/passes/fastalloc.h"
 #include "back/passes/blkrearrange.h"
 
@@ -52,17 +53,24 @@ void CodeGenerator::RunPasses() {
 void CodeGenerator::RegisterPasses() {
   auto spill = std::make_shared<Spill>(_ll_module);
   auto pre_peephole = std::make_shared<PeepHole>(_ll_module);
+
+  auto liveness = std::make_shared<LivenessAnalysis>(_ll_module);
+
   auto fast_alloc = std::make_shared<FastAllocation>(_ll_module);
-  auto post_peephole = std::make_shared<PeepHole>(_ll_module);
+
+  auto post_peephole = std::make_shared<PeepHole>(_ll_module, true);
   auto func_fix = std::make_shared<FunctionFix>(_ll_module);
   auto blk_rearrange = std::make_shared<BlockRearrange>(_ll_module);
 
-  _passes.push_back(blk_rearrange);
-  _passes.push_back(pre_peephole);
-  _passes.push_back(fast_alloc);
-  _passes.push_back(spill);
-  _passes.push_back(post_peephole);
-  _passes.push_back(func_fix);
+//  _passes.push_back(blk_rearrange);
+//  _passes.push_back(pre_peephole);
+
+  _passes.push_back(liveness);
+
+//  _passes.push_back(fast_alloc);
+//  _passes.push_back(spill);
+//  _passes.push_back(post_peephole);
+//  _passes.push_back(func_fix);
 }
 
 }

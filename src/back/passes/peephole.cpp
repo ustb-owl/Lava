@@ -61,11 +61,17 @@ void PeepHole::runOn(const LLFunctionPtr &func) {
         }
 
       } else if (auto jump_inst = dyn_cast<LLJump>(*it)) {
+        // opt control flow in final pass
+        if (!_is_final) continue;
+
         auto next_block = std::next(BB);
         if (jump_inst->target() == *next_block) {
           it = block->insts().erase(it);
         }
       } else if (auto branch_inst = dyn_cast<LLBranch>(*it)) {
+        // opt control flow in final pass
+        if (!_is_final) continue;
+
         auto next_block = std::next(BB);
         if (branch_inst->false_block() == *next_block) {
           branch_inst->set_out_false(false);
