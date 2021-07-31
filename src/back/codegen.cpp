@@ -64,13 +64,13 @@ void CodeGenerator::RegisterPasses() {
   auto blk_rearrange = CREATE_PASS<BlockRearrange>(_ll_module);
 
   _passes.push_back(blk_rearrange);
-//  _passes.push_back(pre_peephole);
+  _passes.push_back(pre_peephole);
 
   _passes.push_back(linear_scan);
 
 //  _passes.push_back(fast_alloc);
   _passes.push_back(spill);
-//  _passes.push_back(post_peephole);
+  _passes.push_back(post_peephole);
   _passes.push_back(func_fix);
 }
 
