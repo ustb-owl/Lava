@@ -52,7 +52,7 @@ void LivenessAnalysis::Init(const LLFunctionPtr &F) {
   }
 }
 
-bool LivenessAnalysis::IsTempReg(const LLOperandPtr &opr) {
+bool IsTempReg(const LLOperandPtr &opr) {
   if (opr->IsRealReg()) {
     auto reg = opr->reg();
     if ((reg >= ArmReg::r0 && reg <= ArmReg::r3) || (reg == ArmReg::lr)) return true;
@@ -144,8 +144,11 @@ void LivenessAnalysis::SolveLiveInterval(const LLFunctionPtr &func) {
 
       // update last_tmp_pos
       auto mv_inst = dyn_cast<LLMove>(inst);
-      if ((dst && IsTempReg(dst)) ||
-          (mv_inst && IsTempReg(mv_inst->src())) ||
+      auto str_inst = dyn_cast<LLStore>(inst);
+      if ((dst && IsTempReg(dst))                     ||
+          (mv_inst && IsTempReg(mv_inst->src()))      ||
+          (str_inst && (IsTempReg(str_inst->data())   ||
+                        IsTempReg(str_inst->addr()))) ||
           inst->classId() == ClassId::LLCallId) {
         last_tmp_pos = pos;
       }
@@ -171,7 +174,8 @@ void LivenessAnalysis::RecordLiveInterval(const LLOperandPtr &opr, std::size_t e
     live_interval.SetEndPos(end_pos);
 
     // check if there are usings of temporary register in interval
-    if (last_tmp_pos > live_interval.start_pos()) live_interval.SetCanAllocTmp(false);
+    if (last_tmp_pos > live_interval.start_pos() || !opr->allow_to_tmp())
+      live_interval.SetCanAllocTmp(false);
   } else {
     // add new operand into records
     _live_intervals.insert({opr, LiveInterval(end_pos, end_pos, true)});
@@ -207,6 +211,22 @@ void LivenessAnalysis::DumpLiveInterval() {
               << "\t" << it.second.can_alloc_to_tmp() << std::endl;
   }
   std::cout << std::endl;
+}
+
+bool LiveIntervalCmpStart(const LiveInterval &S1, const LiveInterval &S2) {
+  return S1.start_pos() < S2.start_pos();
+}
+
+bool LiveIntervalCmpEnd(const LiveInterval &S1, const LiveInterval &S2) {
+  return S1.end_pos() < S2.end_pos();
+}
+
+bool __CmpStart(const LiveInterval &S1, const LiveInterval &S2) {
+  return LiveIntervalCmpStart(S1, S2);
+}
+
+bool __CmpEnd(const LiveInterval &S1, const LiveInterval &S2) {
+  return LiveIntervalCmpEnd(S1, S2);
 }
 
 }

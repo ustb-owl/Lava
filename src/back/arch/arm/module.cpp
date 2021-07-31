@@ -342,6 +342,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
 
           // offset
           auto offset = CreateImmediate(-((param_size - i) * 4));
+          offset->set_not_allowed_to_tmp(false);
           auto st_inst = AddInst<LLStore>(data, addr, offset);
           DBG_ASSERT(st_inst != nullptr, "store parameter(%lu) failed in calling %s",
                      i, dyn_cast<mid::Function>(callInst->Callee())->GetFunctionName().c_str());
@@ -751,7 +752,7 @@ std::ostream &operator<<(std::ostream &os, const ArmReg armReg) {
     case ArmReg::r8:  os << "r8";  break;
     case ArmReg::r9:  os << "r9";  break;
     case ArmReg::r10: os << "r10"; break;
-    case ArmReg::r11: os << "fp"; break;
+    case ArmReg::r11: os << "r11"; break;
     case ArmReg::r12: os << "r12"; break;
     case ArmReg::r13: os << "sp";  break;
     case ArmReg::r14: os << "lr";  break;

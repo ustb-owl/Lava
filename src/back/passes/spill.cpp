@@ -12,7 +12,7 @@ void Spill::runOn(const LLFunctionPtr &func) {
     _cur_block = block;
     for (auto it = block->inst_begin(); it != block->inst_end(); it++) {
       auto inst = *it;
-     _mask = GetTmpMask(inst);
+      _mask = GetTmpMask(inst);
       if (auto mv_inst = dyn_cast<LLMove>(inst)) {
         if (mv_inst->src()->IsVirtual()) {
           auto allocated = mv_inst->src()->allocated();
@@ -58,9 +58,15 @@ void Spill::runOn(const LLFunctionPtr &func) {
       /* ------ spill dst ------ */
       auto dst = inst->dest();
       if ((dst != nullptr) && dst->IsVirtual()) {
-        auto tmp = LLOperand::Register(ArmReg::r12);
-        InsertStoreInst(it, dst->allocated(), tmp);
-        inst->set_dst(tmp);
+        auto allocated_value = dst->allocated();
+
+        if (allocated_value->IsRealReg()) {
+          inst->set_dst(allocated_value);
+        } else {
+          auto tmp = LLOperand::Register(ArmReg::r12);
+          InsertStoreInst(it, allocated_value, tmp);
+          inst->set_dst(tmp);
+        }
       }
     }
   }
@@ -72,14 +78,14 @@ LLOperandPtr Spill::GetTmpReg(std::uint32_t &reg_mask) {
   if (!(reg_mask & (1 << static_cast<int>(ArmReg::r12)))) {
     reg_mask |= 1 << static_cast<int>(ArmReg::r12);
     temp = LLOperand::Register(ArmReg::r12);
-  } else if (!(reg_mask & (1 << static_cast<int>(ArmReg::r10)))) {
-    reg_mask |= 1 << static_cast<int>(ArmReg::r10);
-    temp = LLOperand::Register(ArmReg::r10);
+  } else if (!(reg_mask & (1 << static_cast<int>(ArmReg::r11)))) {
+    reg_mask |= 1 << static_cast<int>(ArmReg::r11);
+    temp = LLOperand::Register(ArmReg::r11);
   } else if (!(reg_mask & (1 << static_cast<int>(ArmReg::r3)))) {
     reg_mask |= 1 << static_cast<int>(ArmReg::r3);
     temp = LLOperand::Register(ArmReg::r3);
   }
-  DBG_ASSERT(temp != nullptr, "get tmp register(r10/r12/fp) failed");
+  DBG_ASSERT(temp != nullptr, "get tmp register(r12/r11/r3) failed");
   return temp;
 }
 

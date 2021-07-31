@@ -36,6 +36,24 @@ public:
   void SetCanAllocTmp(bool value)   { _can_alloc_to_tmp = value; }
 };
 
+// methods for sort
+bool LiveIntervalCmpStart(const LiveInterval &S1, const LiveInterval &S2);
+bool LiveIntervalCmpEnd(const LiveInterval &S1, const LiveInterval &S2);
+bool __CmpStart(const LiveInterval &S1, const LiveInterval &S2);
+bool __CmpEnd(const LiveInterval &S1, const LiveInterval &S2);
+
+struct CmpStart {
+  bool operator()(const LiveInterval& S1, const LiveInterval &S2) const {
+    return __CmpStart(S1, S2);
+  }
+};
+
+struct CmpEnd {
+  bool operator()(const LiveInterval& S1, const LiveInterval &S2) const {
+    return __CmpEnd(S1, S2);
+  }
+};
+
 class LivenessAnalysis : public PassBase {
 private:
   std::list<LLBlockPtr>                           _rpo_blocks;
@@ -58,9 +76,6 @@ public:
   // init gen and kill set
   void Init(const LLFunctionPtr &F);
 
-  // check if it is temp reg
-  bool IsTempReg(const LLOperandPtr &opr);
-
   // traverse basic block in RPO
   void TraverseRPO(const LLBlockPtr &BB);
 
@@ -79,11 +94,20 @@ public:
   // solve live interval
   void SolveLiveInterval(const LLFunctionPtr &func);
 
+  // get live interval information
+  const std::unordered_map<LLOperandPtr, LiveInterval> &
+  GetLiveInterval() const {
+    return _live_intervals;
+  }
+
   // record live interval for each operands
   void RecordLiveInterval(const LLOperandPtr &opr, std::size_t end_pos, std::size_t last_tmp_pos);
 
   void runOn(const LLFunctionPtr &func) final;
 };
+
+// check if it is temp reg
+bool IsTempReg(const LLOperandPtr &opr);
 
 }
 

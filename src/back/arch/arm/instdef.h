@@ -200,15 +200,16 @@ public:
   };
 
 private:
-  State        _state;       // state of operand
-  ArmReg       _reg;         // which register (state is RealReg)
-  std::size_t  _virtual_num; // virtual register num (state is Virtual)
-  int          _imm_num;     // number of immediate num (state is Immediate)
-  LLOperandPtr _allocated;   // allocation result (state is virtual)
+  State        _state;        // state of operand
+  ArmReg       _reg;          // which register (state is RealReg)
+  std::size_t  _virtual_num;  // virtual register num (state is Virtual)
+  int          _imm_num;      // number of immediate num (state is Immediate)
+  LLOperandPtr _allocated;    // allocation result (state is virtual)
+  bool         _allow_to_tmp; // if this operand is allowed to allocated to r0-r3
 
 public:
   LLOperand(State state)
-    : _state(state), _virtual_num(-1), _imm_num(-1), _allocated(nullptr) {}
+    : _state(state), _virtual_num(-1), _imm_num(-1), _allocated(nullptr), _allow_to_tmp(true) {}
 
   LLOperand(State state, int n);
 
@@ -235,13 +236,19 @@ public:
     _allocated = allocated;
   }
 
+  void set_not_allowed_to_tmp(bool value) {
+    DBG_ASSERT(_state == State::Virtual, "this is not virtual reg");
+    _allow_to_tmp = value;
+  }
+
   void ReplaceWith(const LLOperandPtr &V);
 
-  State        state()       const { return _state;       }
-  ArmReg       reg()         const { return _reg;         }
-  int          imm_num()     const { return _imm_num;     }
-  std::size_t  virtual_num() const { return _virtual_num; }
-  LLOperandPtr allocated()   const { return _allocated;   }
+  State        state()        const { return _state;        }
+  ArmReg       reg()          const { return _reg;          }
+  int          imm_num()      const { return _imm_num;      }
+  std::size_t  virtual_num()  const { return _virtual_num;  }
+  LLOperandPtr allocated()    const { return _allocated;    }
+  bool         allow_to_tmp() const { return _allow_to_tmp; }
 
   CLASSOF(LLOperand)
 };

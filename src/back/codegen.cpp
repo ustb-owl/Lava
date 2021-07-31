@@ -4,6 +4,7 @@
 #include "back/passes/funcfix.h"
 #include "back/passes/peephole.h"
 #include "back/passes/liveness.h"
+#include "back/passes/linearscan.h"
 #include "back/passes/fastalloc.h"
 #include "back/passes/blkrearrange.h"
 
@@ -40,10 +41,11 @@ void CodeGenerator::CodeGene() {
 }
 
 void CodeGenerator::RunPasses() {
-//  DumpASM(std::cout);
+  DumpASM(std::cout);
   for (const auto &pass : _passes) {
     for (const auto &function : _ll_module.Functions()) {
       if (function->is_decl()) continue;
+      pass->Initialize();
       pass->runOn(function);
       pass->Reset();
     }
@@ -51,26 +53,25 @@ void CodeGenerator::RunPasses() {
 }
 
 void CodeGenerator::RegisterPasses() {
-  auto spill = std::make_shared<Spill>(_ll_module);
-  auto pre_peephole = std::make_shared<PeepHole>(_ll_module);
+  auto spill         = CREATE_PASS<Spill>(_ll_module);
+  auto pre_peephole  = CREATE_PASS<PeepHole>(_ll_module);
+  auto liveness      = CREATE_PASS<LivenessAnalysis>(_ll_module);
+  auto linear_scan   = CREATE_PASS<LinearScanRegisterAllocation>(_ll_module, liveness);
 
-  auto liveness = std::make_shared<LivenessAnalysis>(_ll_module);
-
-  auto fast_alloc = std::make_shared<FastAllocation>(_ll_module);
-
-  auto post_peephole = std::make_shared<PeepHole>(_ll_module, true);
-  auto func_fix = std::make_shared<FunctionFix>(_ll_module);
-  auto blk_rearrange = std::make_shared<BlockRearrange>(_ll_module);
+  auto fast_alloc    = CREATE_PASS<FastAllocation>(_ll_module);
+  auto post_peephole = CREATE_PASS<PeepHole>(_ll_module, true);
+  auto func_fix      = CREATE_PASS<FunctionFix>(_ll_module);
+  auto blk_rearrange = CREATE_PASS<BlockRearrange>(_ll_module);
 
   _passes.push_back(blk_rearrange);
 //  _passes.push_back(pre_peephole);
 
-  _passes.push_back(liveness);
+  _passes.push_back(linear_scan);
 
 //  _passes.push_back(fast_alloc);
-//  _passes.push_back(spill);
+  _passes.push_back(spill);
 //  _passes.push_back(post_peephole);
-//  _passes.push_back(func_fix);
+  _passes.push_back(func_fix);
 }
 
 }

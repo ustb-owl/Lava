@@ -7,6 +7,7 @@ add_library(back
         passes/funcfix.cpp
         passes/peephole.cpp
         passes/liveness.cpp
+        passes/linearscan.cpp
         passes/fastalloc.cpp
         passes/blkrearrange.cpp
 )

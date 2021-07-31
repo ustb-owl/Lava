@@ -15,6 +15,8 @@ public:
 
   virtual ~PassBase() = default;
 
+  virtual void Initialize() {}
+
   virtual void Reset() = 0;
 
   virtual void runOn(const LLFunctionPtr &func) = 0;

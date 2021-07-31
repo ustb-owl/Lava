@@ -31,9 +31,18 @@ public:
   // generate LLIR
   void CodeGene();
 
+  // create passes
+  template<typename TYPE, typename... Args>
+  std::shared_ptr<TYPE> CREATE_PASS(Args &&... args) {
+    auto pass = std::make_shared<TYPE>(std::forward<Args>(args)...);
+    DBG_ASSERT(pass != nullptr, "create pass failed");
+    return pass;
+  }
+
   // register passes
   void RegisterPasses();
 
+  // run passes on each function
   void RunPasses();
 
   // dump asm
