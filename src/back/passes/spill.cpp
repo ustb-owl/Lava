@@ -13,6 +13,8 @@ void Spill::runOn(const LLFunctionPtr &func) {
     for (auto it = block->inst_begin(); it != block->inst_end(); it++) {
       auto inst = *it;
       _mask = GetTmpMask(inst);
+      auto mask = _mask;
+      static_cast<void>(mask);
       if (auto mv_inst = dyn_cast<LLMove>(inst)) {
         if (mv_inst->src()->IsVirtual()) {
           auto allocated = mv_inst->src()->allocated();
@@ -78,9 +80,9 @@ LLOperandPtr Spill::GetTmpReg(std::uint32_t &reg_mask) {
   if (!(reg_mask & (1 << static_cast<int>(ArmReg::r12)))) {
     reg_mask |= 1 << static_cast<int>(ArmReg::r12);
     temp = LLOperand::Register(ArmReg::r12);
-  } else if (!(reg_mask & (1 << static_cast<int>(ArmReg::r11)))) {
-    reg_mask |= 1 << static_cast<int>(ArmReg::r11);
-    temp = LLOperand::Register(ArmReg::r11);
+  } else if (!(reg_mask & (1 << static_cast<int>(ArmReg::r10)))) {
+    reg_mask |= 1 << static_cast<int>(ArmReg::r10);
+    temp = LLOperand::Register(ArmReg::r10);
   } else if (!(reg_mask & (1 << static_cast<int>(ArmReg::r3)))) {
     reg_mask |= 1 << static_cast<int>(ArmReg::r3);
     temp = LLOperand::Register(ArmReg::r3);
@@ -118,6 +120,7 @@ void Spill::InsertLoadInst(LLInstList::iterator &it,
   if (slot->imm_num() >= 4096) {
     _cur_func->AddSavedRegister(ArmReg::fp);
     auto tmp = LLOperand::Register(ArmReg::fp);
+//    auto tmp = GetTmpReg(_mask);
     _module.AddInst<LLMove>(tmp, slot);
     offset = tmp;
   }

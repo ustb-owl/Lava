@@ -623,7 +623,7 @@ public:
 class LLMLS : public LLFMA {
 public:
   LLMLS(const LLOperandPtr &dst, const LLOperandPtr &lhs, const LLOperandPtr &rhs, const LLOperandPtr &acc)
-      : LLFMA(Opcode::MLA, dst, lhs, rhs, acc, ClassId::LLMLSId) {}
+      : LLFMA(Opcode::MLS, dst, lhs, rhs, acc, ClassId::LLMLSId) {}
 
   LLOperandPtr dest() final { return LLFMA::dst(); }
   LLOperandList operands() override { return LLFMA::operands(); }

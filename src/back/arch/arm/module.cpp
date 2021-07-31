@@ -291,8 +291,12 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       if (bin_op == LLOpcode::SRem) {
         auto dst = CreateOperand(inst);
         auto sdiv = AddInst<LLBinaryInst>(LLOpcode::SDiv, dst, lhs, rhs);
-        auto mls = AddInst<LLMLS>(dst, dst, rhs, lhs);
-        DBG_ASSERT(mls != nullptr, "create mod instruction failed");
+
+//        auto mul_res = LLOperand::Virtual(_virtual_max);
+        auto mul = AddInst<LLBinaryInst>(LLOpcode::Mul, dst, dst, rhs);
+        auto sub = AddInst<LLBinaryInst>(LLOpcode::Sub, dst, lhs, dst);
+//        auto mls = AddInst<LLMLS>(dst, dst, rhs, lhs);
+        DBG_ASSERT(sub != nullptr, "create mod instruction failed");
       } else {
         auto dst = CreateOperand(inst);
         auto bin_inst = AddInst<LLBinaryInst>(bin_op, dst, lhs, rhs);

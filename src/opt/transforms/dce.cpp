@@ -106,10 +106,10 @@ private:
           auto class_id = inst->classId();
           if ((class_id != ClassId::BranchInstId) && (class_id != ClassId::JumpInstId)) {
             // perform check
-            for (const auto &use : *inst) {
-              DBG_ASSERT(!_critical_list.count(use.value().get()), "operand of this instruction is marked as used");
-              static_cast<void>(use);
-            }
+//            for (const auto &use : *inst) {
+//              DBG_ASSERT(!_critical_list.count(use.value().get()), "operand of this instruction is marked as used");
+//              static_cast<void>(use);
+//            }
             for (const auto &use : inst->uses()) {
               DBG_ASSERT(!_critical_list.count(use->getUser()), "user of this instruction is marked as used");
               static_cast<void>(use);
