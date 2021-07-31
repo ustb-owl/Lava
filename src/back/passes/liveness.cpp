@@ -9,8 +9,9 @@ void LivenessAnalysis::runOn(const LLFunctionPtr &func) {
   if (func->is_decl()) return;
   Init(func);
   SolveLiveness();
-  DumpInitInfo();
-
+  SolveLiveInterval(func);
+  DumpInitInfo(func);
+  DumpLiveInterval();
 }
 
 void LivenessAnalysis::Init(const LLFunctionPtr &F) {
@@ -49,7 +50,14 @@ void LivenessAnalysis::Init(const LLFunctionPtr &F) {
     BlockInfo blk_info(ue_var, var_kill, live_out);
     _blk_info.insert({it, blk_info});
   }
+}
 
+bool LivenessAnalysis::IsTempReg(const LLOperandPtr &opr) {
+  if (opr->IsRealReg()) {
+    auto reg = opr->reg();
+    if ((reg >= ArmReg::r0 && reg <= ArmReg::r3) || (reg == ArmReg::lr)) return true;
+  }
+  return false;
 }
 
 void LivenessAnalysis::TraverseRPO(const LLBlockPtr &BB) {
@@ -72,33 +80,13 @@ void LivenessAnalysis::TraverseRPO(const LLBlockPtr &BB) {
   _rpo_blocks.push_front(BB);
 }
 
-void LivenessAnalysis::DumpInitInfo() {
-  for (const auto &it : _blk_info) {
-    std::cout << it.first->name() << std::endl;
-
-    // output ue
-    std::cout << "ue: ";
-    for (const auto &ue : it.second.ue_var) std::cout << ue << " ";
-    std::cout << std::endl;
-
-    // output kill
-    std::cout << "kill: ";
-    for (const auto &kill : it.second.var_kill) std::cout << kill << " ";
-    std::cout << std::endl;
-
-    std::cout << "liveout: ";
-    for (const auto &liveout : it.second.live_out) std::cout << liveout << " ";
-    std::cout << std::endl << std::endl;
-  }
-}
-
 void LivenessAnalysis::SolveLiveness() {
   // clear live out set
-  for(const auto &BB : _rpo_blocks) _blk_info[BB].live_out.clear();
+  for (const auto &BB : _rpo_blocks) _blk_info[BB].live_out.clear();
 
 
   bool changed = true;
-  while(changed) {
+  while (changed) {
     changed = false;
     for (const auto &BB : _rpo_blocks) {
       auto &liveout = _blk_info[BB].live_out;
@@ -135,6 +123,90 @@ std::vector<LLBlockPtr> LivenessAnalysis::GetSuccessors(const LLBlockPtr &BB) {
     ERROR("should not reach here");
   }
   return succs;
+}
+
+// solve live interval
+void LivenessAnalysis::SolveLiveInterval(const LLFunctionPtr &func) {
+  std::size_t pos = 0, last_tmp_pos = 0;
+  for (const auto &BB : func->blocks()) {
+    for (const auto &inst : BB->insts()) {
+      // record operands
+      for (const auto &opr : inst->operands()) {
+        if (!opr || !opr->IsVirtual()) continue;
+        RecordLiveInterval(opr, pos, last_tmp_pos);
+      }
+
+      // record dest
+      const auto &dst = inst->dest();
+      if (dst && dst->IsVirtual()) {
+        RecordLiveInterval(dst, pos, last_tmp_pos);
+      }
+
+      // update last_tmp_pos
+      auto mv_inst = dyn_cast<LLMove>(inst);
+      if ((dst && IsTempReg(dst)) ||
+          (mv_inst && IsTempReg(mv_inst->src())) ||
+          inst->classId() == ClassId::LLCallId) {
+        last_tmp_pos = pos;
+      }
+      pos++;
+    }
+
+    // set vreg which stay in liveout set
+    const auto &live_info = _blk_info[BB];
+    for (const auto &opr : live_info.live_out) {
+      RecordLiveInterval(opr, pos, last_tmp_pos);
+    }
+  }
+}
+
+// record live interval for each operands
+void LivenessAnalysis::RecordLiveInterval(const LLOperandPtr &opr, std::size_t end_pos, std::size_t last_tmp_pos) {
+  DBG_ASSERT(opr->IsVirtual(), "operand is not virtual register");
+  auto it = _live_intervals.find(opr);
+  if (it != _live_intervals.end()) {
+    auto &live_interval = it->second;
+
+    // update the end position
+    live_interval.SetEndPos(end_pos);
+
+    // check if there are usings of temporary register in interval
+    if (last_tmp_pos > live_interval.start_pos()) live_interval.SetCanAllocTmp(false);
+  } else {
+    // add new operand into records
+    _live_intervals.insert({opr, LiveInterval(end_pos, end_pos, true)});
+  }
+}
+
+
+void LivenessAnalysis::DumpInitInfo(const LLFunctionPtr &func) {
+  std::cout << func->function()->GetFunctionName() << ":" << std::endl;
+  for (const auto &it : _blk_info) {
+    std::cout << it.first->name() << std::endl;
+
+    // output ue
+    std::cout << "ue: ";
+    for (const auto &ue : it.second.ue_var) std::cout << ue << " ";
+    std::cout << std::endl;
+
+    // output kill
+    std::cout << "kill: ";
+    for (const auto &kill : it.second.var_kill) std::cout << kill << " ";
+    std::cout << std::endl;
+
+    std::cout << "liveout: ";
+    for (const auto &liveout : it.second.live_out) std::cout << liveout << " ";
+    std::cout << std::endl << std::endl;
+  }
+  std::cout << "-----------------" << std::endl;
+}
+
+void LivenessAnalysis::DumpLiveInterval() {
+  for (const auto &it : _live_intervals) {
+    std::cout << it.first << "\tstart: " << it.second.start_pos() << "\tend: " << it.second.end_pos()
+              << "\t" << it.second.can_alloc_to_tmp() << std::endl;
+  }
+  std::cout << std::endl;
 }
 
 }

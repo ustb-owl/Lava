@@ -62,7 +62,7 @@ void CodeGenerator::RegisterPasses() {
   auto func_fix = std::make_shared<FunctionFix>(_ll_module);
   auto blk_rearrange = std::make_shared<BlockRearrange>(_ll_module);
 
-//  _passes.push_back(blk_rearrange);
+  _passes.push_back(blk_rearrange);
 //  _passes.push_back(pre_peephole);
 
   _passes.push_back(liveness);

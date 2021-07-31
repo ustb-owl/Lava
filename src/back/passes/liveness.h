@@ -17,12 +17,32 @@ public:
   OprSet live_out;
 };
 
+class LiveInterval {
+private:
+  std::size_t _start_pos;
+  std::size_t _end_pos;
+  bool        _can_alloc_to_tmp;
+public:
+  LiveInterval() : _start_pos(0), _end_pos(0), _can_alloc_to_tmp(true) {}
+  LiveInterval(std::size_t start, std::size_t end, bool value)
+    : _start_pos(start), _end_pos(end), _can_alloc_to_tmp(value) {}
+
+  std::size_t start_pos() const { return _start_pos;        }
+  std::size_t end_pos()   const { return _end_pos;          }
+  bool can_alloc_to_tmp() const { return _can_alloc_to_tmp; }
+
+  void SetStartPos(std::size_t pos) { _start_pos = pos;          }
+  void SetEndPos(std::size_t pos)   { _end_pos = pos;            }
+  void SetCanAllocTmp(bool value)   { _can_alloc_to_tmp = value; }
+};
+
 class LivenessAnalysis : public PassBase {
 private:
-  std::list<LLBlockPtr>                       _rpo_blocks;
-  std::unordered_set<LLBlockPtr>              _visited;
-  std::unordered_map<LLBlockPtr, BlockInfo>   _blk_info;
-  std::unordered_map<std::size_t, LLBlockPtr> _blk_map;
+  std::list<LLBlockPtr>                           _rpo_blocks;
+  std::unordered_set<LLBlockPtr>                  _visited;
+  std::unordered_map<LLBlockPtr, BlockInfo>       _blk_info;
+  std::unordered_map<std::size_t, LLBlockPtr>     _blk_map;
+  std::unordered_map<LLOperandPtr, LiveInterval>  _live_intervals;
 
 public:
   explicit LivenessAnalysis(LLModule &module) : PassBase(module) {}
@@ -32,10 +52,14 @@ public:
     _visited.clear();
     _blk_info.clear();
     _blk_map.clear();
+    _live_intervals.clear();
   }
 
   // init gen and kill set
   void Init(const LLFunctionPtr &F);
+
+  // check if it is temp reg
+  bool IsTempReg(const LLOperandPtr &opr);
 
   // traverse basic block in RPO
   void TraverseRPO(const LLBlockPtr &BB);
@@ -44,9 +68,19 @@ public:
   std::vector<LLBlockPtr> GetSuccessors(const LLBlockPtr &BB);
 
   // used for debug
-  void DumpInitInfo();
+  void DumpInitInfo(const LLFunctionPtr &func);
 
+  // used for debug
+  void DumpLiveInterval();
+
+  // get live out information
   void SolveLiveness();
+
+  // solve live interval
+  void SolveLiveInterval(const LLFunctionPtr &func);
+
+  // record live interval for each operands
+  void RecordLiveInterval(const LLOperandPtr &opr, std::size_t end_pos, std::size_t last_tmp_pos);
 
   void runOn(const LLFunctionPtr &func) final;
 };
