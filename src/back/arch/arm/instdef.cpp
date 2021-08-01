@@ -2,7 +2,7 @@
 
 namespace lava::back {
 LLOperand::LLOperand(State state, int n)
-  : _state(state), _virtual_num(-1), _imm_num(-1), _allocated(nullptr) {
+  : _state(state), _virtual_num(-1), _imm_num(-1), _allocated(nullptr), _allow_to_tmp(true) {
   switch (state) {
     case State::Immediate: _imm_num = n;                  break;
     case State::Virtual:   _virtual_num = n;              break;
