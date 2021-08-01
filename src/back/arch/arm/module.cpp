@@ -340,6 +340,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
 
           // data
           auto data = CreateNoImmOperand(callInst->Param(i));
+          data->set_not_allowed_to_tmp(false);
 
           // addr
           auto addr = LLOperand::Register(ArmReg::sp);

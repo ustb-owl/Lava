@@ -8,7 +8,6 @@ void LinearScanRegisterAllocation::Initialize() {
   _free_tmp_regs.push_back(LLOperand::Register(ArmReg::r0));
   _free_tmp_regs.push_back(LLOperand::Register(ArmReg::r1));
   _free_tmp_regs.push_back(LLOperand::Register(ArmReg::r2));
-  _free_tmp_regs.push_back(LLOperand::Register(ArmReg::r3));
 
   for (auto reg = int(ArmReg::r4); reg <= int(ArmReg::r9); reg++) {
     _free_comm_regs.push_back(LLOperand::Register(ArmReg(reg)));
