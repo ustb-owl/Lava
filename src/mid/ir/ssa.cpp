@@ -1,4 +1,5 @@
 #include <define/ast.h>
+#include <queue>
 #include "ssa.h"
 #include "common/casting.h"
 #include "constant.h"
@@ -17,7 +18,6 @@ Instruction::Instruction(unsigned opcode, unsigned operand_nums,
 
 bool Instruction::classof(Value *value) {
   switch (value->classId()) {
-    case ClassId::PHINodeId:
     case ClassId::UndefId:
     case ClassId::FunctionId:
     case ClassId::BasicBlockId:
@@ -25,14 +25,15 @@ bool Instruction::classof(Value *value) {
     case ClassId::GlobalVariableId:
     case ClassId::ConstantIntId:
     case ClassId::ConstantArrayId:
-    case ClassId::ConstantStringId: return false;
-    default: return true;
+    case ClassId::ConstantStringId:
+      return false;
+    default:
+      return true;
   }
 }
 
 bool Instruction::classof(const Value *value) {
   switch (value->classId()) {
-    case ClassId::PHINodeId:
     case ClassId::UndefId:
     case ClassId::FunctionId:
     case ClassId::BasicBlockId:
@@ -40,8 +41,10 @@ bool Instruction::classof(const Value *value) {
     case ClassId::GlobalVariableId:
     case ClassId::ConstantIntId:
     case ClassId::ConstantArrayId:
-    case ClassId::ConstantStringId: return false;
-    default: return true;
+    case ClassId::ConstantStringId:
+      return false;
+    default:
+      return true;
   }
 }
 
@@ -115,8 +118,10 @@ bool TerminatorInst::classof(Value *value) {
   switch (value->classId()) {
     case ClassId::ReturnInstId:
     case ClassId::BranchInstId:
-    case ClassId::JumpInstId: return true;
-    default: return false;
+    case ClassId::JumpInstId:
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -124,8 +129,10 @@ bool TerminatorInst::classof(const Value *value) {
   switch (value->classId()) {
     case ClassId::ReturnInstId:
     case ClassId::BranchInstId:
-    case ClassId::JumpInstId: return true;
-    default: return false;
+    case ClassId::JumpInstId:
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -192,15 +199,19 @@ std::vector<BasicBlock *> BasicBlock::successors() {
 
 bool BasicBlock::classof(Value *value) {
   switch (value->classId()) {
-    case ClassId::BasicBlockId: return true;
-    default: return false;
+    case ClassId::BasicBlockId:
+      return true;
+    default:
+      return false;
   }
 }
 
 bool BasicBlock::classof(const Value *value) {
   switch (value->classId()) {
-    case ClassId::BasicBlockId: return true;
-    default: return false;
+    case ClassId::BasicBlockId:
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -448,8 +459,7 @@ inline void DumpBlockName(std::ostream &os, IdManager &id_mgr, const BasicBlock 
     os << name << id_mgr.GetId(block, IdType::_ID_LAND_END);
   } else if (name.find("lor.end") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_LOR_END);
-  }
-  else if (name.find("block") != npos) {
+  } else if (name.find("block") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_BLOCK);
   } else {
     os << name;
@@ -457,7 +467,7 @@ inline void DumpBlockName(std::ostream &os, IdManager &id_mgr, const BasicBlock 
 }
 
 void PrintId(std::ostream &os, IdManager &id_mgr, const Value *value) {
-  os << "%" << id_mgr.GetId(value);
+  os << "%v" << id_mgr.GetId(value);
 }
 
 void PrintId(std::ostream &os, IdManager &id_mgr, const std::string &name) {
@@ -567,6 +577,52 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
 
   os << " {\n";
 
+  std::vector<BlockPtr> bbs;
+  std::unordered_set<Value *> visited;
+  std::queue<SSAPtr> worklist;
+  worklist.push((*this)[0].value());
+  SSAPtr func_exit = nullptr;
+  while (!worklist.empty()) {
+    auto it = worklist.front();
+    worklist.pop();
+    auto block = dyn_cast<BasicBlock>(it);
+    if (block->name() == "func_exit") {
+      func_exit = it;
+      bbs.push_back(nullptr);
+    } else {
+      bbs.push_back(block);
+    }
+
+    auto back = block->insts().back();
+    if (auto jump_inst = dyn_cast<JumpInst>(back)) {
+      if (!visited.count(dyn_cast<BasicBlock>(jump_inst->target()).get())) {
+        visited.insert(jump_inst->target().get());
+        worklist.push(jump_inst->target());
+      }
+    } else if (auto branch_inst = dyn_cast<BranchInst>(back)) {
+      if (!visited.count(dyn_cast<BasicBlock>(branch_inst->true_block()).get())) {
+        visited.insert(branch_inst->true_block().get());
+        worklist.push(branch_inst->true_block());
+      }
+      if (!visited.count(dyn_cast<BasicBlock>(branch_inst->false_block()).get())) {
+        visited.insert(branch_inst->false_block().get());
+        worklist.push(branch_inst->false_block());
+      }
+    }
+  }
+  DBG_ASSERT(bbs.size() == this->size(), "block size is error");
+  for (auto &bb : bbs) {
+    if (bb == nullptr) continue;
+    DumpValue(os, id_mgr, bb);
+    os << std::endl;
+  }
+
+  if (func_exit) {
+    DumpValue(os, id_mgr, func_exit);
+    os << std::endl;
+  }
+
+#if 0
   // dump content of blocks
   bool report_exit = false;
   for (std::size_t i = 0; i < this->size(); i++) {
@@ -588,6 +644,7 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
     DumpValue(os, id_mgr, (*this)[1]);
     os << std::endl;
   }
+#endif
 
 //   end of function
   os << "}\n" << std::endl;
@@ -801,7 +858,11 @@ void UnDefineValue::Dump(std::ostream &os, IdManager &id_mgr) const {
 }
 
 void PhiNode::Dump(std::ostream &os, IdManager &id_mgr) const {
-  if (PrintPrefix(os, id_mgr, this)) return;
+  if (!in_expr) os << xIndent;
+  os << "%phi" << id_mgr.GetId(this, IdType::_ID_PHI);
+  if (!in_expr) os << " = ";
+  if (in_expr) return;
+
   auto guard = InExpr();
   os << "phi ";
   DumpType(os, type());

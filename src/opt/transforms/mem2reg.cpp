@@ -43,7 +43,7 @@ public:
   }
 
   void finalize() final {
-    _dom_info.clear();
+//    _dom_info.clear();
     _allocas.clear();
     _alloca_ids.clear();
     _alloca_defs.clear();
@@ -128,11 +128,14 @@ public:
   // 2. rename variables, replace load/store with move
   void Rename(const FuncPtr &F) {
     auto undef = std::make_shared<UnDefineValue>();
+    undef->set_type(MakePrimType(Type::Int32, true));
     auto entry = dyn_cast<BasicBlock>(F->entry()).get();
     std::unordered_set<BasicBlock *> visited;
     std::vector<std::pair<BasicBlock *, std::vector<SSAPtr>>> worklist{
         {entry, std::vector<SSAPtr>(_alloca_ids.size(), undef)}
     };
+
+    std::vector<std::pair<BasicBlock *, SSAPtrList::iterator>> alloc_pos;
 
 
     while (!worklist.empty()) {
@@ -147,12 +150,16 @@ public:
 
           if (auto res = _alloca_ids.find(it->get()); res != _alloca_ids.end()) {
             // remove from instruction list
-            BB->insts().erase(it);
+            alloc_pos.push_back({BB, it});
           } else if (auto load_inst = dyn_cast<LoadInst>(*it)) {
             // if alloc has been removed
             DBG_ASSERT(load_inst->Pointer() != nullptr, "pointer of load instruction is nullptr");
             auto alloc_it = _alloca_ids.find(load_inst->Pointer().get());
             if (alloc_it != _alloca_ids.end()) {
+              auto target = values[alloc_it->second];
+              if (target->classId() == ClassId::UnDefineValueId) {
+                target->set_type(load_inst->type());
+              }
               load_inst->ReplaceBy(values[alloc_it->second]);
               BB->insts().erase(it);
             }
@@ -206,8 +213,14 @@ public:
       }
     }
 
+    // remove from user
     for (const auto &it : _allocas) {
-      it->ReplaceBy(nullptr);
+      it->RemoveFromUser();
+    }
+
+    // remove from instruction list
+    for (const auto &it : alloc_pos) {
+      it.first->insts().erase(it.second);
     }
   }
 

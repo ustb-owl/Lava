@@ -72,7 +72,7 @@ int Main(bool AST = fire::arg({"-T", "--dump-ast"}),
   comp.RunPasses();
 
   // code generation
-  comp.CodeGeneAction();
+//  comp.CodeGeneAction();
 
   switch (option) {
     case OPTION::NONE:

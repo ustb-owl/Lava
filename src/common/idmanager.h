@@ -24,22 +24,23 @@ enum class IdType {
   _ID_LHS_FALSE     = 10,
   _ID_LAND_END      = 11,
   _ID_LOR_END       = 12,
+  _ID_PHI           = 13,
 
   // LLIR
-  _ID_LL_VIRTUAL    = 13,
-  _ID_LL_BLOCK      = 14,
-  _ID_LL_IF_COND    = 15,
-  _ID_LL_THEN       = 16,
-  _ID_LL_ELSE       = 17,
-  _ID_LL_IF_END     = 18,
-  _ID_LL_WHILE_COND = 19,
-  _ID_LL_LOOP_BODY  = 20,
-  _ID_LL_WHILE_END  = 21,
-  _ID_LL_REAL       = 22,
-  _ID_LL_LHS_TRUE   = 23,
-  _ID_LL_LHS_FALSE  = 24,
-  _ID_LL_LAND_END   = 25,
-  _ID_LL_LOR_END    = 26,
+  _ID_LL_VIRTUAL    = 14,
+  _ID_LL_BLOCK      = 15,
+  _ID_LL_IF_COND    = 16,
+  _ID_LL_THEN       = 17,
+  _ID_LL_ELSE       = 18,
+  _ID_LL_IF_END     = 19,
+  _ID_LL_WHILE_COND = 20,
+  _ID_LL_LOOP_BODY  = 21,
+  _ID_LL_WHILE_END  = 22,
+  _ID_LL_REAL       = 23,
+  _ID_LL_LHS_TRUE   = 24,
+  _ID_LL_LHS_FALSE  = 25,
+  _ID_LL_LAND_END   = 26,
+  _ID_LL_LOR_END    = 27,
 };
 
 class IdManager {
@@ -58,6 +59,7 @@ private:
   std::size_t                                         _lhs_false_id;  // current lhs false id
   std::size_t                                         _land_end;      // current land id
   std::size_t                                         _lor_end;       // current lor id
+  std::size_t                                         _phi_id;        // current phi node id
 
   // LLIR
   std::size_t                                         _ll_block_id;      // current block id
@@ -90,7 +92,10 @@ public:
   IdManager()
     : _cur_id(0), _block_id(0), _if_cond_id(0), _then_id(0), _else_id(0),
       _if_end_id(0), _while_cond_id(0), _loop_body_id(0), _while_end_id(0),
-      _lhs_true_id(0), _lhs_false_id(0), _land_end(0), _lor_end(0) {}
+      _lhs_true_id(0), _lhs_false_id(0), _land_end(0), _lor_end(0),
+      _phi_id(0), _ll_block_id(0), _ll_if_cond_id(0), _ll_then_id(0), _ll_else_id(0),
+      _ll_if_end_id(0), _ll_while_cond_id(0), _ll_loop_body_id(0), _ll_while_end_id(0),
+      _ll_lhs_true_id(0), _ll_lhs_false_id(0), _ll_land_end(0), _ll_lor_end(0) {}
 
   void Reset();
 

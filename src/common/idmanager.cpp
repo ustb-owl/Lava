@@ -84,6 +84,7 @@ std::size_t IdManager::GetId(const Value *value, IdType idType) {
     case IdType::_ID_LHS_FALSE:  id = _lhs_false_id++;  break;
     case IdType::_ID_LAND_END:   id = _land_end++;      break;
     case IdType::_ID_LOR_END:    id = _lor_end++;       break;
+    case IdType::_ID_PHI:        id = _phi_id++;        break;
     default:
       ERROR("should not reach here");
   }

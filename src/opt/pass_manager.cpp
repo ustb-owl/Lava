@@ -18,7 +18,7 @@ PassInfo &PassInfo::Invalidates(const std::string &pass_name) {
 
 
 void PassManager::RequiredBy(const std::string &slave, const std::string &master) {
-    GetRequiredBy()[slave].insert(master);
+  GetRequiredBy()[slave].insert(master);
 }
 
 bool PassManager::RunPass(PassNameSet &valid, const PassInfoPtr &info) {
@@ -42,15 +42,18 @@ bool PassManager::RunPass(const PassPtr &pass) {
   pass->initialize();
   if (pass->IsModulePass()) {
     changed = pass->runOnModule(module());
+    // perform finalization
+    pass->finalize();
   } else {
     DBG_ASSERT(pass->IsFunctionPass(), "unknown pass class");
     for (const auto &it : module().Functions()) {
       auto func = std::static_pointer_cast<Function>(it);
       changed = pass->runOnFunction(func);
+      // perform finalization
+      pass->finalize();
     }
   }
-  // perform finalization
-  pass->finalize();
+
   return changed;
 }
 
@@ -59,40 +62,32 @@ void PassManager::RunPasses(const PassPtrList &passes) {
   PassNameSet valid;
 
 //  while (changed) {
-    changed = false;
+  changed = false;
 
 
-    // run all passes
-    for (const auto &it : passes) {
-      changed = RunPass(valid, it);
-//      while (changed) changed = RunPass(valid, it);
-    }
-//  }
+  // run all passes
+  for (const auto &it : passes) {
+
+    changed = RunPass(valid, it);
+  }
 }
 
 bool PassManager::RunRequiredPasses(PassNameSet &valid, const PassInfoPtr &info) {
-  bool changed = false, rerun = true;
-  while (rerun) {
-    rerun = false;
-    for (const auto &name : info->required_passes()) {
+  bool changed = false;
+  for (const auto &name : info->required_passes()) {
 
-      // get pointer of pass
-      const auto &passes = GetPasses();
-      auto it = passes.find(name);
-      DBG_ASSERT(it != passes.end(), "required pass not found");
+    // get pointer of pass
+    const auto &passes = GetPasses();
+    auto it = passes.find(name);
+    DBG_ASSERT(it != passes.end(), "required pass not found");
 
-      // check if current pass can be run
-      if (!it->second->is_analysis() &&
-           it->second->min_opt_level() > opt_level()) {
-        continue;
-      }
-
-      // run if not valid
-      if (!valid.count(name) && RunPass(valid, it->second)) {
-        changed = true;
-        rerun = !it->second->invalidated_passes().empty();
-      }
+    // check if current pass can be run
+    if (!it->second->is_analysis() &&
+        it->second->min_opt_level() > opt_level()) {
+      continue;
     }
+
+    RunPass(valid, it->second);
   }
   return changed;
 }
