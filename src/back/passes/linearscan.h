@@ -20,9 +20,9 @@ private:
   LLOperandList _free_comm_regs;
   LLOperandList _free_slots;
 
-  std::unordered_map<LLOperandPtr, LLOperandPtr> _alloc_map;
-  std::map<LiveInterval, LLOperandPtr, CmpEnd>   _active;
-  std::map<LiveInterval, LLOperandPtr, CmpStart> _live_intervals;
+  std::unordered_map<LLOperandPtr, LLOperandPtr>      _alloc_map;
+  std::multimap<LiveInterval, LLOperandPtr, CmpEnd>   _active;
+  std::multimap<LiveInterval, LLOperandPtr, CmpStart> _live_intervals;
 
 public:
   explicit LinearScanRegisterAllocation(LLModule &module, std::shared_ptr<LivenessAnalysis> liveness)

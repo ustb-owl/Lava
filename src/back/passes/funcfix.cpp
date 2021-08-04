@@ -63,16 +63,18 @@ void FunctionFix::AddPrologue(const LLFunctionPtr &func) {
 
   DBG_ASSERT(update_sp != nullptr, "update sp register failed");
 
-  for (const auto &inst : entry->insts()) {
-    if (auto move_inst = dyn_cast<LLMove>(inst)) {
-      if (!move_inst->is_arg()) continue;
+  for (const auto &BB : func->blocks()) {
+    for (const auto &inst : BB->insts()) {
+      if (auto move_inst = dyn_cast<LLMove>(inst)) {
+        if (!move_inst->is_arg()) continue;
 
-      auto src = move_inst->src();
-      DBG_ASSERT(src->IsImmediate(), "offset is not imm");
-      auto offset = src->imm_num();
+        auto src = move_inst->src();
+        DBG_ASSERT(src->IsImmediate(), "offset is not imm");
+        auto offset = src->imm_num();
 
-      offset += _gap;
-      move_inst->set_operand(LLOperand::Immediate(offset), 0);
+        offset += _gap;
+        move_inst->set_operand(LLOperand::Immediate(offset), 0);
+      }
     }
   }
 }

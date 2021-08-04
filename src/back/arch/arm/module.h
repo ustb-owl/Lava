@@ -21,6 +21,7 @@ private:
 
   std::unordered_map<mid::SSAPtr, std::pair<LLInstPtr, ArmCond>>  _cond_map;
   std::unordered_map<std::shared_ptr<mid::GlobalVariable>, LLOperandPtr> _glob_map;
+  std::unordered_map<mid::SSAPtr, LLOperandPtr> _param_map;
 public:
 
   // create a new LLIR
@@ -80,6 +81,8 @@ public:
   LLOperandPtr  CreateImmediate(int value);
   LLFunctionPtr CreateFunction(const mid::FuncPtr &function);
   LLBlockPtr    CreateBasicBlock(const mid::BlockPtr &block, const LLFunctionPtr& parent);
+
+  void          HandlePhiNode(const mid::FuncPtr &function);
 
 
   // getter/setter

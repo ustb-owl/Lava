@@ -35,6 +35,10 @@ LLOperandPtr LLModule::CreateNoImmOperand(const mid::SSAPtr &value) {
 
 LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
   if (auto param = dyn_cast<mid::ArgRefSSA>(value)) {
+    auto it = _param_map.find(value);
+    if (it != _param_map.end()) {
+      return it->second;
+    }
     const auto &args = _insert_function->function()->args();
     LLOperandPtr arg = nullptr;
     for (std::size_t i = 0; i < args.size(); i++) {
@@ -42,7 +46,16 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
         // copy from register
         if (i < 4) {
           // r0-r3
-          arg = LLOperand::Register((ArmReg) i);
+          // mov v1, r0
+          auto dst = LLOperand::Virtual(_virtual_max);
+          auto src = LLOperand::Register((ArmReg) i);
+
+          // insert this instruction at entry
+          auto mv_inst = std::make_shared<LLMove>(dst, src);
+          auto entry = _insert_function->entry();
+          entry->insts().insert(entry->insts().begin(), mv_inst);
+
+          arg = dst;
         } else {
           /* read from sp + (i-4)*4 in entry block */
 
@@ -69,6 +82,7 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
     }
 
     DBG_ASSERT(arg != nullptr, "create argument failed");
+    _param_map[value] = arg;
     return arg;
   } else if (auto constValue = dyn_cast<mid::ConstantInt>(value)) {
     return CreateImmediate(constValue->value());
@@ -93,6 +107,9 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
       return it->second;
     }
 
+  } else if (auto undef = dyn_cast<mid::UnDefineValue>(value)) {
+    auto res = CreateImmediate(0);
+    return res;
   } else {
     auto it = _value_map.find(value);
     if (it == _value_map.end()) {
@@ -454,6 +471,69 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
   }
 
   return ll_block;
+}
+
+void LLModule::HandlePhiNode(const mid::FuncPtr &function) {
+  using PhiAssign = std::vector<std::pair<LLOperandPtr , LLOperandPtr>>;
+  for (const auto &BB : *function) {
+    auto block = dyn_cast<BasicBlock>(BB.value());
+    DBG_ASSERT(_block_map.find(block) != _block_map.end(), "can't find the block in current _block_map");
+    auto ll_block = _block_map[block];
+
+    PhiAssign phi_dst;
+
+    std::unordered_map<BlockPtr, PhiAssign> move;
+    for (const auto &inst : block->insts()) {
+      if (auto phi_inst = dyn_cast<PhiNode>(inst)) {
+        // for each phi:
+        // 1. create a virtual register for each instruction
+        // 2. add mov for each node
+        // 2. add mov in each predecessor
+        auto vreg = LLOperand::Virtual(_virtual_max);
+        auto dst = CreateOperand(inst);
+        phi_dst.emplace_back(dst, vreg);
+        for (auto i = 0; i < phi_inst->size(); i++) {
+          auto pred = dyn_cast<BasicBlock>(block->GetOperand(i));
+          DBG_ASSERT(pred != nullptr, "get predecessor of current block failed");
+          auto val = CreateOperand((*phi_inst)[i].value());
+          move[pred].emplace_back(vreg, val);
+        }
+      } else {
+        break;
+      }
+    }
+
+    auto begin = ll_block->inst_begin();
+    SetInsertPoint(ll_block, begin);
+    for (auto &[lhs, rhs] : phi_dst) {
+      auto mov_inst = AddInst<LLMove>(lhs, rhs);
+      DBG_ASSERT(mov_inst != nullptr, "create move instruction for phi-node failed");
+    }
+
+    // insert move instructions in each predecessor
+    for (auto &[bb, movs] : move) {
+      auto ll_bb = _block_map[bb];
+
+      // find terminate instruction
+      auto it = ll_bb->inst_begin();
+      for (; it != ll_bb->insts().end(); it++) {
+        if ((*it)->classId() == ClassId::LLJumpId)
+          break;
+        else if ((*it)->classId() == ClassId::LLBranchId) {
+          it = std::prev(it);
+          break;
+        }
+      }
+      auto pos = it;
+
+      SetInsertPoint(ll_bb, pos);
+      for (auto &[lhs, rhs] : movs) {
+        auto mov_inst = AddInst<LLMove>(lhs, rhs);
+        DBG_ASSERT(mov_inst != nullptr, "create move instruction for phi-node failed");
+      }
+    }
+
+  }
 }
 
 

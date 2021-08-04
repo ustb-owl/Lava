@@ -10,8 +10,8 @@ void LivenessAnalysis::runOn(const LLFunctionPtr &func) {
   Init(func);
   SolveLiveness();
   SolveLiveInterval(func);
-//  DumpInitInfo(func);
-//  DumpLiveInterval();
+  DumpInitInfo(func);
+  DumpLiveInterval();
 }
 
 void LivenessAnalysis::Init(const LLFunctionPtr &F) {

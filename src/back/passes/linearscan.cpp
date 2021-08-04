@@ -23,7 +23,9 @@ void LinearScanRegisterAllocation::runOn(const LLFunctionPtr &func) {
   auto &live_intervals = _liveness->GetLiveInterval();
   // build live intervals which ordered by start position
   for (const auto &it : live_intervals) {
+    auto i = _live_intervals.size();
     _live_intervals.insert({it.second, it.first});
+    DBG_ASSERT(_live_intervals.size() - 1 == i, "insert live interval failed");
   }
   DBG_ASSERT(_live_intervals.size() == live_intervals.size(), "size of _live_intervals is wrong");
 
@@ -115,14 +117,20 @@ void LinearScanRegisterAllocation::SpillAtInterval(const LiveInterval &live_inte
 
   // _alloc_map[live_interval] = _alloc_map[spill]
   if (spill.first.end_pos() > live_interval.end_pos()) {
-    auto vreg = _live_intervals[spill.first];
+    auto it = _live_intervals.find(spill.first);
+    DBG_ASSERT(it != _live_intervals.end(), "can't find spill vreg");
+    auto vreg = it->second;
     auto opr = _alloc_map[vreg];
 
-    auto vreg_new = _live_intervals[live_interval];
+    it = _live_intervals.find(live_interval);
+    DBG_ASSERT(it != _live_intervals.end(), "can't find live_interval vreg");
+    auto vreg_new = it->second;
     _alloc_map[vreg_new] = opr;
     _alloc_map[vreg] = _slot.AllocSlot(func, vreg);
   } else {
-    auto vreg = _live_intervals[live_interval];
+    auto it =  _live_intervals.find(live_interval);
+    DBG_ASSERT(it != _live_intervals.end(), "can't find live_interval vreg");
+    auto vreg = it->second;
     auto slot = _slot.AllocSlot(func, vreg);
     _alloc_map[vreg] = slot;
   }

@@ -31,6 +31,9 @@ void CodeGenerator::CodeGene() {
       DBG_ASSERT(ll_block != nullptr, "create low-level block failed");
     }
 
+    // handle phi-node
+    _ll_module.HandlePhiNode(func);
+
     // update vreg number
     ll_function->SetVirtualMax(_ll_module.VirtualMax());
     _ll_module.ClearVirtualMax();
@@ -66,6 +69,7 @@ void CodeGenerator::RegisterPasses() {
   _passes.push_back(blk_rearrange);
   _passes.push_back(pre_peephole);
 
+//  _passes.push_back(liveness);
   _passes.push_back(linear_scan);
 
 //  _passes.push_back(fast_alloc);
