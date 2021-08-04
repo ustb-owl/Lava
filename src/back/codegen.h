@@ -23,6 +23,10 @@ public:
 
   CodeGenerator(TargetArch targetArch) : _target_arch(targetArch), _module(nullptr) {}
 
+  ~CodeGenerator() {
+    _passes.clear();
+  }
+
   // set IR module
   void SetModule(mid::Module *module) { _module = module; }
 

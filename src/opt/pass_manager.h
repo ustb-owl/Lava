@@ -166,8 +166,9 @@ public:
   static void RunPasses();
 
   // getter/setter
-  static std::size_t  opt_level() { return _instance->_opt_level; }
-  static mid::Module &module()    { return *_instance->_module; }
+  static std::size_t  opt_level()      { return _instance->_opt_level;  }
+  static mid::Module &module()         { return *_instance->_module;    }
+  static void set_opt_level(int value) { _instance->_opt_level = value; }
 
   static void SetModule(mid::Module &module) { _instance->_module = &module; }
 };

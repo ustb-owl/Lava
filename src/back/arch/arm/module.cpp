@@ -19,6 +19,11 @@ void LLModule::reset() {
   _virtual_max = 0;
   _functions.clear();
   _glob_decl.clear();
+  _block_map.clear();
+  _value_map.clear();
+  _cond_map.clear();
+  _glob_map.clear();
+  _param_map.clear();
 }
 
 LLOperandPtr LLModule::CreateNoImmOperand(const mid::SSAPtr &value) {
@@ -97,7 +102,7 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
       _glob_map[globalValue] = res;
 
       // insert at entry
-      SetInsertPoint(_insert_function->entry(), _insert_function->entry()->inst_begin());
+      SetInsertPoint(_insert_function->entry(), _insert_function->entry()->insts().begin());
       auto load_global_addr = AddInst<LLGlobal>(res, globalValue.get());
       DBG_ASSERT(load_global_addr != nullptr, "load global variable address failed");
 

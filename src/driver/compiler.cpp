@@ -37,6 +37,7 @@ void Compiler::Parse() {
 }
 
 void Compiler::RunPasses() {
+  if (_opt_flag) PassManager::set_opt_level(2);
   PassManager::Initialize();
   PassManager::SetModule(_irbuilder->module());
   PassManager::RunPasses();

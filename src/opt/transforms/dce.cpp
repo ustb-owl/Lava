@@ -134,7 +134,7 @@ public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<DeadCodeElimination>();
     auto passinfo =
-        std::make_shared<PassInfo>(pass, "DeadCodeElimination", false, false, DEAD_CODE_ELIMINATION);
+        std::make_shared<PassInfo>(pass, "DeadCodeElimination", false, 0, DEAD_CODE_ELIMINATION);
 
     return passinfo;
   }

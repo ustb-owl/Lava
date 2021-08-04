@@ -44,6 +44,8 @@ int Main(bool AST = fire::arg({"-T", "--dump-ast"}),
     ERROR("should not reach here");
   }
 
+  if (level) comp.set_opt_flat(true);
+
   if (output.has_value()) {
     std::ofstream *o_file;
     output_file = output.value();

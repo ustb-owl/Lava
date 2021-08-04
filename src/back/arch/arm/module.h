@@ -44,6 +44,9 @@ public:
   void reset();
 
   LLModule() { reset(); }
+  ~LLModule() {
+    reset();
+  }
 
   void SetInsertPoint(const LLBlockPtr &BB, LLInstList::iterator it) {
     _insert_point = BB;

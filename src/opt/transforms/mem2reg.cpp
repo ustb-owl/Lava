@@ -231,7 +231,7 @@ class Mem2RegFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<Mem2Reg>();
-    auto passinfo = std::make_shared<PassInfo>(pass, "Mem2Reg", false, false, MEMORY_TO_REGISTER);
+    auto passinfo = std::make_shared<PassInfo>(pass, "Mem2Reg", false, 2, MEMORY_TO_REGISTER);
 
     passinfo->Requires("DominanceInfo");
 

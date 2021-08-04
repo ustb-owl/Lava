@@ -65,7 +65,7 @@ public:
     // 1. set function type
     define::TypePtrList params;
     auto param_type = MakePrimType(Type::Int32, false);
-    params.push_back(param_type);
+    params.push_back(std::move(param_type));
     auto ret_type = MakePrimType(Type::Void, false);
     F->set_type(std::make_shared<define::FuncType>(std::move(params), ret_type, false));
 
@@ -82,7 +82,7 @@ public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<DirtyFunctionNameConvert>();
     auto passinfo =
-        std::make_shared<PassInfo>(pass, "DirtyFunctionNameConvert", false, false, DIRTY_FUNCTION_CONV);
+        std::make_shared<PassInfo>(pass, "DirtyFunctionNameConvert", false, 0, DIRTY_FUNCTION_CONV);
     return passinfo;
   }
 };

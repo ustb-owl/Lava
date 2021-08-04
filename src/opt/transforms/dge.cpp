@@ -71,7 +71,7 @@ public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<DeadGlobalCodeElimination>();
     auto passinfo =
-        std::make_shared<PassInfo>(pass, "DeadGlobalCodeElimination", false, false, DEAD_GLOBAL_CODE_ELIMINATION);
+        std::make_shared<PassInfo>(pass, "DeadGlobalCodeElimination", false, 0, DEAD_GLOBAL_CODE_ELIMINATION);
     return passinfo;
   }
 };
