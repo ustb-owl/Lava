@@ -8,6 +8,7 @@ add_library(opt
         transforms/dge.cpp
         transforms/dce.cpp
         transforms/hello.cpp
+        transforms/mem2reg.cpp
         transforms/blocksimp.cpp
         transforms/dirtyname_conv.cpp
         transforms/dirtyarray_conv.cpp

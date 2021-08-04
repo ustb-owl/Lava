@@ -361,6 +361,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
         auto lhs = LLOperand::Register(ArmReg::sp);
         auto rhs = CreateImmediate(4 * (param_size - 4));
         auto sub_inst = AddInst<LLBinaryInst>(LLInst::Opcode::Sub, dst, lhs, rhs);
+        rhs->set_not_allowed_to_tmp(false);
       }
 
       // create call instruction
@@ -375,6 +376,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
         auto lhs = LLOperand::Register(ArmReg::sp);
         auto rhs = CreateImmediate(4 * (param_size - 4));
         auto sub_inst = AddInst<LLBinaryInst>(LLInst::Opcode::Add, dst, lhs, rhs);
+        rhs->set_not_allowed_to_tmp(false);
       }
 
       // set return value

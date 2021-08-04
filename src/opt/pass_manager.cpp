@@ -23,16 +23,13 @@ void PassManager::RequiredBy(const std::string &slave, const std::string &master
 
 bool PassManager::RunPass(PassNameSet &valid, const PassInfoPtr &info) {
   bool changed = false;
-  if (!valid.insert(info->name()).second) return changed;
+
   // check dependencies, run required passes first
-  changed = RunRequiredPasses(valid, info);
+  RunRequiredPasses(valid, info);
+
   // run current pass
   if (RunPass(info->pass())) {
     changed = true;
-    // invalidate passes
-    for (const auto &name : info->invalidated_passes()) {
-      InvalidatePass(valid, name);
-    }
   }
   return changed;
 }
@@ -61,15 +58,16 @@ void PassManager::RunPasses(const PassPtrList &passes) {
   bool changed = true;
   PassNameSet valid;
 
-  while (changed) {
+//  while (changed) {
     changed = false;
-    valid.clear();
+
 
     // run all passes
     for (const auto &it : passes) {
-      changed |= RunPass(valid, it);
+      changed = RunPass(valid, it);
+//      while (changed) changed = RunPass(valid, it);
     }
-  }
+//  }
 }
 
 bool PassManager::RunRequiredPasses(PassNameSet &valid, const PassInfoPtr &info) {

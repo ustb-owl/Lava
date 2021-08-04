@@ -28,6 +28,7 @@ CLASS_ID(69, , GlobalVariable)
 CLASS_ID(70, , ConstantInt)
 CLASS_ID(71, , ConstantArray)
 CLASS_ID(72, , ConstantString)
+CLASS_ID(73, , UnDefineValue)
 
 // class for LLIR
 CLASS_ID(80, , LLFunction)

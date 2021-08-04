@@ -796,4 +796,24 @@ void AccessInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << std::endl;
 }
 
+void UnDefineValue::Dump(std::ostream &os, IdManager &id_mgr) const {
+  os << "undef";
+}
+
+void PhiNode::Dump(std::ostream &os, IdManager &id_mgr) const {
+  if (PrintPrefix(os, id_mgr, this)) return;
+  auto guard = InExpr();
+  os << "phi ";
+  DumpType(os, type());
+  for (auto i = 0; i < this->size(); i++) {
+    os << " [ ";
+    DumpValue(os, id_mgr, (*this)[i].value());
+    os << ", %";
+    (*_block)[i]->Dump(os, id_mgr);
+    os << " ]";
+    if (i != this->size() - 1) os << ",";
+  }
+  os << std::endl;
+}
+
 }

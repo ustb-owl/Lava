@@ -140,6 +140,6 @@ public:
   }
 };
 
-static PassRegisterFactory<DeadCodeEliminationFactory> registry;
+//static PassRegisterFactory<DeadCodeEliminationFactory> registry;
 
 }

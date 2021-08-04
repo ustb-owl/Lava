@@ -740,5 +740,55 @@ public:
   }
 };
 
+class UnDefineValue : public Value {
+public:
+  UnDefineValue() : Value(ClassId::UnDefineValueId) {}
+
+  // dump ir
+  void Dump(std::ostream &os, IdManager &id_mgr) const override;
+
+  // methods for dyn_cast
+  static inline bool classof(UnDefineValue *) { return true; }
+  static inline bool classof(const UnDefineValue *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::UnDefineValueId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::UnDefineValueId) return true;
+    return false;
+  }
+};
+
+// phi node
+// operands: value1, value2, ...
+class PhiNode : public Instruction {
+private:
+  BasicBlock *_block;
+
+public:
+  explicit PhiNode(BasicBlock *BB)
+  : Instruction(Instruction::OtherOps::PHI, BB->size(), ClassId::PHINodeId), _block(BB) {}
+
+  BasicBlock *parent_block() { return _block; }
+
+  // dump ir
+  void Dump(std::ostream &os, IdManager &id_mgr) const override;
+
+  bool isInstruction() const override { return true; }
+
+  // methods for dyn_cast
+  static inline bool classof(PhiNode *) { return true; }
+  static inline bool classof(const PhiNode *) { return true; }
+  static bool classof(Value *value) {
+    if (value->classId() == ClassId::PHINodeId) return true;
+    return false;
+  }
+  static bool classof(const Value *value) {
+    if (value->classId() == ClassId::PHINodeId) return true;
+    return false;
+  }
+};
+
 }
 #endif //LAVA_SSA_H

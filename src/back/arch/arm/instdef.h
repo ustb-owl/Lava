@@ -237,7 +237,6 @@ public:
   }
 
   void set_not_allowed_to_tmp(bool value) {
-    DBG_ASSERT(_state == State::Virtual, "this is not virtual reg");
     _allow_to_tmp = value;
   }
 

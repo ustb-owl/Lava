@@ -43,7 +43,7 @@ void PeepHole::runOn(const LLFunctionPtr &func) {
         }
       } else if (auto load_inst = dyn_cast<LLLoad>(*it)) {
         /* 3. match:
-         * str r0, [r1, #0]
+         * str r0, [r1, #0w]
          * ldr r2, [r1, #0]
          * ldr can be opt to:
          * mov r2, r0
