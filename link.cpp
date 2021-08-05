@@ -7,6 +7,7 @@ extern int DirtyArrayConvert;
 extern int DirtyFunctionConvert;
 extern int DeadGlobalCodeElimination;
 extern int Mem2Reg;
+extern int GlobalValueNumbering;
 extern int DeadCodeElimination;
 
 // analysis
@@ -19,6 +20,7 @@ int DirtyArrayLinked     = DirtyArrayConvert;
 int DirtyFunctionLinked  = DirtyFunctionConvert;
 int DeadGlobalCodeLinked = DeadGlobalCodeElimination;
 int Mem2RegLinked        = Mem2Reg;
+int GVNGCMLinked         = GlobalValueNumbering;
 int DeadCodeLinked       = DeadCodeElimination;
 
 int DominanceLinked      = Dominance;

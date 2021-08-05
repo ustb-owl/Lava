@@ -21,6 +21,7 @@ private:
 
 public:
   bool runOnFunction(const FuncPtr &F) final {
+    _changed = false;
     if (F->is_decl()) return _changed;
 
     _entry = F->entry();
