@@ -72,6 +72,7 @@ public:
 
   // Accessor methods...
   unsigned opcode() const { return _opcode; }
+  void set_opcode(unsigned opcode) { _opcode = opcode; }
 
   std::string GetOpcodeAsString() const {
     return GetOpcodeAsString(opcode());
@@ -200,6 +201,14 @@ public:
   static BinaryPtr Create(BinaryOps opcode, const SSAPtr &S1, const SSAPtr &S2);
 
   bool isInstruction() const override { return true; }
+
+  // swap lhs and rhs
+  bool swapOperand();
+
+  // try to eval when both lhs and rhs are constant value
+  SSAPtr EvalArithOnConst();
+
+  void TryToFold();
 
   // Create* - These methods just forward to create, and are useful when you
   // statically know what type of instruction you're going to create.  These

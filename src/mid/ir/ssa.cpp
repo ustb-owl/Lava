@@ -140,11 +140,135 @@ bool TerminatorInst::classof(const Value *value) {
 //                           BinaryOperator Class
 //===----------------------------------------------------------------------===//
 
+constexpr static std::pair<BinaryOperator::BinaryOps, BinaryOperator::BinaryOps> swapableOperators[11] = {
+    {BinaryOperator::BinaryOps::Add, BinaryOperator::BinaryOps::Add},
+//    {BinaryOperator::BinaryOps::Sub, BinaryOperator::BinaryOps::Rsb},
+    {BinaryOperator::BinaryOps::Mul, BinaryOperator::BinaryOps::Mul},
+    {BinaryOperator::BinaryOps::And, BinaryOperator::BinaryOps::And},
+    {BinaryOperator::BinaryOps::Or,  BinaryOperator::BinaryOps::Or},
+};
+
 BinaryOperator::BinaryOperator(Instruction::BinaryOps opcode, const SSAPtr &S1,
                                const SSAPtr &S2, const define::TypePtr &type)
     : Instruction(opcode, 2, ClassId::BinaryOperatorId) {
   AddValue(S1);
   AddValue(S2);
+}
+
+bool BinaryOperator::swapOperand() {
+  for (auto [before, after] : swapableOperators) {
+    if (opcode() == before) {
+      std::swap((*this)[0], (*this)[1]);
+      return true;
+    }
+  }
+  return false;
+}
+
+SSAPtr BinaryOperator::EvalArithOnConst() {
+  DBG_ASSERT(LHS()->classId() == ClassId::ConstantIntId, "lhs value is not constant int");
+  DBG_ASSERT(RHS()->classId() == ClassId::ConstantIntId, "rhs value is not constant int");
+
+  auto lhs_imm = dyn_cast<ConstantInt>(LHS())->value();
+  auto rhs_imm = dyn_cast<ConstantInt>(RHS())->value();
+  int result = 0;
+  switch (opcode()) {
+    case Add:  result = lhs_imm +  rhs_imm; break;
+    case Sub:  result = lhs_imm -  rhs_imm; break;
+    case Mul:  result = lhs_imm *  rhs_imm; break;
+    case SDiv: result = lhs_imm /  rhs_imm; break;
+    case SRem: result = lhs_imm %  rhs_imm; break;
+    case And:  result = lhs_imm &  rhs_imm; break;
+    case Or:   result = lhs_imm |  rhs_imm; break;
+    case Xor:  result = lhs_imm ^  rhs_imm; break;
+    case Shl:  result = lhs_imm << rhs_imm; break;
+    case AShr: result = lhs_imm >> rhs_imm; break;
+    default: ERROR("should not reach here");
+  }
+  auto const_int = std::make_shared<ConstantInt>(result);
+  DBG_ASSERT(const_int != nullptr, "create const fold value failed");
+  const_int->set_type(type());
+  return const_int;
+}
+
+/*
+ * Add:                           <---|
+ * b = a + 1; c = b + 2;              |
+ *   => c = a + 3                     |
+ * Sub                                |
+ * b = a - 1; c = b - 2;              |
+ *   => b = a + (-1); c = b + (-2) ---|
+ *
+ * b = 1 - a; c = b - 2;
+ *   => c = -1 - a
+ *
+ * Mul
+ * b = a * 2; c = b * 3;
+ *   => c = a * 6;
+ */
+
+void BinaryOperator::TryToFold() {
+  if (auto rhs = dyn_cast<ConstantInt>(RHS())) {
+    // a - 1 ---> a + (-1)
+    if (opcode() == BinaryOps::Sub) {
+      auto neg_rhs = std::make_shared<ConstantInt>(-rhs->value());
+      neg_rhs->set_type(rhs->type());
+
+      // replace rhs with negitive value
+      RemoveValue(RHS());
+      AddValue(neg_rhs);
+      // change sub to add
+      set_opcode(BinaryOps::Add);
+    }
+
+    if (auto lhs_bin_inst = dyn_cast<BinaryOperator>(LHS())) {
+      // 1. Add: b = a + 1; c = b + 2; ---> c = a + 3;
+      // 2. Mul: b = a * 2; c = b * 3; ---> c = a * 6;
+      if (auto lhs_bin_rhs = dyn_cast<ConstantInt>(lhs_bin_inst->RHS())) {
+        // a - 1 ---> a + (-1)
+        if (lhs_bin_inst->opcode() == BinaryOps::Sub) {
+          auto neg_rhs = std::make_shared<ConstantInt>(-lhs_bin_rhs->value());
+          neg_rhs->set_type(lhs_bin_rhs->type());
+
+          RemoveValue(lhs_bin_inst->RHS());
+          AddValue(neg_rhs);
+          set_opcode(BinaryOps::Add);
+        }
+
+        if ((opcode() == BinaryOps::Add) && (lhs_bin_inst->opcode() == BinaryOps::Add)) {
+          (*this)[0].set(lhs_bin_inst->LHS());
+          auto new_rhs = std::make_shared<ConstantInt>(lhs_bin_rhs->value() + rhs->value());
+          (*this)[1].set(new_rhs);
+        } else if ((opcode() == BinaryOps::Mul) && (lhs_bin_inst->opcode() == BinaryOps::Mul)) {
+          (*this)[0].set(lhs_bin_inst->LHS());
+          auto new_rhs = std::make_shared<ConstantInt>(lhs_bin_rhs->value() * rhs->value());
+          (*this)[1].set(new_rhs);
+        }
+      } else if (auto lhs_bin_lhs = dyn_cast<ConstantInt>(lhs_bin_inst->LHS())) {
+        // 3. Sub: b = 3 - a; c = b + 4 ---> c = 7 - a;
+        if (lhs_bin_inst->opcode() == BinaryOps::Sub) {
+          if (opcode() == BinaryOps::Add) {
+            auto new_lhs = std::make_shared<ConstantInt>(lhs_bin_lhs->value() + rhs->value());
+            (*this)[0].set(new_lhs);
+            (*this)[1].set(lhs_bin_inst->RHS());
+            set_opcode(BinaryOps::Sub);
+          }
+        }
+      }
+    }
+  } else if (auto lhs = dyn_cast<ConstantInt>(LHS())) {
+    // 4. Sub: b = 1 - a; c = 3 - b; ---> c = a + 2;
+    if (auto rhs_bin_inst = dyn_cast<BinaryOperator>(RHS())) {
+      if (auto rhs_bin_lhs = dyn_cast<ConstantInt>(rhs_bin_inst->LHS())) {
+        if ((opcode() == BinaryOps::Sub) && (rhs_bin_inst->opcode() == BinaryOps::Sub)) {
+          (*this)[0].set(rhs_bin_inst->RHS());
+          auto new_lhs = std::make_shared<ConstantInt>(lhs->value() - rhs_bin_lhs->value());
+          (*this)[1].set(new_lhs);
+          set_opcode(BinaryOps::Add);
+        }
+      }
+    }
+  }
 }
 
 BinaryPtr

@@ -38,7 +38,7 @@ public:
     _value_number.clear();
   }
 
-  void Replace(const InstPtr &inst, const SSAPtr &value, const BlockPtr &block, SSAPtrList::iterator it) {
+  void Replace(const InstPtr &inst, const SSAPtr &value, BasicBlock *block, SSAPtrList::iterator it) {
     if (inst != value) {
       inst->ReplaceBy(value);
 
@@ -59,6 +59,31 @@ public:
   void GlobalValueNumbering(const FuncPtr &F) {
     auto entry = dyn_cast<BasicBlock>(F->entry());
     auto rpo = _blkWalker.RPOTraverse(entry.get());
+
+    for (const auto &BB : rpo) {
+      for (auto it = BB->insts().begin(); it != BB->inst_end(); ) {
+        auto next = std::next(it);
+        if (auto binary_inst = dyn_cast<BinaryOperator>(*it)) {
+          // always move const value to rhs
+          if (binary_inst->LHS()->classId() == ClassId::ConstantIntId) {
+            binary_inst->swapOperand();
+          }
+
+          // try to get lhs and rhs as constant value
+          auto lhs_const = dyn_cast<ConstantInt>(binary_inst->LHS());
+          auto rhs_const = dyn_cast<ConstantInt>(binary_inst->RHS());
+
+          if ((lhs_const != nullptr) && (rhs_const != nullptr)) {
+            auto const_inst = binary_inst->EvalArithOnConst();
+            Replace(binary_inst, const_inst, BB, it);
+          } else {
+            binary_inst->TryToFold();
+          }
+        }
+
+        it = next;
+      }
+    }
   }
 
 };
@@ -67,7 +92,7 @@ class GlobalValueNumberingGlobalCodeMotionFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<GlobalValueNumberingGlobalCodeMotion>();
-    auto passinfo = std::make_shared<PassInfo>(pass, "GlobalValueNumberingGlobalCodeMotion", false, 0, GVN_GCM);
+    auto passinfo = std::make_shared<PassInfo>(pass, "GlobalValueNumberingGlobalCodeMotion", false, 2, GVN_GCM);
     return passinfo;
   }
 };
