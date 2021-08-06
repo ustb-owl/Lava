@@ -1,5 +1,6 @@
-#include <define/ast.h>
 #include <queue>
+#include <iostream>
+#include "define/ast.h"
 #include "ssa.h"
 #include "common/casting.h"
 #include "constant.h"
@@ -210,6 +211,7 @@ SSAPtr BinaryOperator::EvalArithOnConst() {
 void BinaryOperator::TryToFold() {
   if (auto rhs = dyn_cast<ConstantInt>(RHS())) {
     // a - 1 ---> a + (-1)
+    int old = rhs->value();
     if (opcode() == BinaryOps::Sub) {
       auto neg_rhs = std::make_shared<ConstantInt>(-rhs->value());
       neg_rhs->set_type(rhs->type());
@@ -230,25 +232,28 @@ void BinaryOperator::TryToFold() {
           auto neg_rhs = std::make_shared<ConstantInt>(-lhs_bin_rhs->value());
           neg_rhs->set_type(lhs_bin_rhs->type());
 
-          RemoveValue(lhs_bin_inst->RHS());
-          AddValue(neg_rhs);
+          lhs_bin_inst->RemoveValue(lhs_bin_inst->RHS());
+          lhs_bin_inst->AddValue(neg_rhs);
           set_opcode(BinaryOps::Add);
         }
 
         if ((opcode() == BinaryOps::Add) && (lhs_bin_inst->opcode() == BinaryOps::Add)) {
           (*this)[0].set(lhs_bin_inst->LHS());
-          auto new_rhs = std::make_shared<ConstantInt>(lhs_bin_rhs->value() + rhs->value());
+          int value = lhs_bin_rhs->value() + dyn_cast<ConstantInt>(RHS())->value();
+          auto new_rhs = std::make_shared<ConstantInt>(value);
           (*this)[1].set(new_rhs);
         } else if ((opcode() == BinaryOps::Mul) && (lhs_bin_inst->opcode() == BinaryOps::Mul)) {
           (*this)[0].set(lhs_bin_inst->LHS());
-          auto new_rhs = std::make_shared<ConstantInt>(lhs_bin_rhs->value() * rhs->value());
+          int value = lhs_bin_rhs->value() * dyn_cast<ConstantInt>(RHS())->value();
+          auto new_rhs = std::make_shared<ConstantInt>(value);
           (*this)[1].set(new_rhs);
         }
       } else if (auto lhs_bin_lhs = dyn_cast<ConstantInt>(lhs_bin_inst->LHS())) {
         // 3. Sub: b = 3 - a; c = b + 4 ---> c = 7 - a;
         if (lhs_bin_inst->opcode() == BinaryOps::Sub) {
           if (opcode() == BinaryOps::Add) {
-            auto new_lhs = std::make_shared<ConstantInt>(lhs_bin_lhs->value() + rhs->value());
+            int value = lhs_bin_lhs->value() + dyn_cast<ConstantInt>(RHS())->value();
+            auto new_lhs = std::make_shared<ConstantInt>(value);
             (*this)[0].set(new_lhs);
             (*this)[1].set(lhs_bin_inst->RHS());
             set_opcode(BinaryOps::Sub);
@@ -269,6 +274,60 @@ void BinaryOperator::TryToFold() {
       }
     }
   }
+}
+
+SSAPtr BinaryOperator::OptimizedValue() {
+  SSAPtr result = nullptr;
+  if (auto rhs = dyn_cast<ConstantInt>(RHS())) {
+    switch (opcode()) {
+      case Add:
+      case Sub: {
+        result = (rhs->IsZero()) ? LHS() : nullptr;
+        break;
+      }
+      case Mul: {
+        if (rhs->IsZero()) {
+          result = std::make_shared<ConstantInt>(0);
+          result->set_type(rhs->type());
+        } else if (rhs->value() == 1) {
+          result = LHS();
+        }
+        break;
+      }
+      case SDiv: {
+        if (rhs->value() == 1) {
+          result = LHS();
+        }
+        break;
+      }
+      case SRem: {
+        if (rhs->value() == 1) {
+          result = std::make_shared<ConstantInt>(0);
+          result->set_type(rhs->type());
+        }
+        break;
+      }
+      case And: {
+        if (rhs->value() == 0) {
+          result = std::make_shared<ConstantInt>(0);
+          result->set_type(rhs->type());
+        }
+        break;
+      }
+      case Or: {
+        if (rhs->value() == 1) {
+          result = std::make_shared<ConstantInt>(1);
+          result->set_type(rhs->type());
+        }
+        break;
+      }
+      case Xor:
+      case Shl:
+      case AShr: break;
+      default: ERROR("should not reach here");
+    }
+  }
+  return result;
 }
 
 BinaryPtr

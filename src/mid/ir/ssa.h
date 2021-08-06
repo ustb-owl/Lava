@@ -210,6 +210,8 @@ public:
 
   void TryToFold();
 
+  SSAPtr OptimizedValue();
+
   // Create* - These methods just forward to create, and are useful when you
   // statically know what type of instruction you're going to create.  These
   // helpers just save some typing.

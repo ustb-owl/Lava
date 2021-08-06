@@ -13,6 +13,7 @@ using ValueNumber = std::vector<std::pair<Value *, Value *>>;
 
 /*
  * Global value numbering and global code motion
+ * TODO: swapOperand or FoldBinary would cause int_literal WA
  */
 class GlobalValueNumberingGlobalCodeMotion : public FunctionPass {
 private:
@@ -56,6 +57,20 @@ public:
     }
   }
 
+  Value *ValueOf(Value *value) {
+    auto it = std::find_if(_value_number.begin(), _value_number.end(), [value](std::pair<Value *, Value *> kv) {
+      return kv.first == value;
+    });
+    if (it != _value_number.end()) return it->second;
+
+    uint32_t idx = _value_number.size();
+    _value_number.emplace_back(value, value);
+
+    // find any way
+
+    return _value_number[idx].second;
+  }
+
   void GlobalValueNumbering(const FuncPtr &F) {
     auto entry = dyn_cast<BasicBlock>(F->entry());
     auto rpo = _blkWalker.RPOTraverse(entry.get());
@@ -78,6 +93,11 @@ public:
             Replace(binary_inst, const_inst, BB, it);
           } else {
             binary_inst->TryToFold();
+            if (auto simp_val = binary_inst->OptimizedValue()) {
+              Replace(binary_inst, simp_val, BB, it);
+            } else {
+
+            }
           }
         }
 
@@ -92,7 +112,7 @@ class GlobalValueNumberingGlobalCodeMotionFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<GlobalValueNumberingGlobalCodeMotion>();
-    auto passinfo = std::make_shared<PassInfo>(pass, "GlobalValueNumberingGlobalCodeMotion", false, 2, GVN_GCM);
+    auto passinfo = std::make_shared<PassInfo>(pass, "GlobalValueNumberingGlobalCodeMotion", false, 1, GVN_GCM);
     return passinfo;
   }
 };
