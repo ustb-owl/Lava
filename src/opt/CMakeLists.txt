@@ -2,7 +2,9 @@ add_library(opt
         pass.cpp
         pass_manager.cpp
         blkwalker.cpp
+        analysis/loopinfo.cpp
         analysis/dominance.cpp
+        analysis/funcanalysis.cpp
         analysis/dominancebase.cpp
         analysis/postdominance.cpp
         transforms/dge.cpp

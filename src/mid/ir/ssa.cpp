@@ -211,7 +211,6 @@ SSAPtr BinaryOperator::EvalArithOnConst() {
 void BinaryOperator::TryToFold() {
   if (auto rhs = dyn_cast<ConstantInt>(RHS())) {
     // a - 1 ---> a + (-1)
-    int old = rhs->value();
     if (opcode() == BinaryOps::Sub) {
       auto neg_rhs = std::make_shared<ConstantInt>(-rhs->value());
       neg_rhs->set_type(rhs->type());

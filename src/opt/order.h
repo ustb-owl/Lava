@@ -11,3 +11,5 @@
 // analysis
 #define DOMINANCE_INFO                50
 #define POST_DOMINANCE_INFO           51
+#define FUNCTION_INFO                 52
+#define LOOP_INFO                     53

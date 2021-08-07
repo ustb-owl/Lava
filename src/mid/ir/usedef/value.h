@@ -16,16 +16,11 @@ namespace lava::mid {
 
 
 class Constant;
-class Argument;
 class Instruction;
 class BasicBlock;
-class GlobalValue;
 class Function;
 class BinaryOperator;
 class GlobalVariable;
-class GlobalAlias;
-class ValueSymbolTable;
-class TypeSymbolTable;
 class ConstantArray;
 
 // type aliases

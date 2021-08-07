@@ -13,6 +13,8 @@ extern int DeadCodeElimination;
 // analysis
 extern int Dominance;
 extern int PostDominance;
+extern int FunctionInfo;
+extern int LoopInfo;
 
 int HelloLinked          = HelloXY;
 int BlockMergeLinked     = BlockMerge;
@@ -25,4 +27,6 @@ int DeadCodeLinked       = DeadCodeElimination;
 
 int DominanceLinked      = Dominance;
 int PostDominanceLinked  = PostDominance;
+int FunctionInfoLinked   = FunctionInfo;
+int LoopINfoLinked       = LoopInfo;
 
