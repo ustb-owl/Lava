@@ -74,21 +74,12 @@ void DominanceInfo::SolveImmediateDom() {
   auto entry = dyn_cast<BasicBlock>(_cur_func->entry()).get();
   auto rpo = _blkWalker.RPOTraverse(entry);
 
-  // insert entry itself into its dominatee set
-  info.doms[entry].insert(entry);
-
   auto it = rpo.begin();
   for (it++; it != rpo.end(); it++) {
     BasicBlock *BB = *it;
 
-    // insert this BB into entry block's dominatees set
-    info.doms[entry].insert(BB);
-
     // traverse BB's dominators
     for (BasicBlock *dominator : info.domBy[BB]) {
-      // insert BB into its dominators dominatees set
-      info.doms[dominator].insert(BB);
-
       // 1. check if dominator is strictly dominate BB
       if (dominator == BB) continue;
 
@@ -102,6 +93,15 @@ void DominanceInfo::SolveImmediateDom() {
       // set dominator as BB's immediate dominator
       DBG_ASSERT(info.idom.find(BB) == info.idom.end(), "block already has a idom");
       info.idom[BB] = dominator;
+
+      // insert BB into its dominators dominatees set
+      info.doms[dominator].insert(BB);
+    }
+  }
+
+  for (const auto &bb : rpo) {
+    if (info.doms.find(bb) == info.doms.end()) {
+      info.doms.insert({bb, std::unordered_set<mid::BasicBlock *>()});
     }
   }
 
@@ -109,6 +109,9 @@ void DominanceInfo::SolveImmediateDom() {
   DBG_ASSERT(info.doms.size() == rpo.size(), "doms size not equals to basic block numbers");
   DBG_ASSERT(info.idom.size() == rpo.size() - 1, "idom set number is wrong");
   DBG_ASSERT(info.idom.find(entry) == info.idom.end(), "entry should not have idom");
+
+  SolveDepth(entry, 0);
+  DBG_ASSERT(info.depth.size() == rpo.size(), "dominance depth size not equals to basic block numbers");
 }
 
 void DominanceInfo::SolveDominanceFrontier() {
@@ -136,6 +139,17 @@ void DominanceInfo::SolveDominanceFrontier() {
 
   DBG_ASSERT(info.DF.size() == rpo.size(), "DF size not equals to basic blocks");
   DBG_ASSERT(info.DF[entry].empty(), "entry dominate all of the nodes");
+}
+
+void DominanceInfo::SolveDepth(BasicBlock *BB, uint32_t depth) {
+  auto &info = _dom_info[_cur_func];
+  DBG_ASSERT(info.depth.find(BB) == info.depth.end(), "depth of block already existed");
+  info.depth.insert({BB, depth});
+
+  if (info.doms.find(BB) == info.doms.end()) return;
+  for (auto &it : info.doms[BB]) {
+    if (it != BB) SolveDepth(it, depth + 1);
+  }
 }
 
 

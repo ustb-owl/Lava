@@ -18,6 +18,8 @@ private:
   // solve the dominance frontier of each block
   void SolveDominanceFrontier() final;
 
+  void SolveDepth(BasicBlock *BB, uint32_t depth);
+
 public:
   bool runOnFunction(const FuncPtr &F) final {
     _changed = false;

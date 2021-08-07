@@ -9,14 +9,14 @@ bool LoopInfoPass::runOnFunction(const FuncPtr &F) {
   _cur_func = F.get();
   auto entry = dyn_cast<BasicBlock>(F->entry());
   CollectLoops(entry.get());
+  Populate(entry.get());
   return false;
 }
 
 void LoopInfoPass::CollectLoops(BasicBlock *header) {
-  TRACE("%lu\n", _dom_info[_cur_func].doms[header].size());
   DBG_ASSERT(_cur_func != nullptr, "current function is nullptr");
   for (auto &dominatee : _dom_info[_cur_func].doms[header]) {
-    if (dominatee && dominatee != header) CollectLoops(dominatee);
+    if (dominatee != header) CollectLoops(dominatee);
   }
 
   std::vector<BasicBlock *> worklist;
@@ -61,6 +61,24 @@ void LoopInfoPass::CollectLoops(BasicBlock *header) {
     }
 
   }
+}
+
+void LoopInfoPass::Populate(BasicBlock *header) {
+  if (_visited.find(header) != _visited.end()) return;
+  _visited.insert(header);
+
+  for (auto &succ : header->successors()) {
+    Populate(succ);
+  }
+
+  auto it = _loop_info.loop_of_bb().find(header);
+  auto sub_loop = (it == _loop_info.loop_of_bb().end()) ? nullptr : it->second;
+  if (sub_loop && (sub_loop->header() == header)) {
+    (sub_loop->parent() ? sub_loop->parent()->sub_loops() : _loop_info.top_level()).push_back(sub_loop);
+    std::reverse(sub_loop->blocks().begin() + 1, sub_loop->blocks().end());
+    std::reverse(sub_loop->sub_loops().begin(), sub_loop->sub_loops().end());
+  }
+  for (; sub_loop; sub_loop = sub_loop->parent()) sub_loop->blocks().push_back(header);
 }
 
 static PassRegisterFactory<LoopInfoPassFactory> registry;

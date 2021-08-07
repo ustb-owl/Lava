@@ -42,13 +42,17 @@ public:
     }
   }
 
+  std::vector<BasicBlock *> &blocks() { return _bbs; }
+
+  std::vector<LoopPtr> &sub_loops() { return _sub_loops; }
+
 };
 
 class LoopInfo {
 private:
   // deepest loop which this block located in
   std::unordered_map<BasicBlock *, LoopPtr> _loop_of_bb;
-  std::vector<Loop *> _top_level;
+  std::vector<LoopPtr> _top_level;
 
 public:
   // get depth of basic block
@@ -60,6 +64,8 @@ public:
   std::unordered_map<BasicBlock *, LoopPtr> &loop_of_bb() {
     return _loop_of_bb;
   }
+
+  std::vector<LoopPtr> &top_level() { return _top_level; }
 
   std::vector<Loop *> deepest_loops() {
     std::vector<Loop *> deepest;
@@ -97,6 +103,10 @@ public:
   }
 
   void CollectLoops(BasicBlock *header);
+
+  void Populate(BasicBlock *header);
+
+  LoopInfo &GetLoopInfo() { return _loop_info; }
 
   bool runOnFunction(const FuncPtr &F) final;
 };

@@ -327,11 +327,13 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
 
     } else if (auto branchInst = dyn_cast<mid::BranchInst>(inst)) {
       ArmCond armCond = ArmCond::Eq;
+      auto cond = CreateNoImmOperand(branchInst->cond());
       if (auto it = _cond_map.find(branchInst->cond()); it != _cond_map.end()) {
         armCond = it->second.second;
+      } else {
+        auto cmp_inst = AddInst<LLCompare>(ArmCond::Ne, cond, CreateImmediate(0));
       }
 
-      auto cond = CreateOperand(branchInst->cond());
 
       DBG_ASSERT(_block_map.find(dyn_cast<mid::BasicBlock>(branchInst->true_block())) != _block_map.end(),
                  "can't find true block");

@@ -4,6 +4,8 @@
 #include "opt/blkwalker.h"
 #include "common/casting.h"
 #include "opt/pass_manager.h"
+#include "opt/analysis/loopinfo.h"
+#include "opt/analysis/dominance.h"
 #include "opt/analysis/funcanalysis.h"
 
 int GlobalValueNumbering;
@@ -22,25 +24,68 @@ private:
   BlockWalker        _blkWalker;
   ValueNumber        _value_number;
   FuncInfoMap        _func_infos;
+  DomInfo            _dom_info;
+  LoopInfo           _loop_info;
 
+  Function          *_cur_func;
+
+  std::unordered_set<Instruction *> _visited;
+  std::unordered_map<Instruction *, InstPtr> _user_map;
+  std::unordered_map<Instruction *, BasicBlock *> _inst_block_map;
 public:
 
   bool runOnFunction(const FuncPtr &F) final {
     _changed = false;
     if (F->is_decl()) return _changed;
+    _cur_func = F.get();
 
     GlobalValueNumbering(F);
+
+//    CollectInstBlockMap(F);
+//
+//    // global code motion
+//    auto entry = dyn_cast<BasicBlock>(F->entry()).get();
+//    DBG_ASSERT(_visited.empty(), "visited set is not empty");
+//
+//    std::vector<InstPtr> insts;
+//    for (const auto &it : *F) {
+//      auto block = dyn_cast<BasicBlock>(it.value());
+//      for (const auto &inst : block->insts()) {
+//        auto I = dyn_cast<Instruction>(inst);
+//        insts.push_back(I);
+//      }
+//    }
+//    for (auto &inst : insts) ScheduleEarly(entry, inst);
+//
+//    _visited.clear();
+//    for (auto &inst : insts) ScheduleLate(inst);
+
+//    for (const auto &it : *F) {
+//      auto block = dyn_cast<BasicBlock>(it.value());
+//      for (const auto &inst : block->insts()) {
+//        auto I = dyn_cast<Instruction>(inst);
+//        ScheduleLate(I);
+//      }
+//    }
 
     return _changed;
   }
 
   void initialize() final {
-    auto A = PassManager::GetAnalysis<FunctionInfoPass>("FunctionInfoPass");
-    _func_infos = A->GetFunctionInfo();
+    _cur_func = nullptr;
+    auto func_info = PassManager::GetAnalysis<FunctionInfoPass>("FunctionInfoPass");
+    _func_infos = func_info->GetFunctionInfo();
+    auto dom_info = PassManager::GetAnalysis<DominanceInfo>("DominanceInfo");
+    _dom_info = dom_info->GetDomInfo();
+    auto loop_info = PassManager::GetAnalysis<LoopInfoPass>("LoopInfoPass");
+    _loop_info = loop_info->GetLoopInfo();
   }
 
   void finalize() final {
     _value_number.clear();
+    _visited.clear();
+    _user_map.clear();
+    _inst_block_map.clear();
   }
 
   void Replace(const InstPtr &inst, const SSAPtr &value, BasicBlock *block, SSAPtrList::iterator it) {
@@ -129,6 +174,40 @@ public:
     return call_inst;
   }
 
+  SSAPtr FindValue(const std::shared_ptr<ICmpInst> &icmp_inst) {
+    auto isrev = [](front::Operator a, front::Operator b) {
+      return (a == front::Operator::SLess && b == front::Operator::SGreat)     ||
+             (a == front::Operator::SGreat && b == front::Operator::SLess)     ||
+             (a == front::Operator::SGreatEq && b == front::Operator::SLessEq) ||
+             (a == front::Operator::SLessEq && b == front::Operator::SGreatEq);
+    };
+
+    auto op = icmp_inst->op();
+    auto lhs1 = ValueOf(icmp_inst->LHS());
+    auto rhs1 = ValueOf(icmp_inst->RHS());
+
+    for (auto i = 0; i < _value_number.size(); i++) {
+      auto [k, v] = _value_number[i];
+      auto num_value = dyn_cast<ICmpInst>(k);
+      if (num_value && (num_value != icmp_inst)) {
+        front::Operator op2 = num_value->op();
+        auto lhs2 = ValueOf(num_value->LHS());
+        auto rhs2 = ValueOf(num_value->RHS());
+
+        bool same = false;
+        if (op == op2) {
+          if (lhs1 == lhs2 && rhs1 == rhs2) {
+            same = true;
+          }
+        } else if (lhs1 == rhs2 && rhs1 == lhs2 && isrev(op, op2)) {
+          same = true;
+        }
+        if (same) return v;
+      }
+    }
+    return icmp_inst;
+  }
+
   SSAPtr ValueOf(const SSAPtr &value) {
     auto it = std::find_if(_value_number.begin(), _value_number.end(), [value](const std::pair<SSAPtr , SSAPtr> &kv) {
       return kv.first == value;
@@ -146,6 +225,9 @@ public:
     } else if (auto call_inst = dyn_cast<CallInst>(value)) {
       _value_number[idx].second = FindValue(call_inst);
     }
+//    else if (auto icmp_inst = dyn_cast<ICmpInst>(value)) {
+//      _value_number[idx].second = FindValue(icmp_inst);
+//    }
 
     return _value_number[idx].second;
   }
@@ -192,12 +274,138 @@ public:
           }
           if (all_same) Replace(phi_node, first, BB, it);
         }
+//        else if (auto icmp_inst = dyn_cast<ICmpInst>(*it)) {
+//          Replace(icmp_inst, ValueOf(icmp_inst), BB, it);
+//        }
 
         it = next;
       }
     }
+  }
 
+  void CollectInstBlockMap(const FuncPtr &F) {
+    for (const auto &BB : *F) {
+      auto block = dyn_cast<BasicBlock>(BB.value());
+      for (const auto &inst : block->insts()) {
+        auto I = dyn_cast<Instruction>(inst);
+        _inst_block_map.insert({I.get(), block.get()});
+        _user_map.insert({I.get(), I});
+      }
+    }
+  }
 
+  void TransferInst(const InstPtr &inst, BasicBlock *new_block) {
+    DBG_ASSERT(_inst_block_map.find(inst.get()) != _inst_block_map.end(), "can't find this inst's block");
+    auto inst_block = _inst_block_map[inst.get()];
+    _inst_block_map[inst.get()] = new_block;
+    new_block->insts().insert(--new_block->insts().end(), inst);
+
+    auto pos = inst_block->insts().begin();
+    for (; pos != inst_block->insts().end(); pos++) {
+      if (*pos == inst) break;
+    }
+    inst_block->insts().erase(pos);
+  }
+
+  void ScheduleOp(BasicBlock *entry, const InstPtr &I, const SSAPtr &operand) {
+    if (auto op = dyn_cast<Instruction>(operand)) {
+      ScheduleEarly(entry, op);
+      DBG_ASSERT(_inst_block_map.find(I.get()) != _inst_block_map.end(), "can't find this inst's block");
+      auto inst_block = _inst_block_map[I.get()];
+      DBG_ASSERT(_inst_block_map.find(op.get()) != _inst_block_map.end(), "can't find this op's block");
+      auto op_block = _inst_block_map[op.get()];
+      auto &dom_info = _dom_info[_cur_func];
+      if (dom_info.depth[inst_block] < dom_info.depth[op_block]) {
+        TransferInst(I, op_block);
+      }
+    }
+  };
+
+  void ScheduleEarly(BasicBlock *entry, const InstPtr &inst) {
+
+    if (_visited.insert(inst.get()).second) {
+      if (auto binary_inst = dyn_cast<BinaryOperator>(inst)) {
+        TransferInst(inst, entry);
+        for (auto &it : *binary_inst) {
+          ScheduleOp(entry, binary_inst, it.value());
+        }
+      }
+//      else if (auto access_inst = dyn_cast<AccessInst>(inst)) {
+//        TransferInst(access_inst, entry);
+//        ScheduleOp(entry, access_inst, access_inst->ptr());
+//        ScheduleOp(entry, access_inst, access_inst->index());
+//      }
+    }
+  }
+
+  BasicBlock *FindLCA(BasicBlock *a, BasicBlock *b) {
+    auto &info = _dom_info[_cur_func];
+    while (info.depth[b] < info.depth[a]) a = info.idom[a];
+    while (info.depth[a] < info.depth[b]) b = info.idom[b];
+    while (a != b) {
+      a = info.idom[a];
+      b = info.idom[b];
+    }
+    return a;
+  }
+
+  void ScheduleLate(const InstPtr &inst) {
+    if (_visited.insert(inst.get()).second) {
+      if (IsSSA<BinaryOperator>(inst)) {
+        BasicBlock *lca = nullptr;
+
+        for (const auto &use : inst->uses()) {
+          auto u = use->getUser();
+          DBG_ASSERT(u->isInstruction(), "user of this instruction is not an instruction");
+          auto i = static_cast<Instruction *>(u);
+          DBG_ASSERT(_user_map.find(i) != _user_map.end(), "can't find user cast of i");
+          auto user = _user_map[i];
+          ScheduleLate(user);
+          auto user_block = _inst_block_map[user.get()];
+
+          // handle phi node
+          if (auto phi_node = dyn_cast<PhiNode>(user)) {
+            auto it = std::find_if(phi_node->begin(), phi_node->end(), [use](const Use &U) {
+              return &U == use;
+            });
+
+            user_block = dyn_cast<BasicBlock>((*(phi_node->parent_block()))[it - phi_node->begin()].value()).get();
+          }
+          lca = lca ? FindLCA(lca, user_block) : user_block;
+        }
+
+        DBG_ASSERT(lca != nullptr, "LCA is nullptr");
+        auto best = lca;
+        auto best_loop_depth = _loop_info.depth_of(best);
+        while (true) {
+          auto cur_loop_depth = _loop_info.depth_of(lca);
+          if (cur_loop_depth < best_loop_depth) {
+            best = lca;
+            best_loop_depth = cur_loop_depth;
+          }
+          if (lca == _inst_block_map[inst.get()]) break;
+          lca = _dom_info[_cur_func].idom[lca];
+        }
+
+        TransferInst(inst, best);
+        for (auto it : best->insts()) {
+          if (!IsSSA<PhiNode>(it)) {
+            for (auto &u : it->uses()) {
+              if (u->getUser() == dyn_cast<User>(it).get()) {
+                best->insts().remove(inst);
+                SSAPtrList::iterator pos;
+                for (pos = best->inst_begin(); pos != best->inst_end(); pos++) {
+                  if (*pos == it) break;
+                }
+                best->insts().insert(pos, inst);
+                goto out;
+              }
+            }
+          }
+        }
+        out:;
+      }
+    }
   }
 
 };
@@ -208,7 +416,7 @@ public:
     auto pass = std::make_shared<GlobalValueNumberingGlobalCodeMotion>();
     auto passinfo = std::make_shared<PassInfo>(pass, "GlobalValueNumberingGlobalCodeMotion", false, 1, GVN_GCM);
     passinfo->Requires("FunctionInfoPass");
-//    passinfo->Requires("LoopInfoPass");
+    passinfo->Requires("LoopInfoPass");
     return passinfo;
   }
 };

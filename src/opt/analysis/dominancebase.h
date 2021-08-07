@@ -21,6 +21,8 @@ struct DominanceResult {
   std::unordered_map<mid::BasicBlock *, std::unordered_set<mid::BasicBlock * >> doms;
 
   std::unordered_map<mid::BasicBlock *, std::unordered_set<mid::BasicBlock * >> DF;
+
+  std::unordered_map<mid::BasicBlock *, uint32_t> depth;
 };
 
 typedef std::unordered_map<mid::User *, DominanceResult> DomInfo;
