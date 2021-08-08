@@ -138,15 +138,31 @@ public:
     auto pass = _instance->_pass_infos.find(name);
     // found pass by name
     if (pass == _instance->_pass_infos.end()) {
-      DBG_ASSERT(0, "analysis pass %s not found", name.c_str());
+      ERROR("analysis pass %s not found", name.c_str());
     }
 
     // check if analysis pass
     if (!pass->second->is_analysis()) {
-      DBG_ASSERT(0, "pass %s is not analysis pass", name.c_str());
+      ERROR("pass %s is not analysis pass", name.c_str());
     }
 
     return std::static_pointer_cast<AnalysisType>(pass->second->pass());
+  }
+
+  /* run pass in another pass */
+  template<typename PassType>
+  static std::shared_ptr<PassType> GetTransformPass(const std::string &name) {
+    auto pass = _instance->_pass_infos.find(name);
+    // found pass by name
+    if (pass == _instance->_pass_infos.end()){
+      ERROR("transform pass %s not found", name.c_str());
+    }
+
+    if (pass->second->is_analysis()) {
+      ERROR("pass %s is not transform pass", name.c_str());
+    }
+
+    return std::static_pointer_cast<PassType>(pass->second->pass());
   }
 
   // register pass

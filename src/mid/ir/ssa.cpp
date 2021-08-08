@@ -790,6 +790,10 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
         visited.insert(branch_inst->false_block().get());
         worklist.push(branch_inst->false_block());
       }
+    } else if (auto ret_inst = dyn_cast<ReturnInst>(back)) {
+      // do nothing
+    } else {
+      ERROR("last instruction of current block is not terminate instruction");
     }
   }
   DBG_ASSERT(bbs.size() == this->size(), "block size is error");

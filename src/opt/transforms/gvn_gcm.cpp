@@ -4,6 +4,7 @@
 #include "opt/blkwalker.h"
 #include "common/casting.h"
 #include "opt/pass_manager.h"
+#include "opt/transforms/dce.h"
 #include "opt/analysis/loopinfo.h"
 #include "opt/analysis/dominance.h"
 #include "opt/analysis/funcanalysis.h"
@@ -41,32 +42,34 @@ public:
 
     GlobalValueNumbering(F);
 
-//    CollectInstBlockMap(F);
-//
-//    // global code motion
-//    auto entry = dyn_cast<BasicBlock>(F->entry()).get();
-//    DBG_ASSERT(_visited.empty(), "visited set is not empty");
-//
-//    std::vector<InstPtr> insts;
-//    for (const auto &it : *F) {
-//      auto block = dyn_cast<BasicBlock>(it.value());
-//      for (const auto &inst : block->insts()) {
-//        auto I = dyn_cast<Instruction>(inst);
-//        insts.push_back(I);
-//      }
-//    }
-//    for (auto &inst : insts) ScheduleEarly(entry, inst);
-//
-//    _visited.clear();
-//    for (auto &inst : insts) ScheduleLate(inst);
+    // clear value number, otherwise we can't remove dead code
+    _value_number.clear();
 
-//    for (const auto &it : *F) {
-//      auto block = dyn_cast<BasicBlock>(it.value());
-//      for (const auto &inst : block->insts()) {
-//        auto I = dyn_cast<Instruction>(inst);
-//        ScheduleLate(I);
-//      }
-//    }
+    // run dead code elimination before gcm
+    auto dce = PassManager::GetTransformPass<DeadCodeElimination>("DeadCodeElimination");
+    dce->runOnFunction(F);
+    dce->finalize();
+//
+    CollectInstBlockMap(F);
+
+    // global code motion
+    auto entry = dyn_cast<BasicBlock>(F->entry()).get();
+    DBG_ASSERT(_visited.empty(), "visited set is not empty");
+
+    std::vector<InstPtr> insts;
+    for (const auto &it : *F) {
+      auto block = dyn_cast<BasicBlock>(it.value());
+      for (const auto &inst : block->insts()) {
+        auto I = dyn_cast<Instruction>(inst);
+        insts.push_back(I);
+      }
+    }
+    DBG_ASSERT(insts.size() == _user_map.size(), "instruction size is not equal _user_map");
+
+    for (auto &inst : insts) ScheduleEarly(entry, inst);
+
+    _visited.clear();
+    for (auto &inst : insts) ScheduleLate(inst);
 
     return _changed;
   }
@@ -101,8 +104,8 @@ public:
         _value_number.pop_back();
       }
 
-      DBG_ASSERT(*it == inst, "iterator is not current instruction");
-      block->insts().erase(it);
+//      DBG_ASSERT(*it == inst, "iterator is not current instruction");
+//      block->insts().erase(it);
     }
   }
 
@@ -284,14 +287,20 @@ public:
   }
 
   void CollectInstBlockMap(const FuncPtr &F) {
+    std::size_t inst_num = 0;
     for (const auto &BB : *F) {
       auto block = dyn_cast<BasicBlock>(BB.value());
       for (const auto &inst : block->insts()) {
         auto I = dyn_cast<Instruction>(inst);
+        if (I->isBinaryOp() && I->uses().empty()) {
+          ERROR("instruction is dead");
+        }
         _inst_block_map.insert({I.get(), block.get()});
         _user_map.insert({I.get(), I});
       }
+      inst_num += block->insts().size();
     }
+    DBG_ASSERT(_user_map.size() == inst_num, "instruction size is not equal");
   }
 
   void TransferInst(const InstPtr &inst, BasicBlock *new_block) {
@@ -390,13 +399,14 @@ public:
         TransferInst(inst, best);
         for (auto it : best->insts()) {
           if (!IsSSA<PhiNode>(it)) {
-            for (auto &u : it->uses()) {
+            for (auto &u : inst->uses()) {
               if (u->getUser() == dyn_cast<User>(it).get()) {
                 best->insts().remove(inst);
                 SSAPtrList::iterator pos;
                 for (pos = best->inst_begin(); pos != best->inst_end(); pos++) {
                   if (*pos == it) break;
                 }
+                DBG_ASSERT(pos != best->insts().end(), "find its user failed");
                 best->insts().insert(pos, inst);
                 goto out;
               }
@@ -414,7 +424,7 @@ class GlobalValueNumberingGlobalCodeMotionFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<GlobalValueNumberingGlobalCodeMotion>();
-    auto passinfo = std::make_shared<PassInfo>(pass, "GlobalValueNumberingGlobalCodeMotion", false, 1, GVN_GCM);
+    auto passinfo = std::make_shared<PassInfo>(pass, "GlobalValueNumberingGlobalCodeMotion", false, 2, GVN_GCM);
     passinfo->Requires("FunctionInfoPass");
     passinfo->Requires("LoopInfoPass");
     return passinfo;
