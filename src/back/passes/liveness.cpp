@@ -179,7 +179,7 @@ void LivenessAnalysis::RecordLiveInterval(const LLOperandPtr &opr, std::size_t e
       live_interval.SetCanAllocTmp(false);
   } else {
     // add new operand into records
-    _live_intervals.insert({opr, LiveInterval(end_pos, end_pos, true)});
+    _live_intervals.insert({opr, LiveInterval(end_pos, end_pos, _id++, true)});
   }
 }
 

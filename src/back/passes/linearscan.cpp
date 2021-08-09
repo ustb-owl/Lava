@@ -117,18 +117,59 @@ void LinearScanRegisterAllocation::SpillAtInterval(const LiveInterval &live_inte
 
   // _alloc_map[live_interval] = _alloc_map[spill]
   if (spill.first.end_pos() > live_interval.end_pos()) {
-    auto it = _live_intervals.find(spill.first);
+    std::multimap<LiveInterval, LLOperandPtr, CmpStart>::iterator it;
+
+    if (_live_intervals.count(spill.first) == 1) {
+      it = _live_intervals.find(spill.first);
+    } else {
+      // has multi-matched
+      auto begin = _live_intervals.lower_bound(spill.first);
+      auto stop = _live_intervals.upper_bound(spill.first);
+      while (begin != stop) {
+        if (begin->first.id() == spill.first.id()) break;
+        begin++;
+      }
+      it = begin;
+    }
+
+//    auto it = _live_intervals.find(spill.first);
+
     DBG_ASSERT(it != _live_intervals.end(), "can't find spill vreg");
     auto vreg = it->second;
     auto opr = _alloc_map[vreg];
 
-    it = _live_intervals.find(live_interval);
+    if (_live_intervals.count(live_interval) == 1) {
+      it = _live_intervals.find(live_interval);
+    } else {
+      // has multi-matched
+      auto begin = _live_intervals.lower_bound(live_interval);
+      auto stop = _live_intervals.upper_bound(live_interval);
+      while (begin != stop) {
+        if (begin->first.id() == live_interval.id()) break;
+        begin++;
+      }
+      it = begin;
+    }
     DBG_ASSERT(it != _live_intervals.end(), "can't find live_interval vreg");
     auto vreg_new = it->second;
     _alloc_map[vreg_new] = opr;
     _alloc_map[vreg] = _slot.AllocSlot(func, vreg);
   } else {
-    auto it =  _live_intervals.find(live_interval);
+    std::multimap<LiveInterval, LLOperandPtr, CmpStart>::iterator it;
+
+    if (_live_intervals.count(live_interval) == 1) {
+      it = _live_intervals.find(live_interval);
+    } else {
+      // has multi-matched
+      auto begin = _live_intervals.lower_bound(live_interval);
+      auto stop = _live_intervals.upper_bound(live_interval);
+      while (begin != stop) {
+        if (begin->first.id() == live_interval.id()) break;
+        begin++;
+      }
+      it = begin;
+    }
+
     DBG_ASSERT(it != _live_intervals.end(), "can't find live_interval vreg");
     auto vreg = it->second;
     auto slot = _slot.AllocSlot(func, vreg);

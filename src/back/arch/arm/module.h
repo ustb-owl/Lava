@@ -22,6 +22,10 @@ private:
   std::unordered_map<mid::SSAPtr, std::pair<LLInstPtr, ArmCond>>  _cond_map;
   std::unordered_map<std::shared_ptr<mid::GlobalVariable>, LLOperandPtr> _glob_map;
   std::unordered_map<mid::SSAPtr, LLOperandPtr> _param_map;
+
+  mid::BlockPtr                     _exit;
+  std::vector<mid::BlockPtr>        _blocks;
+  std::unordered_set<mid::BlockPtr> _visited;
 public:
 
   // create a new LLIR
@@ -74,6 +78,9 @@ public:
   void ClearVirtualMax() { _virtual_max = 0;  }
 
   void DumpASM(std::ostream &os) const;
+
+  void DFS(const mid::BlockPtr &BB);
+  void ClearBlocks();
 
   /* Creators */
   LLOperandPtr  CreateOperand(const mid::SSAPtr &value);

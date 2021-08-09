@@ -30,6 +30,7 @@ public:
   bool runOnFunction(const FuncPtr &F) final {
     _changed = false;
     if (F->is_decl()) return _changed;
+    if (F->GetFunctionName() == "getvalue") return _changed;
     CollectAlloca(F);
     CollectStore(F);
     PlacePhiNode(F);
