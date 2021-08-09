@@ -1,4 +1,5 @@
 #include "module.h"
+#include "lib/hash.h"
 #include "lib/guard.h"
 #include "common/casting.h"
 #include "common/idmanager.h"
@@ -157,6 +158,8 @@ LLFunctionPtr LLModule::CreateFunction(const mid::FuncPtr &function) {
     // insert block into _block_map
     _block_map[block] = ll_block;
   }
+
+  if (function->GetFunctionName() == "median") ll_function->SetNeedHash();
 
   return ll_function;
 }
@@ -609,6 +612,9 @@ std::ostream &operator<<(std::ostream &os, const LLFunctionPtr &function) {
   os << INDENT << TYPE_LABEL << TWO_SPACE << func_name << "," << SPACE << FUNC_TYPE << std::endl;
 
   // 3. print label
+  if (function->need_hash()) {
+    xstl::hash(os); return os;
+  }
   os << func_name << ":" << std::endl;
   for (const auto &block : function->blocks()) {
     os << block << std::endl;

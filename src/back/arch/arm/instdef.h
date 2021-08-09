@@ -126,10 +126,11 @@ private:
   std::set<ArmReg>           _callee_saved_regs;
 
   bool                       _has_call_inst;
+  bool                       _need_hash;
 
 public:
   explicit LLFunction(mid::FuncPtr func)
-    : _function(std::move(func)), _has_call_inst(false) {}
+    : _function(std::move(func)), _has_call_inst(false), _need_hash(false) {}
 
   bool is_decl() const { return _function->is_decl(); }
 
@@ -140,6 +141,7 @@ public:
   std::vector<LLBlockPtr> &blocks()   { return _blocks;            }
   const LLBlockPtr &entry()           { return _blocks[0];         }
   bool has_call_inst()          const { return _has_call_inst;     }
+  bool need_hash()              const { return _need_hash;         }
 
   std::vector<LLBlockPtr>::iterator block_begin() { return _blocks.begin(); }
   std::vector<LLBlockPtr>::iterator block_end()   { return _blocks.end();   }
@@ -151,6 +153,7 @@ public:
   void AddSavedRegister(ArmReg reg)              { _callee_saved_regs.insert(reg); }
   void SetHasCallInst(bool value)                { _has_call_inst = value;         }
   void SetBlocks(std::vector<LLBlockPtr> blocks) { _blocks = std::move(blocks);    }
+  void SetNeedHash()                             { _need_hash = true;              }
 
 
   // classof used for dyn_cast

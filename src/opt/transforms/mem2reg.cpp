@@ -150,7 +150,7 @@ public:
 
           if (auto res = _alloca_ids.find(it->get()); res != _alloca_ids.end()) {
             // remove from instruction list
-            alloc_pos.push_back({BB, it});
+            alloc_pos.emplace_back(BB, it);
           } else if (auto load_inst = dyn_cast<LoadInst>(*it)) {
             // if alloc has been removed
             DBG_ASSERT(load_inst->Pointer() != nullptr, "pointer of load instruction is nullptr");
