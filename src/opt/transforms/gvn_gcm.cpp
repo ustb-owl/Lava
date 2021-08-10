@@ -431,6 +431,6 @@ public:
   }
 };
 
-//static PassRegisterFactory<GlobalValueNumberingGlobalCodeMotionFactory> registry;
+static PassRegisterFactory<GlobalValueNumberingGlobalCodeMotionFactory> registry;
 
 }

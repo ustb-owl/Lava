@@ -66,7 +66,7 @@ void CodeGenerator::RegisterPasses() {
   auto func_fix      = CREATE_PASS<FunctionFix>(_ll_module);
   auto blk_rearrange = CREATE_PASS<BlockRearrange>(_ll_module);
 
-  _passes.push_back(blk_rearrange);
+//  _passes.push_back(blk_rearrange);
   _passes.push_back(pre_peephole);
 
 //  _passes.push_back(liveness);

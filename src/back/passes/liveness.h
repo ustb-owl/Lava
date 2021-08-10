@@ -21,14 +21,16 @@ class LiveInterval {
 private:
   std::size_t _start_pos;
   std::size_t _end_pos;
+  std::size_t _id;
   bool        _can_alloc_to_tmp;
 public:
-  LiveInterval() : _start_pos(0), _end_pos(0), _can_alloc_to_tmp(true) {}
-  LiveInterval(std::size_t start, std::size_t end, bool value)
-    : _start_pos(start), _end_pos(end), _can_alloc_to_tmp(value) {}
+  LiveInterval() : _start_pos(0), _end_pos(0), _id(0), _can_alloc_to_tmp(true) {}
+  LiveInterval(std::size_t start, std::size_t end, std::size_t id, bool value)
+    : _start_pos(start), _end_pos(end), _id(id), _can_alloc_to_tmp(value) {}
 
   std::size_t start_pos() const { return _start_pos;        }
   std::size_t end_pos()   const { return _end_pos;          }
+  std::size_t id()        const { return _id;               }
   bool can_alloc_to_tmp() const { return _can_alloc_to_tmp; }
 
   void SetStartPos(std::size_t pos) { _start_pos = pos;          }
@@ -56,6 +58,7 @@ struct CmpEnd {
 
 class LivenessAnalysis : public PassBase {
 private:
+  std::size_t                                     _id;
   std::list<LLBlockPtr>                           _rpo_blocks;
   std::unordered_set<LLBlockPtr>                  _visited;
   std::unordered_map<LLBlockPtr, BlockInfo>       _blk_info;
@@ -63,9 +66,10 @@ private:
   std::unordered_map<LLOperandPtr, LiveInterval>  _live_intervals;
 
 public:
-  explicit LivenessAnalysis(LLModule &module) : PassBase(module) {}
+  explicit LivenessAnalysis(LLModule &module) : PassBase(module), _id(1) {}
 
   void Reset() final {
+    _id = 1;
     _rpo_blocks.clear();
     _visited.clear();
     _blk_info.clear();

@@ -62,7 +62,9 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
           entry->insts().insert(entry->insts().begin(), mv_inst);
 
           arg = dst;
+          _param_map[value] = arg;
         } else {
+          AddInst<LLComment>("load param from stack");
           /* read from sp + (i-4)*4 in entry block */
 
           // mov rm, (i - 4) * 4
@@ -71,12 +73,14 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
           auto src = LLOperand::Immediate((i - 4) * 4);
           auto moveInst = AddInst<LLMove>(offset, src);
           moveInst->SetIsArg(true);
+          offset->set_not_allowed_to_tmp(false);
 
 
           // load rn, [sp, rm]
           auto vreg = LLOperand::Virtual(_virtual_max);
           auto addr = LLOperand::Register(ArmReg::sp);
           auto load_arg = AddInst<LLLoad>(vreg, addr, offset);
+          vreg->set_not_allowed_to_tmp(false);
 
           // set load is argument
           load_arg->SetIsArg(true);
@@ -88,7 +92,7 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
     }
 
     DBG_ASSERT(arg != nullptr, "create argument failed");
-    _param_map[value] = arg;
+//    _param_map[value] = arg;
     return arg;
   } else if (auto constValue = dyn_cast<mid::ConstantInt>(value)) {
     return CreateImmediate(constValue->value());
@@ -142,12 +146,62 @@ LLOperandPtr LLModule::CreateImmediate(int value) {
   }
 }
 
+void LLModule::DFS(const mid::BlockPtr &BB) {
+  // return if visited
+  if (!_visited.insert(BB).second) return;
+
+  if (BB->insts().back()->classId() == ClassId::ReturnInstId) {
+    _exit = BB;
+    return;
+  }
+
+  _blocks.push_back(BB);
+
+  auto termInst = BB->insts().back();
+  if (auto jump_inst = dyn_cast<mid::JumpInst>(termInst)) {
+    // visit its successor
+    DFS(dyn_cast<mid::BasicBlock>(jump_inst->target()));
+  } else if (auto branch_inst = dyn_cast<mid::BranchInst>(termInst)) {
+    // visit false block firstly
+    DFS(dyn_cast<mid::BasicBlock>(branch_inst->false_block()));
+    DFS(dyn_cast<mid::BasicBlock>(branch_inst->true_block()));
+  } else if (auto ret_inst = dyn_cast<mid::ReturnInst>(termInst)) {
+    // do nothing
+  } else {
+    ERROR("should not reach here");
+  }
+}
+
+void LLModule::ClearBlocks() {
+  _visited.clear();
+  _blocks.clear();
+  _exit = nullptr;
+}
+
 LLFunctionPtr LLModule::CreateFunction(const mid::FuncPtr &function) {
   auto ll_function = std::make_shared<LLFunction>(function);
   _functions.push_back(ll_function);
   _insert_function = ll_function;
 
   // create block map
+  if (function->is_decl()) return ll_function;
+  DFS(dyn_cast<mid::BasicBlock>(function->entry()));
+  DBG_ASSERT(_blocks.size() + 1 == function->size(), "block size error");
+  for (const auto &block : _blocks) {
+    auto ll_block = std::make_shared<LLBasicBlock>(block->name(), block, ll_function);
+
+    // insert blocks into function
+    ll_function->AddBlock(ll_block);
+
+    // insert block into _block_map
+    _block_map[block] = ll_block;
+  }
+  auto ll_exit = std::make_shared<LLBasicBlock>(_exit->name(), _exit, ll_function);
+  ll_function->AddBlock(ll_exit);
+  _block_map[_exit] = ll_exit;
+  ClearBlocks();
+
+#if 0
   for (const auto &it : *function) {
     auto block = dyn_cast<mid::BasicBlock>(it.value());
     auto ll_block = std::make_shared<LLBasicBlock>(block->name(), block, ll_function);
@@ -158,6 +212,7 @@ LLFunctionPtr LLModule::CreateFunction(const mid::FuncPtr &function) {
     // insert block into _block_map
     _block_map[block] = ll_block;
   }
+#endif
 
   if (function->GetFunctionName() == "median") ll_function->SetNeedHash();
 
@@ -505,6 +560,23 @@ void LLModule::HandlePhiNode(const mid::FuncPtr &function) {
         for (auto i = 0; i < phi_inst->size(); i++) {
           auto pred = dyn_cast<BasicBlock>(block->GetOperand(i));
           DBG_ASSERT(pred != nullptr, "get predecessor of current block failed");
+
+          // set insert point
+          DBG_ASSERT(_block_map.find(pred) != _block_map.end(), "find predecessor of phi-node failed");
+          auto ll_pred = _block_map[pred];
+
+          auto it = ll_pred->inst_begin();
+          for (; it != ll_pred->insts().end(); it++) {
+            if ((*it)->classId() == ClassId::LLJumpId)
+              break;
+            else if ((*it)->classId() == ClassId::LLBranchId) {
+              it = std::prev(it);
+              break;
+            }
+          }
+
+          SetInsertPoint(ll_pred, it);
+
           auto val = CreateOperand((*phi_inst)[i].value());
           move[pred].emplace_back(vreg, val);
         }
@@ -612,9 +684,7 @@ std::ostream &operator<<(std::ostream &os, const LLFunctionPtr &function) {
   os << INDENT << TYPE_LABEL << TWO_SPACE << func_name << "," << SPACE << FUNC_TYPE << std::endl;
 
   // 3. print label
-  if (function->need_hash()) {
-    xstl::hash(os); return os;
-  }
+  if (function->need_hash()) { xstl::hash(os); return os; }
   os << func_name << ":" << std::endl;
   for (const auto &block : function->blocks()) {
     os << block << std::endl;
