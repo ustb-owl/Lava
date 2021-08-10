@@ -550,6 +550,23 @@ void LLModule::HandlePhiNode(const mid::FuncPtr &function) {
         for (auto i = 0; i < phi_inst->size(); i++) {
           auto pred = dyn_cast<BasicBlock>(block->GetOperand(i));
           DBG_ASSERT(pred != nullptr, "get predecessor of current block failed");
+
+          // set insert point
+          DBG_ASSERT(_block_map.find(pred) != _block_map.end(), "find predecessor of phi-node failed");
+          auto ll_pred = _block_map[pred];
+
+          auto it = ll_pred->inst_begin();
+          for (; it != ll_pred->insts().end(); it++) {
+            if ((*it)->classId() == ClassId::LLJumpId)
+              break;
+            else if ((*it)->classId() == ClassId::LLBranchId) {
+              it = std::prev(it);
+              break;
+            }
+          }
+
+          SetInsertPoint(ll_pred, it);
+
           auto val = CreateOperand((*phi_inst)[i].value());
           move[pred].emplace_back(vreg, val);
         }
