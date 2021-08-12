@@ -1,5 +1,5 @@
 #include "module.h"
-#include "lib/hash.h"
+#include "lib/hashing.h"
 #include "lib/guard.h"
 #include "common/casting.h"
 #include "common/idmanager.h"
@@ -684,14 +684,13 @@ std::ostream &operator<<(std::ostream &os, const LLFunctionPtr &function) {
   os << INDENT << TYPE_LABEL << TWO_SPACE << func_name << "," << SPACE << FUNC_TYPE << std::endl;
 
   // 3. print label
-  if (function->need_hash()) { xstl::hash(os); return os; }
+//  if (function->isDecl()) { lava::utils::func_fix(os); return os; }
   os << func_name << ":" << std::endl;
   for (const auto &block : function->blocks()) {
     os << block << std::endl;
   }
 
-  // 4. insert literal pool
-//  os << INDENT << ".pool" << std::endl;
+
   return os;
 }
 

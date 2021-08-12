@@ -25,6 +25,7 @@ void LLOperand::ReplaceWith(const LLOperandPtr &V) {
 
 bool operator==(const LLOperandPtr &lhs, const LLOperandPtr &rhs) {
   if (lhs.get() == rhs.get() && lhs == nullptr) return true;
+  else if (lhs == nullptr || rhs == nullptr) return false;
   if (lhs->state() == rhs->state()) {
     if (lhs->IsRealReg() && rhs->IsRealReg()) {
       return lhs->reg() == rhs->reg();

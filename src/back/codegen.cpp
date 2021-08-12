@@ -1,5 +1,6 @@
 #include "codegen.h"
 #include "common/casting.h"
+#include "back/passes/dme.h"
 #include "back/passes/spill.h"
 #include "back/passes/funcfix.h"
 #include "back/passes/peephole.h"
@@ -56,6 +57,7 @@ void CodeGenerator::RunPasses() {
 }
 
 void CodeGenerator::RegisterPasses() {
+  auto dme           = CREATE_PASS<DeadMoveElimination>(_ll_module);
   auto spill         = CREATE_PASS<Spill>(_ll_module);
   auto pre_peephole  = CREATE_PASS<PeepHole>(_ll_module);
   auto liveness      = CREATE_PASS<LivenessAnalysis>(_ll_module);
@@ -67,13 +69,16 @@ void CodeGenerator::RegisterPasses() {
   auto blk_rearrange = CREATE_PASS<BlockRearrange>(_ll_module);
 
 //  _passes.push_back(blk_rearrange);
+//  _passes.push_back(dme);
   _passes.push_back(pre_peephole);
+//  _passes.push_back(dme);
 
 //  _passes.push_back(liveness);
   _passes.push_back(linear_scan);
 //
 //  _passes.push_back(fast_alloc);
   _passes.push_back(spill);
+
   _passes.push_back(post_peephole);
   _passes.push_back(func_fix);
 }

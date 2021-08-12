@@ -141,7 +141,7 @@ public:
   std::vector<LLBlockPtr> &blocks()   { return _blocks;            }
   const LLBlockPtr &entry()           { return _blocks[0];         }
   bool has_call_inst()          const { return _has_call_inst;     }
-  bool need_hash()              const { return _need_hash;         }
+  bool isDecl()                 const { return _need_hash;         }
 
   std::vector<LLBlockPtr>::iterator block_begin() { return _blocks.begin(); }
   std::vector<LLBlockPtr>::iterator block_end()   { return _blocks.end();   }

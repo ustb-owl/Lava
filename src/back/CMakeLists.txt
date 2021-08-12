@@ -3,6 +3,7 @@ add_library(back
         codegen.cpp
         arch/arm/module.cpp
         arch/arm/instdef.cpp
+        passes/dme.cpp
         passes/spill.cpp
         passes/funcfix.cpp
         passes/peephole.cpp
