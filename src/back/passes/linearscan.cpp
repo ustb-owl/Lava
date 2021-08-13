@@ -8,6 +8,7 @@ void LinearScanRegisterAllocation::Initialize() {
   _free_tmp_regs.push_back(LLOperand::Register(ArmReg::r0));
   _free_tmp_regs.push_back(LLOperand::Register(ArmReg::r1));
   _free_tmp_regs.push_back(LLOperand::Register(ArmReg::r2));
+  _free_tmp_regs.push_back(LLOperand::Register(ArmReg::r3));
 
   for (auto reg = int(ArmReg::r4); reg <= int(ArmReg::r9); reg++) {
     _free_comm_regs.push_back(LLOperand::Register(ArmReg(reg)));
@@ -19,6 +20,8 @@ void LinearScanRegisterAllocation::Initialize() {
 void LinearScanRegisterAllocation::runOn(const LLFunctionPtr &func) {
   _liveness->Initialize();
   _liveness->runOn(func);
+
+  if (func->has_call_inst()) _free_tmp_regs.push_back(LLOperand::Register(ArmReg::lr));
 
   auto &live_intervals = _liveness->GetLiveInterval();
   // build live intervals which ordered by start position
@@ -154,6 +157,12 @@ void LinearScanRegisterAllocation::SpillAtInterval(const LiveInterval &live_inte
     auto vreg_new = it->second;
     _alloc_map[vreg_new] = opr;
     _alloc_map[vreg] = _slot.AllocSlot(func, vreg);
+
+    // remove spill from active
+    _active.erase(end);
+
+    // insert new vreg into active
+    _active.insert({live_interval, opr});
   } else {
     std::multimap<LiveInterval, LLOperandPtr, CmpStart>::iterator it;
 

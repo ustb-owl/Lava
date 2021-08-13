@@ -449,6 +449,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       // create call instruction
       auto callee = dyn_cast<mid::Function>(callInst->Callee());
       auto ll_call = AddInst<LLCall>(callee);
+      ll_call->SetIsTailCall(callInst->IsTailCall());
       DBG_ASSERT(ll_call != nullptr, "create call instruction failed");
 
       // recover stack
@@ -684,7 +685,6 @@ std::ostream &operator<<(std::ostream &os, const LLFunctionPtr &function) {
   os << INDENT << TYPE_LABEL << TWO_SPACE << func_name << "," << SPACE << FUNC_TYPE << std::endl;
 
   // 3. print label
-//  if (function->isDecl()) { lava::utils::func_fix(os); return os; }
   os << func_name << ":" << std::endl;
   for (const auto &block : function->blocks()) {
     os << block << std::endl;

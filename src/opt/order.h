@@ -4,8 +4,9 @@
 #define DEAD_GLOBAL_CODE_ELIMINATION  4
 
 #define MEMORY_TO_REGISTER            5
-#define GVN_GCM                       6
-#define DEAD_CODE_ELIMINATION         7
+#define TAIL_RECURSION                6
+#define GVN_GCM                       7
+#define DEAD_CODE_ELIMINATION         8
 
 
 // analysis

@@ -39,7 +39,7 @@ void FunctionFix::runOn(const LLFunctionPtr &func) {
  */
 void FunctionFix::AddPrologue(const LLFunctionPtr &func) {
   auto entry = func->entry();
-  DBG_ASSERT(entry->name() == "entry", "not entry");
+  DBG_ASSERT(entry->name() == "entry" || entry->name().find("pre_head") != std::string::npos, "not entry");
 
   _module.SetInsertPoint(entry, entry->inst_begin());
   if (!_saved_regs.empty()) {
@@ -48,7 +48,7 @@ void FunctionFix::AddPrologue(const LLFunctionPtr &func) {
 
 
   LLOperandPtr stack_size;
-  if (_module.can_encode_imm(func->stack_size())) {
+  if (lava::back::LLModule::can_encode_imm(func->stack_size())) {
     stack_size = _module.CreateImmediate(func->stack_size());
   } else {
     auto dst = LLOperand::Register(ArmReg::r12);
@@ -83,7 +83,7 @@ void FunctionFix::AddEpilogue(const LLFunctionPtr &func) {
   _module.SetInsertPoint(_ret_block, _ret_pos);
 
   LLOperandPtr stack_size;
-  if (_module.can_encode_imm(func->stack_size())) {
+  if (lava::back::LLModule::can_encode_imm(func->stack_size())) {
     stack_size = _module.CreateImmediate(func->stack_size());
   } else {
     auto dst = LLOperand::Register(ArmReg::r12);

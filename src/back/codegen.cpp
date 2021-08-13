@@ -8,6 +8,7 @@
 #include "back/passes/linearscan.h"
 #include "back/passes/fastalloc.h"
 #include "back/passes/blkrearrange.h"
+#include "back/passes/tailrecursion.h"
 
 #include <iostream>
 
@@ -57,6 +58,7 @@ void CodeGenerator::RunPasses() {
 }
 
 void CodeGenerator::RegisterPasses() {
+  auto tail_recur    = CREATE_PASS<TailRecursionTransform>(_ll_module);
   auto dme           = CREATE_PASS<DeadMoveElimination>(_ll_module);
   auto spill         = CREATE_PASS<Spill>(_ll_module);
   auto pre_peephole  = CREATE_PASS<PeepHole>(_ll_module);
@@ -69,9 +71,10 @@ void CodeGenerator::RegisterPasses() {
   auto blk_rearrange = CREATE_PASS<BlockRearrange>(_ll_module);
 
 //  _passes.push_back(blk_rearrange);
-//  _passes.push_back(dme);
+  _passes.push_back(tail_recur);
+  _passes.push_back(dme);
   _passes.push_back(pre_peephole);
-//  _passes.push_back(dme);
+  _passes.push_back(dme);
 
 //  _passes.push_back(liveness);
   _passes.push_back(linear_scan);

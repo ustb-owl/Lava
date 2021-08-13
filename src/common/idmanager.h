@@ -75,7 +75,6 @@ private:
   std::size_t                                         _ll_land_end;      // current land id
   std::size_t                                         _ll_lor_end;       // current lor id
 
-
   // IR
   std::unordered_map<const Value *, std::size_t>      _ids;           // local values id
   std::unordered_map<const Value *, std::size_t>      _blocks;        // store blocks name

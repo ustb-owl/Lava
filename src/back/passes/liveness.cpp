@@ -55,7 +55,7 @@ void LivenessAnalysis::Init(const LLFunctionPtr &F) {
 bool IsTempReg(const LLOperandPtr &opr) {
   if (opr->IsRealReg()) {
     auto reg = opr->reg();
-    if ((reg >= ArmReg::r0 && reg <= ArmReg::r2) || (reg == ArmReg::lr)) return true;
+    if ((reg >= ArmReg::r0 && reg <= ArmReg::r3) || (reg == ArmReg::lr)) return true;
   }
   return false;
 }
@@ -70,8 +70,8 @@ void LivenessAnalysis::TraverseRPO(const LLBlockPtr &BB) {
     TraverseRPO(jump_inst->target());
   } else if (auto branch_inst = dyn_cast<LLBranch>(termInst)) {
     // visit false block firstly
-    TraverseRPO(branch_inst->true_block());
     TraverseRPO(branch_inst->false_block());
+    TraverseRPO(branch_inst->true_block());
   } else if (auto ret_inst = dyn_cast<LLReturn>(termInst)) {
     // do nothing
   } else {
@@ -148,8 +148,8 @@ void LivenessAnalysis::SolveLiveInterval(const LLFunctionPtr &func) {
       auto ldr_inst = dyn_cast<LLLoad>(inst);
       if ((dst && IsTempReg(dst))                     ||
           (mv_inst && IsTempReg(mv_inst->src()))      ||
-          (str_inst && (IsTempReg(str_inst->data())   ||
-                        IsTempReg(str_inst->addr()))) ||
+//          (str_inst && (IsTempReg(str_inst->data())   ||
+//                        IsTempReg(str_inst->addr()))) ||
           inst->classId() == ClassId::LLCallId) {
         last_tmp_pos = pos;
       }

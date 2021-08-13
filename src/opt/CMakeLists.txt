@@ -13,6 +13,7 @@ add_library(opt
         transforms/mem2reg.cpp
         transforms/gvn_gcm.cpp
         transforms/blocksimp.cpp
+        transforms/tailrecursion.cpp
         transforms/dirtyname_conv.cpp
         transforms/dirtyarray_conv.cpp
 )

@@ -38,6 +38,7 @@ public:
   bool runOnFunction(const FuncPtr &F) final {
     _changed = false;
     if (F->is_decl()) return _changed;
+
     _cur_func = F.get();
 
     GlobalValueNumbering(F);
@@ -50,26 +51,26 @@ public:
     dce->runOnFunction(F);
     dce->finalize();
 //
-    CollectInstBlockMap(F);
-
-    // global code motion
-    auto entry = dyn_cast<BasicBlock>(F->entry()).get();
-    DBG_ASSERT(_visited.empty(), "visited set is not empty");
-
-    std::vector<InstPtr> insts;
-    for (const auto &it : *F) {
-      auto block = dyn_cast<BasicBlock>(it.value());
-      for (const auto &inst : block->insts()) {
-        auto I = dyn_cast<Instruction>(inst);
-        insts.push_back(I);
-      }
-    }
-    DBG_ASSERT(insts.size() == _user_map.size(), "instruction size is not equal _user_map");
-
-    for (auto &inst : insts) ScheduleEarly(entry, inst);
-
-    _visited.clear();
-    for (auto &inst : insts) ScheduleLate(inst);
+//    CollectInstBlockMap(F);
+//
+//    // global code motion
+//    auto entry = dyn_cast<BasicBlock>(F->entry()).get();
+//    DBG_ASSERT(_visited.empty(), "visited set is not empty");
+//
+//    std::vector<InstPtr> insts;
+//    for (const auto &it : *F) {
+//      auto block = dyn_cast<BasicBlock>(it.value());
+//      for (const auto &inst : block->insts()) {
+//        auto I = dyn_cast<Instruction>(inst);
+//        insts.push_back(I);
+//      }
+//    }
+//    DBG_ASSERT(insts.size() == _user_map.size(), "instruction size is not equal _user_map");
+//
+//    for (auto &inst : insts) ScheduleEarly(entry, inst);
+//
+//    _visited.clear();
+//    for (auto &inst : insts) ScheduleLate(inst);
 
     return _changed;
   }

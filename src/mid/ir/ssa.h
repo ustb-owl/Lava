@@ -249,12 +249,13 @@ public:
 class Function : public User {
 private:
   bool _is_decl;
+  bool _is_tail_recursion;
   std::vector<SSAPtr> _args;
   std::string _function_name;
 
 public:
   explicit Function(std::string name, bool is_decl = false)
-    : User(ClassId::FunctionId), _is_decl(is_decl), _function_name(std::move(name)) {}
+    : User(ClassId::FunctionId), _is_decl(is_decl), _is_tail_recursion(false), _function_name(std::move(name)) {}
 
   bool isInstruction() const override { return false; }
 
@@ -271,14 +272,16 @@ public:
     _function_name = name;
   }
 
+  void SetIsRecursion(bool value) { _is_tail_recursion = value; }
+
   // getters
   const std::string &GetFunctionName() const { return _function_name; }
 
   const SSAPtr      &entry() { return (*this)[0].value(); }
 
-  const std::vector<SSAPtr> &args() { return _args; }
-
-  bool is_decl()              const { return _is_decl; }
+  const std::vector<SSAPtr> &args() { return _args;              }
+  bool is_decl()              const { return _is_decl;           }
+  bool is_tail_recursion()    const { return _is_tail_recursion; }
 
 
   // methods for dyn_cast
@@ -546,7 +549,8 @@ private:
 
 public:
   ArgRefSSA(SSAPtr func, std::size_t index, std::string name)
-      : Value(ClassId::ArgRefSSAId), _func(std::move(func)), _index(index), _arg_name(std::move(name)) {}
+      : Value(ClassId::ArgRefSSAId), _func(std::move(func)),
+        _index(index), _arg_name(std::move(name)) {}
 
   bool isInstruction() const override { return false; }
 
@@ -576,6 +580,9 @@ public:
 // function call
 // operands: callee, parameters
 class CallInst : public Instruction {
+private:
+  bool _is_tail_call;
+
 public:
   CallInst(const SSAPtr &callee, const std::vector<SSAPtr> &args);
 
@@ -590,6 +597,10 @@ public:
   int param_size()           const { return size() - 1;             }
 
   void AddParam(const SSAPtr &param);
+
+
+  bool IsTailCall() const        { return _is_tail_call;  }
+  void SetIsTailCall(bool value) { _is_tail_call = value; }
 
   // methods for dyn_cast
   static inline bool classof(CallInst *) { return true; }

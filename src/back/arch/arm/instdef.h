@@ -132,7 +132,8 @@ public:
   explicit LLFunction(mid::FuncPtr func)
     : _function(std::move(func)), _has_call_inst(false), _need_hash(false) {}
 
-  bool is_decl() const { return _function->is_decl(); }
+  bool is_decl()           const { return _function->is_decl();           }
+  bool is_tail_recursion() const { return _function->is_tail_recursion(); }
 
   mid::FuncPtr function()       const { return _function;          }
   std::size_t virtual_max()     const { return _virtual_max;       }
@@ -190,6 +191,7 @@ public:
   LLInstList::iterator inst_end()   { return _insts.end();   }
   const LLFunctionPtr &parent()     { return _parent;        }
   const std::string   &name() const { return _name;          }
+  void SetBlockName(const std::string &name) { _name = name; }
   CLASSOF(LLBasicBlock)
 };
 
@@ -545,10 +547,15 @@ public:
 class LLCall : public LLInst {
 private:
   mid::FuncPtr _function;
+  bool         _is_tail_call;
 
 public:
   LLCall(mid::FuncPtr function)
-    : LLInst(Opcode::Call, ClassId::LLCallId), _function(std::move(function)) {}
+    : LLInst(Opcode::Call, ClassId::LLCallId),
+      _function(std::move(function)), _is_tail_call(false) {}
+
+  bool IsTailCall() const        { return _is_tail_call;  }
+  void SetIsTailCall(bool value) { _is_tail_call = value; }
 
   const mid::FuncPtr &function() { return _function;       }
   LLOperandList operands() final { return LLOperandList(); }

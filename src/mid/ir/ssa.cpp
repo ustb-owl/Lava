@@ -423,7 +423,8 @@ BranchInst::BranchInst(const SSAPtr &cond, const SSAPtr &true_block, const SSAPt
 }
 
 CallInst::CallInst(const SSAPtr &callee, const std::vector<SSAPtr> &args) :
-    Instruction(Instruction::OtherOps::Call, args.size() + 1, ClassId::CallInstId) {
+    Instruction(Instruction::OtherOps::Call, args.size() + 1, ClassId::CallInstId),
+    _is_tail_call(false) {
   AddValue(callee);
   for (const auto &it : args) AddValue(it);
 }
@@ -649,7 +650,7 @@ inline void DumpBlockName(std::ostream &os, IdManager &id_mgr, const BasicBlock 
 }
 
 void PrintId(std::ostream &os, IdManager &id_mgr, const Value *value) {
-  os << "%v" << id_mgr.GetId(value);
+  os << "%t" << id_mgr.GetId(value);
 }
 
 void PrintId(std::ostream &os, IdManager &id_mgr, const std::string &name) {

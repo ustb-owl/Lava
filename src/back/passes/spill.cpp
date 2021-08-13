@@ -83,11 +83,12 @@ LLOperandPtr Spill::GetTmpReg(std::uint32_t &reg_mask) {
   } else if (!(reg_mask & (1 << static_cast<int>(ArmReg::r10)))) {
     reg_mask |= 1 << static_cast<int>(ArmReg::r10);
     temp = LLOperand::Register(ArmReg::r10);
-  } else if (!(reg_mask & (1 << static_cast<int>(ArmReg::r3)))) {
-    reg_mask |= 1 << static_cast<int>(ArmReg::r3);
-    temp = LLOperand::Register(ArmReg::r3);
   }
-  DBG_ASSERT(temp != nullptr, "get tmp register(r12/r11/r3) failed");
+//  else if (!(reg_mask & (1 << static_cast<int>(ArmReg::r3)))) {
+//    reg_mask |= 1 << static_cast<int>(ArmReg::r3);
+//    temp = LLOperand::Register(ArmReg::r3);
+//  }
+  DBG_ASSERT(temp != nullptr, "get tmp register(r12/r10) failed");
   return temp;
 }
 

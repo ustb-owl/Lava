@@ -11,6 +11,7 @@ add_library(back
         passes/linearscan.cpp
         passes/fastalloc.cpp
         passes/blkrearrange.cpp
+        passes/tailrecursion.cpp
 )
 
 target_compile_features(back PUBLIC cxx_std_17)
