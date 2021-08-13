@@ -440,6 +440,25 @@ ICmpInst::ICmpInst(Operator op, const SSAPtr &lhs, const SSAPtr &rhs)
   AddValue(rhs);
 }
 
+SSAPtr ICmpInst::EvalArithOnConst() {
+  bool value;
+  auto lhs_imm = dyn_cast<ConstantInt>(LHS())->value();
+  auto rhs_imm = dyn_cast<ConstantInt>(RHS())->value();
+  switch (_op) {
+    case Operator::Equal:    value = (lhs_imm == rhs_imm); break;
+    case Operator::NotEqual: value = (lhs_imm != rhs_imm); break;
+    case Operator::SLess:    value = (lhs_imm <  rhs_imm); break;
+    case Operator::SLessEq:  value = (lhs_imm <= rhs_imm); break;
+    case Operator::SGreat:   value = (lhs_imm >  rhs_imm); break;
+    case Operator::SGreatEq: value = (lhs_imm >= rhs_imm); break;
+    default: ERROR("should not reach here");
+  }
+  auto const_bool = std::make_shared<ConstantInt>(value);
+  const_bool->set_type(define::MakePrimType(define::Type::Bool, true));
+  DBG_ASSERT(const_bool != nullptr, "create const bool value failed");
+  return const_bool;
+}
+
 AccessInst::AccessInst(AccessType acc_type, const SSAPtr &ptr, const SSAPtrList &indexs)
     : Instruction(Instruction::MemoryOps::Access, 0, ClassId::AccessInstId), _acc_type(acc_type) {
   AddValue(ptr);

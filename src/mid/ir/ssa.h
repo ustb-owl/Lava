@@ -630,6 +630,8 @@ public:
 
   static unsigned GetNumOperands() { return 2; }
 
+  SSAPtr EvalArithOnConst();
+
   // getter/setter
   Operator             op()   const { return _op;                }
   const SSAPtr       &LHS()   const { return (*this)[0].value(); }

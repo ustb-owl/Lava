@@ -36,7 +36,16 @@ bool FunctionInfoPass::runOnModule(Module &M) {
   }
 
   for (auto &[k, v] : _func_infos) {
+    if (_func_map.find(k) == _func_map.end()) continue;
     if (_func_map[k]->Callees().empty()) v.is_leaf = true;
+  }
+
+  for (auto it = _func_infos.begin(); it != _func_infos.end();) {
+    if (_func_map.find(it->first) == _func_map.end()) {
+      it = _func_infos.erase(it);
+    } else {
+      it++;
+    }
   }
 
 //  DumpCallGraph();

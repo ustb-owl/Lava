@@ -11,6 +11,8 @@
 
 int GlobalValueNumbering;
 
+#define OPEN 0
+
 namespace lava::opt {
 
 using ValueNumber = std::vector<std::pair<SSAPtr, SSAPtr>>;
@@ -46,10 +48,10 @@ public:
     // clear value number, otherwise we can't remove dead code
     _value_number.clear();
 
-    // run dead code elimination before gcm
-    auto dce = PassManager::GetTransformPass<DeadCodeElimination>("DeadCodeElimination");
-    dce->runOnFunction(F);
-    dce->finalize();
+//    // run dead code elimination before gcm
+//    auto dce = PassManager::GetTransformPass<DeadCodeElimination>("DeadCodeElimination");
+//    dce->runOnFunction(F);
+//    dce->finalize();
 //
 //    CollectInstBlockMap(F);
 //
@@ -229,9 +231,11 @@ public:
     } else if (auto call_inst = dyn_cast<CallInst>(value)) {
       _value_number[idx].second = FindValue(call_inst);
     }
-//    else if (auto icmp_inst = dyn_cast<ICmpInst>(value)) {
-//      _value_number[idx].second = FindValue(icmp_inst);
-//    }
+#if OPEN
+    else if (auto icmp_inst = dyn_cast<ICmpInst>(value)) {
+      _value_number[idx].second = FindValue(icmp_inst);
+    }
+#endif
 
     return _value_number[idx].second;
   }
@@ -278,9 +282,19 @@ public:
           }
           if (all_same) Replace(phi_node, first, BB, it);
         }
-//        else if (auto icmp_inst = dyn_cast<ICmpInst>(*it)) {
-//          Replace(icmp_inst, ValueOf(icmp_inst), BB, it);
-//        }
+        else if (auto icmp_inst = dyn_cast<ICmpInst>(*it)) {
+#if OPEN
+          // try to get lhs and rhs as constant value
+          auto lhs_const = dyn_cast<ConstantInt>(icmp_inst->LHS());
+          auto rhs_const = dyn_cast<ConstantInt>(icmp_inst->RHS());
+          if ((lhs_const != nullptr) && (rhs_const != nullptr)) {
+            auto const_inst = icmp_inst->EvalArithOnConst();
+            Replace(icmp_inst, const_inst, BB, it);
+          } else {
+            Replace(icmp_inst, ValueOf(icmp_inst), BB, it);
+          }
+#endif
+        }
 
         it = next;
       }
