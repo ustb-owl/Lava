@@ -14,6 +14,7 @@ add_library(opt
         transforms/gvn_gcm.cpp
         transforms/blocksimp.cpp
         transforms/tailrecursion.cpp
+        transforms/simpunrolling.cpp
         transforms/dirtyname_conv.cpp
         transforms/dirtyarray_conv.cpp
 )

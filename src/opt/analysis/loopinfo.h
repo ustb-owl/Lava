@@ -20,7 +20,7 @@ private:
 public:
   explicit Loop(BasicBlock *head) : _parent(nullptr), _bbs{head} {}
 
-  BasicBlock *header() { return _bbs[0]; }
+  BasicBlock *header() const { return _bbs[0]; }
 
   LoopPtr parent() { return _parent; }
   void set_parent(const LoopPtr &p) {
@@ -43,6 +43,7 @@ public:
   }
 
   std::vector<BasicBlock *> &blocks() { return _bbs; }
+  const std::vector<BasicBlock *> &blocks() const { return _bbs; }
 
   std::vector<LoopPtr> &sub_loops() { return _sub_loops; }
 
@@ -69,7 +70,7 @@ public:
 
   std::vector<Loop *> deepest_loops() {
     std::vector<Loop *> deepest;
-    for (auto l : _top_level) {
+    for (const auto &l : _top_level) {
       l->get_deepest_loops(deepest);
     }
     return deepest;

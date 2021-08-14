@@ -7,6 +7,7 @@
 #define TAIL_RECURSION                6
 #define GVN_GCM                       7
 #define DEAD_CODE_ELIMINATION         8
+#define LOOP_UNROLLING                9
 
 
 // analysis

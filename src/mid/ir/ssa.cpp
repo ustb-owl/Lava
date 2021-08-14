@@ -240,11 +240,13 @@ void BinaryOperator::TryToFold() {
           (*this)[0].set(lhs_bin_inst->LHS());
           int value = lhs_bin_rhs->value() + dyn_cast<ConstantInt>(RHS())->value();
           auto new_rhs = std::make_shared<ConstantInt>(value);
+          new_rhs->set_type(RHS()->type());
           (*this)[1].set(new_rhs);
         } else if ((opcode() == BinaryOps::Mul) && (lhs_bin_inst->opcode() == BinaryOps::Mul)) {
           (*this)[0].set(lhs_bin_inst->LHS());
           int value = lhs_bin_rhs->value() * dyn_cast<ConstantInt>(RHS())->value();
           auto new_rhs = std::make_shared<ConstantInt>(value);
+          new_rhs->set_type(RHS()->type());
           (*this)[1].set(new_rhs);
         }
       } else if (auto lhs_bin_lhs = dyn_cast<ConstantInt>(lhs_bin_inst->LHS())) {
@@ -253,6 +255,7 @@ void BinaryOperator::TryToFold() {
           if (opcode() == BinaryOps::Add) {
             int value = lhs_bin_lhs->value() + dyn_cast<ConstantInt>(RHS())->value();
             auto new_lhs = std::make_shared<ConstantInt>(value);
+            new_lhs->set_type(LHS()->type());
             (*this)[0].set(new_lhs);
             (*this)[1].set(lhs_bin_inst->RHS());
             set_opcode(BinaryOps::Sub);
@@ -267,6 +270,7 @@ void BinaryOperator::TryToFold() {
         if ((opcode() == BinaryOps::Sub) && (rhs_bin_inst->opcode() == BinaryOps::Sub)) {
           (*this)[0].set(rhs_bin_inst->RHS());
           auto new_lhs = std::make_shared<ConstantInt>(lhs->value() - rhs_bin_lhs->value());
+          new_lhs->set_type(lhs->type());
           (*this)[1].set(new_lhs);
           set_opcode(BinaryOps::Add);
         }

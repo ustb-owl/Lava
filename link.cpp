@@ -10,6 +10,7 @@ extern int Mem2Reg;
 extern int TailRecursion;
 extern int GlobalValueNumbering;
 extern int DeadCodeElimination;
+extern int LoopUnrolling;
 
 // analysis
 extern int Dominance;
@@ -26,6 +27,7 @@ int Mem2RegLinked        = Mem2Reg;
 int TailRecursionLinked  = TailRecursion;
 int GVNGCMLinked         = GlobalValueNumbering;
 int DeadCodeLinked       = DeadCodeElimination;
+int LoopUnrollingLinked  = LoopUnrolling;
 
 int DominanceLinked      = Dominance;
 int PostDominanceLinked  = PostDominance;
