@@ -40,6 +40,7 @@ private:
 
   std::unordered_map<std::string, SSAPtr> _origin_array;
 
+  std::string                  _filename;
 public:
 
   // create a new SSA with current context (logger)
@@ -138,6 +139,10 @@ public:
     }
     _origin_array.clear();
   }
+
+  std::string File() const { return _filename; }
+  void SetFile(const std::string &file) { _filename = file; }
+  bool IsFile(const std::string &file) const { return _filename == file; }
 
   // getters
   typedef FunctionList::iterator        iterator;

@@ -3,7 +3,6 @@
 #include <utility>
 #include "version.h"
 #include "driver/compiler.h"
-//#include "lib/argsparser.h"
 
 #include "lib/fire.hpp"
 
@@ -55,6 +54,7 @@ int Main(bool AST = fire::arg({"-T", "--dump-ast"}),
   }
 
   file = std::move(filename[0]);
+  comp.SetFile(file);
 
   if (Opt) {
     comp.set_opt_flat(true);

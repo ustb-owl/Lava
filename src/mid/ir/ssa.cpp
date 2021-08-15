@@ -643,7 +643,7 @@ inline void DumpValue(std::ostream &os, IdManager &id_mgr, It begin, It end) {
 inline void DumpBlockName(std::ostream &os, IdManager &id_mgr, const BasicBlock *block) {
   auto &npos = std::string::npos;
   auto name = block->name();
-  if (name.find("if_cond") != npos) {
+  if (name.find("if.cond") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_IF_COND);
   } else if (name.find("if.then") != npos) {
     os << name << id_mgr.GetId(block, IdType::_ID_THEN);
@@ -670,6 +670,7 @@ inline void DumpBlockName(std::ostream &os, IdManager &id_mgr, const BasicBlock 
   } else {
     os << name;
   }
+//  os << "size:" << const_cast<BasicBlock *>(block)->insts().size();
 }
 
 void PrintId(std::ostream &os, IdManager &id_mgr, const Value *value) {

@@ -66,6 +66,8 @@ public:
   void SetInsertPointAtEntry();
   void SetInsertPoint(const BlockPtr &BB);
 
+  void SetFile (const std::string &file) { _module.SetFile(file); }
+
     // print error message
   SSAPtr LogError(const front::LoggerPtr &log, std::string &message);
   SSAPtr LogError(const front::LoggerPtr &log, std::string &message, const std::string &id);

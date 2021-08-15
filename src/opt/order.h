@@ -3,15 +3,19 @@
 #define BLOCK_SIMPLIFICATION          3
 #define DEAD_GLOBAL_CODE_ELIMINATION  4
 
-#define MEMORY_TO_REGISTER            5
-#define TAIL_RECURSION                6
-#define GVN_GCM                       7
-#define DEAD_CODE_ELIMINATION         8
-#define LOOP_UNROLLING                9
+#define LOOP_UNROLL                   5
+#define MEMORY_TO_REGISTER            6
+#define GLOBAL_CONST_PROP             7
+#define TAIL_RECURSION                8
+#define GVN_GCM                       9
+#define LOCAL_MEM_PROP                10
+#define DEAD_CODE_ELIMINATION         11
+#define LOOP_UNROLLING                12
 
 
 // analysis
 #define DOMINANCE_INFO                50
 #define POST_DOMINANCE_INFO           51
-#define FUNCTION_INFO                 52
-#define LOOP_INFO                     53
+#define NEED_GCM                      52
+#define FUNCTION_INFO                 53
+#define LOOP_INFO                     54

@@ -11,12 +11,14 @@ extern int TailRecursion;
 extern int GlobalValueNumbering;
 extern int DeadCodeElimination;
 extern int LoopUnrolling;
+extern int GlobalConstPropagation;
 
 // analysis
 extern int Dominance;
 extern int PostDominance;
 extern int FunctionInfo;
 extern int LoopInfo;
+extern int NeedGcm;
 
 int HelloLinked          = HelloXY;
 int BlockMergeLinked     = BlockMerge;
@@ -28,9 +30,11 @@ int TailRecursionLinked  = TailRecursion;
 int GVNGCMLinked         = GlobalValueNumbering;
 int DeadCodeLinked       = DeadCodeElimination;
 int LoopUnrollingLinked  = LoopUnrolling;
+int GlbConstPropLinked   = GlobalConstPropagation;
 
 int DominanceLinked      = Dominance;
 int PostDominanceLinked  = PostDominance;
 int FunctionInfoLinked   = FunctionInfo;
 int LoopINfoLinked       = LoopInfo;
+int NeedGcmLinked        = NeedGcm;
 

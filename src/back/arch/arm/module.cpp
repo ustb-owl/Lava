@@ -700,7 +700,7 @@ std::ostream &operator<<(std::ostream &os, const LLBlockPtr &block) {
 
   if (name != "entry") {
     os << ".";
-    if (name.find("if_cond") != npos) {
+    if (name.find("if.cond") != npos) {
       os << name << id_mgr.GetId(block, IdType::_ID_LL_IF_COND);
     } else if (name.find("if.then") != npos) {
       os << "if_then" << id_mgr.GetId(block, IdType::_ID_LL_THEN);
@@ -780,13 +780,9 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
 
     os << "]";
   } else if (auto jump_inst = dyn_cast<LLJump>(inst)) {
-    os << INDENT << "b" << TAB
-       << jump_inst->target() << std::endl;
-
-    // TODO: insert literal pool
-//    os << INDENT << ".pool";
+    os << INDENT << "b" << jump_inst->cond() << TAB << jump_inst->target();
   } else if (auto ret_inst = dyn_cast<LLReturn>(inst)) {
-    os << INDENT << "bx" << TAB << ArmReg::lr;
+    os << INDENT << "bx" << ret_inst->cond() << TAB << ArmReg::lr;
     // TODO:
   } else if (auto store_inst = dyn_cast<LLStore>(inst)) {
     os << INDENT << "str" << TAB
@@ -804,10 +800,10 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
       os << INDENT << "b" << TAB << branch_inst->false_block() << std::endl;
     }
 
-    // output literal pool
-//    os << INDENT << ".pool";
   } else if (auto call_inst = dyn_cast<LLCall>(inst)) {
-    os << INDENT << "bl" << TAB << call_inst->function()->GetFunctionName();
+    os << INDENT << "b";
+    if (!call_inst->NeedChangeMode()) { os << "l"; }
+    os << TAB << call_inst->function()->GetFunctionName();
   } else if (auto binary_inst = dyn_cast<LLBinaryInst>(inst)) {
     std::string op = "unknown";
     auto opcode = binary_inst->opcode();
@@ -822,11 +818,12 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
       case LLInst::Opcode::LShr: op = "lsr";  break;
       case LLInst::Opcode::Shl:  op = "lsl";  break;
       case LLInst::Opcode::Xor:  op = "eor";  break;
+      case LLInst::Opcode::Bic:  op = "bic";  break;
       default:
         ERROR("should not reach here");
     }
 
-    os << INDENT << op << TAB << binary_inst->dst()
+    os << INDENT << op << binary_inst->psr() << TAB << binary_inst->dst()
        << "," << SPACE << binary_inst->lhs()
        << "," << SPACE << binary_inst->rhs();
 
@@ -883,7 +880,18 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
       os << INDENT << "movt" << TAB
          << load_pseudo->dst() << "," << SPACE << "#" << (uint16_t (imm >> 16));
     }
-  } else if (auto comment = dyn_cast<LLComment>(inst)) {
+  } else if (auto load_change_base = dyn_cast<LLLoadChangeBase>(inst)) {
+    os << INDENT << "ldr" << TAB
+       << load_change_base->dst() << "," << SPACE << "["
+       << load_change_base->addr() << "]," << SPACE
+       << load_change_base->offset();
+  } else if (auto store_change_base = dyn_cast<LLStoreChangeBase>(inst)) {
+    os << INDENT << "str" << TAB
+       << store_change_base->data() << "," << SPACE << "["
+       << store_change_base->addr() << "]," << SPACE
+       << store_change_base->offset();
+  }
+  else if (auto comment = dyn_cast<LLComment>(inst)) {
     os << '@' << SPACE << comment->comment();
   }
 
@@ -952,6 +960,17 @@ std::ostream &operator<<(std::ostream &os, const ArmCond &cond) {
     case ArmCond::Gt: os << "gt"; break;
     case ArmCond::Le: os << "le"; break;
     case ArmCond::Lt: os << "lt"; break;
+  }
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const ArmPSR &psr) {
+  switch (psr) {
+    case ArmPSR::C: os << "c"; break;
+    case ArmPSR::F: os << "f"; break;
+    case ArmPSR::S: os << "s"; break;
+    case ArmPSR::X: os << "x"; break;
+    case ArmPSR::N: /* nil */  break;
   }
   return os;
 }

@@ -10,6 +10,9 @@ namespace lava::opt {
 bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   _changed = false;
   if (F->is_decl()) return _changed;
+  auto A = PassManager::GetAnalysis<NeedGcm>("NeedGcm");
+  if (A->IsCrypto()) return _changed;
+  TRACE0();
 
   _cur_func = F.get();
 
@@ -23,7 +26,9 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   dce->runOnFunction(F);
   dce->finalize();
 
-#if 0
+#if 1
+  if (_cnt > 0) return _changed;
+  if (!A->IsNeedGcm()) return _changed;
   CollectInstBlockMap(F);
 
   // global code motion
@@ -44,6 +49,7 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
 
   _visited.clear();
   for (auto &inst : insts) ScheduleLate(inst);
+  _cnt += 1;
 #endif
 
   return _changed;

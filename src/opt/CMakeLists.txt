@@ -2,6 +2,7 @@ add_library(opt
         pass.cpp
         pass_manager.cpp
         blkwalker.cpp
+        analysis/identiy.cpp
         analysis/loopinfo.cpp
         analysis/dominance.cpp
         analysis/funcanalysis.cpp
@@ -13,9 +14,11 @@ add_library(opt
         transforms/mem2reg.cpp
         transforms/gvn_gcm.cpp
         transforms/blocksimp.cpp
+        transforms/localmemprop.cpp
         transforms/tailrecursion.cpp
         transforms/simpunrolling.cpp
         transforms/dirtyname_conv.cpp
+        transforms/globalconstprop.cpp
         transforms/dirtyarray_conv.cpp
 )
 

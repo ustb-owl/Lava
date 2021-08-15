@@ -52,6 +52,8 @@ enum class ArmReg {
   pc = r15,  // program counter
 };
 
+enum class ArmPSR { N, C, F, S, X };
+
 enum class ArmCond { Any, Eq, Ne, Ge, Gt, Le, Lt };
 inline ArmCond opposite_cond(ArmCond c) {
   constexpr static ArmCond OPPOSITE[] = {ArmCond::Any, ArmCond::Ne, ArmCond::Eq, ArmCond::Lt,
@@ -99,6 +101,8 @@ public:
 std::ostream &operator<<(std::ostream &os, const ArmShift &shift);
 
 std::ostream &operator<<(std::ostream &os, const ArmCond &cond);
+
+std::ostream &operator<<(std::ostream &os, const ArmPSR &psr);
 
 class LLFunction;
 class LLBasicBlock;
@@ -264,7 +268,7 @@ class LLInst {
 public:
   enum class Opcode {
     // binary
-    Add, Sub, Mul, SDiv, SRem, And, Or, Xor, Shl, AShr, LShr,
+    Add, Sub, Mul, SDiv, SRem, And, Or, Xor, Shl, AShr, LShr, Bic,
 
     // control
     Branch, Jump, Return,
@@ -317,18 +321,20 @@ private:
   LLOperandPtr _lhs;
   LLOperandPtr _rhs;
   ArmShift     _shift;
+  ArmPSR       _psr;
 
 public:
 
   LLBinaryInst(Opcode opcode, LLOperandPtr dst, LLOperandPtr lhs, LLOperandPtr rhs)
     : LLInst(opcode, ClassId::LLBinaryInstId),
-      _dst(std::move(dst)), _lhs(std::move(lhs)), _rhs(std::move(rhs)) {}
+      _dst(std::move(dst)), _lhs(std::move(lhs)), _rhs(std::move(rhs)), _psr(ArmPSR::N) {}
 
   // getter/setter
   const LLOperandPtr &dst() { return _dst;   }
   const LLOperandPtr &lhs() { return _lhs;   }
   const LLOperandPtr &rhs() { return _rhs;   }
   ArmShift shift()    const { return _shift; }
+  ArmPSR psr()        const { return _psr;   }
 
   LLOperandList operands() final;
   LLOperandPtr dest() final { return dst(); }
@@ -341,6 +347,7 @@ public:
   void setShift(ArmShift shift) { _shift = shift; }
   void setShiftNum(int num) { _shift.setShift(num); }
   void setShiftType(ArmShift::ShiftType type) { _shift.setType(type); }
+  void setPSR(ArmPSR psr) { _psr = psr; }
 
   CLASSOF(LLBinaryInst)
   CLASSOF_INST(LLBinaryInst)
@@ -415,16 +422,23 @@ public:
   CLASSOF_INST(LLBranch)
 };
 
-// b label
+// b{cond} label
 class LLJump : public LLInst {
 private:
   LLBlockPtr _target;
+  ArmCond    _cond;
+  bool       _is_pl;
 
 public:
-  LLJump(LLBlockPtr target)
-    : LLInst(Opcode::Jump, ClassId::LLJumpId), _target(std::move(target)) {}
+  LLJump(LLBlockPtr target, ArmCond cond = ArmCond::Any)
+    : LLInst(Opcode::Jump, ClassId::LLJumpId),
+      _target(std::move(target)), _cond(cond), _is_pl(false) {}
 
-  LLBlockPtr target() { return _target; }
+  LLBlockPtr target()  { return _target; }
+  ArmCond cond() const { return _cond;   }
+
+  bool IsPl() const    { return _is_pl; }
+  void SetPL(bool val) { _is_pl = val;  }
 
   LLOperandList operands() final { return LLOperandList(); }
 
@@ -432,13 +446,17 @@ public:
   CLASSOF_INST(LLJump)
 };
 
-// bx lr
+// bx{cond} lr
 class LLReturn : public LLInst {
+private:
+  ArmCond _cond;
 public:
-  LLReturn()
-    : LLInst(Opcode::Return, ClassId::LLReturnId) {}
+  LLReturn(ArmCond cond = ArmCond::Any)
+    : LLInst(Opcode::Return, ClassId::LLReturnId), _cond(cond) {}
 
   LLOperandList operands() final { return LLOperandList(); }
+
+  ArmCond cond() const { return _cond; }
 
   CLASSOF(LLReturn)
   CLASSOF_INST(LLReturn)
@@ -452,13 +470,16 @@ private:
   LLOperandPtr _offset;
 
   bool         _is_arg;
+  ArmCond      _cond;
 
 public:
   LLLoad(LLOperandPtr dst, LLOperandPtr addr, LLOperandPtr offset)
     : LLInst(Opcode::Load, ClassId::LLLoadId),
-      _dst(std::move(dst)), _addr(std::move(addr)), _offset(std::move(offset)) {}
+      _dst(std::move(dst)), _addr(std::move(addr)), _offset(std::move(offset)),
+      _is_arg(false), _cond(ArmCond::Any) {}
 
   bool         is_arg() { return _is_arg; }
+  ArmCond      cond()   { return _cond;   }
   LLOperandPtr dst()    { return _dst;    }
   LLOperandPtr addr()   { return _addr;   }
   LLOperandPtr offset() { return _offset; }
@@ -471,12 +492,78 @@ public:
   }
 
   void SetIsArg(bool value)                  { _is_arg = value;  }
+  void SetCond(ArmCond cond)                 { _cond = cond;     }
   void SetDst(const LLOperandPtr &dst)       { _dst    = dst;    }
   void SetAddr(const LLOperandPtr &addr)     { _addr   = addr;   }
   void SetOffset(const LLOperandPtr &offset) { _offset = offset; }
 
   CLASSOF(LLLoad)
   CLASSOF_INST(LLLoad)
+};
+
+
+// ldrpl rd, [rn {, offset}]
+class LLLoadPL : public LLInst {
+private:
+  LLOperandPtr _dst;
+  LLOperandPtr _addr;
+  LLOperandPtr _offset;
+
+public:
+  LLLoadPL(LLOperandPtr dst, LLOperandPtr addr, LLOperandPtr offset)
+      : LLInst(Opcode::Load, ClassId::LLLoadPLId),
+        _dst(std::move(dst)), _addr(std::move(addr)), _offset(std::move(offset)) {}
+
+  LLOperandPtr dst()    { return _dst;    }
+  LLOperandPtr addr()   { return _addr;   }
+  LLOperandPtr offset() { return _offset; }
+
+  LLOperandPtr  dest()     final { return dst(); }
+  LLOperandList operands() final;
+  void set_operand(const LLOperandPtr &opr, std::size_t index) override;
+  void set_dst(const LLOperandPtr &dst) final {
+    _dst = dst;
+  }
+
+  void SetDst(const LLOperandPtr &dst)       { _dst    = dst;    }
+  void SetAddr(const LLOperandPtr &addr)     { _addr   = addr;   }
+  void SetOffset(const LLOperandPtr &offset) { _offset = offset; }
+
+  CLASSOF(LLLoadPL)
+  CLASSOF_INST(LLLoadPL)
+};
+
+// ldr rd, [rs], #offset
+//  => rd = *rs;
+//  => rs += offset;
+class LLLoadChangeBase : public LLInst {
+private:
+  LLOperandPtr _dst;
+  LLOperandPtr _addr;
+  LLOperandPtr _offset;
+
+public:
+  LLLoadChangeBase(LLOperandPtr dst, LLOperandPtr addr, LLOperandPtr offset)
+    : LLInst(Opcode::Load, ClassId::LLLoadChangeBaseId),
+      _dst(std::move(dst)), _addr(std::move(addr)), _offset(std::move(offset)) {}
+
+  LLOperandPtr dst()    { return _dst;    }
+  LLOperandPtr addr()   { return _addr;   }
+  LLOperandPtr offset() { return _offset; }
+
+  LLOperandPtr  dest()     final { return dst(); }
+  LLOperandList operands() final;
+  void set_operand(const LLOperandPtr &opr, std::size_t index) override;
+  void set_dst(const LLOperandPtr &dst) final {
+    _dst = dst;
+  }
+
+  void SetDst(const LLOperandPtr &dst)       { _dst    = dst;    }
+  void SetAddr(const LLOperandPtr &addr)     { _addr   = addr;   }
+  void SetOffset(const LLOperandPtr &offset) { _offset = offset; }
+
+  CLASSOF(LLLoadChangeBase)
+  CLASSOF_INST(LLLoadChangeBase)
 };
 
 // TODO: dirty hack
@@ -521,20 +608,48 @@ public:
   CLASSOF_INST(LLStore)
 };
 
+// str rd, [rn], offset
+class LLStoreChangeBase : public LLInst {
+private:
+  LLOperandPtr _data;
+  LLOperandPtr _addr;
+  LLOperandPtr _offset;
+
+public:
+  LLStoreChangeBase(LLOperandPtr data, LLOperandPtr addr, LLOperandPtr offset)
+      : LLInst(Opcode::Store, ClassId::LLStoreChangeBaseId),
+        _data(std::move(data)), _addr(std::move(addr)), _offset(std::move(offset)) {}
+
+  LLOperandPtr data()   { return _data;   }
+  LLOperandPtr addr()   { return _addr;   }
+  LLOperandPtr offset() { return _offset; }
+
+  LLOperandList operands() final;
+  void set_operand(const LLOperandPtr &opr, std::size_t index) override;
+
+  CLASSOF(LLStoreChangeBase)
+  CLASSOF_INST(LLStoreChangeBase)
+};
+
 // cmp rn, <operand2>
 class LLCompare : public LLInst {
 private:
   ArmCond      _cond;
   LLOperandPtr _lhs;
   LLOperandPtr _rhs;
+  bool         _is_pl;
+
 public:
   LLCompare(ArmCond cond, LLOperandPtr lhs, LLOperandPtr rhs)
     : LLInst(Opcode::Compare, ClassId::LLCompareId),
-      _cond(cond), _lhs(std::move(lhs)), _rhs(std::move(rhs)) {}
+      _cond(cond), _lhs(std::move(lhs)), _rhs(std::move(rhs)), _is_pl(false) {}
 
   ArmCond      cond() { return _cond; }
   LLOperandPtr rhs()  { return _rhs;  }
   LLOperandPtr lhs()  { return _lhs;  }
+
+  bool IsPL() const    { return _is_pl; }
+  void SetPL(bool val) { _is_pl = val;  }
 
   LLOperandList operands() final;
   void set_operand(const LLOperandPtr &opr, std::size_t index) override;
@@ -543,19 +658,23 @@ public:
   CLASSOF_INST(LLCompare)
 };
 
-// bl <label>
+// b{l} <label>
 class LLCall : public LLInst {
 private:
   mid::FuncPtr _function;
   bool         _is_tail_call;
+  bool         _changed_mod;
 
 public:
   LLCall(mid::FuncPtr function)
     : LLInst(Opcode::Call, ClassId::LLCallId),
-      _function(std::move(function)), _is_tail_call(false) {}
+      _function(std::move(function)), _is_tail_call(false), _changed_mod(false) {}
 
   bool IsTailCall() const        { return _is_tail_call;  }
   void SetIsTailCall(bool value) { _is_tail_call = value; }
+
+  bool NeedChangeMode() const    { return _changed_mod;   }
+  void SetChangeMode(bool val)   { _changed_mod = val;    }
 
   const mid::FuncPtr &function() { return _function;       }
   LLOperandList operands() final { return LLOperandList(); }
@@ -586,15 +705,19 @@ private:
   LLOperandPtr _lhs;
   LLOperandPtr _rhs;
   LLOperandPtr _acc;
+  ArmCond      _cond;
 
 public:
   LLFMA(Opcode opcode, const LLOperandPtr &dst, const LLOperandPtr &lhs, const LLOperandPtr &rhs, const LLOperandPtr &acc, ClassId classId)
-    : LLInst(opcode, classId), _dst(dst), _lhs(lhs), _rhs(rhs), _acc(acc) {}
+    : LLInst(opcode, classId), _dst(dst), _lhs(lhs), _rhs(rhs), _acc(acc), _cond(ArmCond::Any) {}
 
   LLOperandPtr dst() { return _dst; }
   LLOperandPtr lhs() { return _lhs; }
   LLOperandPtr rhs() { return _rhs; }
   LLOperandPtr acc() { return _acc; }
+
+  ArmCond cond() const        { return _cond; }
+  void set_cond(ArmCond cond) { _cond = cond; }
 
   LLOperandList operands() override;
   LLOperandPtr dest() override { return dst(); }

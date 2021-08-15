@@ -33,6 +33,7 @@ void Compiler::Parse() {
   _parser.SemaAnalysis(_analysis);
   if (_irbuilder == nullptr) {
     _irbuilder = new mid::IRBuilder(_parser.ast());
+    _irbuilder->SetFile(_file);
   }
 }
 

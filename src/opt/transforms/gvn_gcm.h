@@ -2,12 +2,12 @@
 #define LAVA_GVN_GCM_H
 
 #include <algorithm>
-
 #include "opt/pass.h"
 #include "opt/blkwalker.h"
 #include "common/casting.h"
 #include "opt/pass_manager.h"
 #include "opt/transforms/dce.h"
+#include "opt/analysis/identiy.h"
 #include "opt/analysis/loopinfo.h"
 #include "opt/analysis/dominance.h"
 #include "opt/analysis/funcanalysis.h"
@@ -21,18 +21,19 @@ using ValueNumber = std::vector<std::pair<SSAPtr, SSAPtr>>;
  */
 class GlobalValueNumberingGlobalCodeMotion : public FunctionPass {
 private:
+  int                 _cnt = 0;
   bool               _changed;
   BlockWalker        _blkWalker;
   ValueNumber        _value_number;
   FuncInfoMap        _func_infos;
   DomInfo            _dom_info;
   LoopInfo           _loop_info;
-
   Function          *_cur_func;
 
   std::unordered_set<Instruction *> _visited;
   std::unordered_map<Instruction *, InstPtr> _user_map;
   std::unordered_map<Instruction *, BasicBlock *> _inst_block_map;
+
 public:
 
   bool runOnFunction(const FuncPtr &F) final;
@@ -76,6 +77,7 @@ public:
     auto passinfo = std::make_shared<PassInfo>(pass, "GlobalValueNumberingGlobalCodeMotion", false, 2, GVN_GCM);
     passinfo->Requires("FunctionInfoPass");
     passinfo->Requires("LoopInfoPass");
+    passinfo->Requires("NeedGcm");
     return passinfo;
   }
 };

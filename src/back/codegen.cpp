@@ -7,15 +7,15 @@
 #include "back/passes/liveness.h"
 #include "back/passes/linearscan.h"
 #include "back/passes/fastalloc.h"
-#include "back/passes/blkrearrange.h"
 #include "back/passes/tailrecursion.h"
 
 #include <iostream>
 
 namespace lava::back {
 
-
 void CodeGenerator::CodeGene() {
+  _ll_module.SetFile(_module->File());
+
   // init global variable
   std::vector<mid::GlobalVariable *> glob_decl;
   for (const auto &it : _module->GlobalVars()) {
@@ -68,9 +68,7 @@ void CodeGenerator::RegisterPasses() {
   auto fast_alloc    = CREATE_PASS<FastAllocation>(_ll_module);
   auto post_peephole = CREATE_PASS<PeepHole>(_ll_module, true);
   auto func_fix      = CREATE_PASS<FunctionFix>(_ll_module);
-  auto blk_rearrange = CREATE_PASS<BlockRearrange>(_ll_module);
 
-//  _passes.push_back(blk_rearrange);
   _passes.push_back(tail_recur);
   _passes.push_back(dme);
   _passes.push_back(pre_peephole);

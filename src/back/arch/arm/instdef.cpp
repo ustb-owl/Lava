@@ -95,7 +95,32 @@ void LLLoad::set_operand(const LLOperandPtr &opr, std::size_t index) {
   }
 }
 
+void LLLoadPL::set_operand(const LLOperandPtr &opr, std::size_t index) {
+  switch (index) {
+    case 0: _addr   = opr; break;
+    case 1: _offset = opr; break;
+    default: ERROR("should not reach here");
+  }
+}
+
+void LLLoadChangeBase::set_operand(const LLOperandPtr &opr, std::size_t index) {
+  switch (index) {
+    case 0: _addr   = opr; break;
+    case 1: _offset = opr; break;
+    default: ERROR("should not reach here");
+  }
+}
+
 void LLStore::set_operand(const LLOperandPtr &opr, std::size_t index) {
+  switch (index) {
+    case 0: _data   = opr; break;
+    case 1: _addr   = opr; break;
+    case 2: _offset = opr; break;
+    default: ERROR("should not reach here");
+  }
+}
+
+void LLStoreChangeBase::set_operand(const LLOperandPtr &opr, std::size_t index) {
   switch (index) {
     case 0: _data   = opr; break;
     case 1: _addr   = opr; break;
@@ -141,7 +166,29 @@ LLOperandList LLLoad::operands() {
   return ops;
 }
 
+LLOperandList LLLoadPL::operands() {
+  std::vector<LLOperandPtr> ops;
+  ops.push_back(_addr);
+  ops.push_back(_offset);
+  return ops;
+}
+
+LLOperandList LLLoadChangeBase::operands() {
+  std::vector<LLOperandPtr> ops;
+  ops.push_back(_addr);
+  ops.push_back(_offset);
+  return ops;
+}
+
 LLOperandList LLStore::operands() {
+  std::vector<LLOperandPtr> ops;
+  ops.push_back(_data);
+  ops.push_back(_addr);
+  ops.push_back(_offset);
+  return ops;
+}
+
+LLOperandList LLStoreChangeBase::operands() {
   std::vector<LLOperandPtr> ops;
   ops.push_back(_data);
   ops.push_back(_addr);

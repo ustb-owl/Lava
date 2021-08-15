@@ -26,6 +26,8 @@ private:
   mid::BlockPtr                     _exit;
   std::vector<mid::BlockPtr>        _blocks;
   std::unordered_set<mid::BlockPtr> _visited;
+
+  std::string                       _file;
 public:
 
   // create a new LLIR
@@ -79,6 +81,10 @@ public:
 
   void ClearGlobalMap()  { _glob_map.clear(); }
   void ClearVirtualMax() { _virtual_max = 0;  }
+
+  void SetFile(const std::string &file) { _file = file; }
+  const std::string &GetFile() const { return _file; }
+  bool IsFile(const std::string &file) const { return _file == file; }
 
   void DumpASM(std::ostream &os) const;
 

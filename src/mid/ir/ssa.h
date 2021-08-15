@@ -637,6 +637,7 @@ public:
   const SSAPtr       &LHS()   const { return (*this)[0].value(); }
   const SSAPtr       &RHS()   const { return (*this)[1].value(); }
   std::string         opStr() const;
+  void SetOp(Operator op) { _op = op; }
 
   // methods for dyn_cast
   static inline bool classof(ICmpInst *) { return true; }

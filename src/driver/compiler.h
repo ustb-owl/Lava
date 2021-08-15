@@ -24,6 +24,7 @@ private:
   mid::Evaluator       _eval;
   mid::IRBuilder      *_irbuilder;
   back::CodeGenerator  _codegen;
+  std::string          _file;
 
   bool            _dump_ast, _dump_ir;
   bool            _dump_pass_info, _dump_code;
@@ -52,6 +53,9 @@ public:
 
   // open stream
   void Open(std::istream *in);
+
+  // set file
+  void SetFile(const std::string &file) { _file = file; }
 
   // generate ast
   void Parse();
