@@ -87,8 +87,6 @@ Replace(const InstPtr &inst, const SSAPtr &value,
       _value_number.pop_back();
     }
 
-//      DBG_ASSERT(*it == inst, "iterator is not current instruction");
-//      block->insts().erase(it);
   }
 }
 
@@ -98,7 +96,7 @@ FindValue(const std::shared_ptr<BinaryOperator> &binary_inst) {
   SSAPtr lhs = ValueOf(binary_inst->LHS());
   SSAPtr rhs = ValueOf(binary_inst->RHS());
 
-  for (auto i = 0; i < _value_number.size(); i++) {
+  for (std::size_t i = 0; i < _value_number.size(); i++) {
     auto[k, v] = _value_number[i];
 
     auto bin_value = dyn_cast<BinaryOperator>(binary_inst);
@@ -127,7 +125,7 @@ FindValue(const std::shared_ptr<BinaryOperator> &binary_inst) {
 
 SSAPtr GlobalValueNumberingGlobalCodeMotion::
 FindValue(const std::shared_ptr<AccessInst> &access_inst) {
-  for (auto i = 0; i < _value_number.size(); i++) {
+  for (std::size_t i = 0; i < _value_number.size(); i++) {
     auto[k, v] = _value_number[i];
     auto gep = dyn_cast<AccessInst>(k);
     if (gep && (gep != access_inst)) {
@@ -148,7 +146,7 @@ FindValue(const std::shared_ptr<CallInst> &call_inst) {
   auto callee = dyn_cast<Function>(call_inst->Callee());
   if (!_func_infos[callee.get()].IsPure()) return call_inst;
 
-  for (auto i = 0; i < _value_number.size(); i++) {
+  for (std::size_t i = 0; i < _value_number.size(); i++) {
     auto[k, v] = _value_number[i];
     auto call_value = dyn_cast<CallInst>(k);
     if (call_value && (call_value->Callee() == call_inst->Callee())) {
@@ -177,7 +175,7 @@ FindValue(const std::shared_ptr<ICmpInst> &icmp_inst) {
   auto lhs1 = ValueOf(icmp_inst->LHS());
   auto rhs1 = ValueOf(icmp_inst->RHS());
 
-  for (auto i = 0; i < _value_number.size(); i++) {
+  for (std::size_t i = 0; i < _value_number.size(); i++) {
     auto[k, v] = _value_number[i];
     auto num_value = dyn_cast<ICmpInst>(k);
     if (num_value && (num_value != icmp_inst)) {
@@ -263,7 +261,7 @@ GlobalValueNumbering(const FuncPtr &F) {
         auto first = ValueOf((*phi_node)[0].value());
         bool all_same = true;
         auto size = phi_node->size();
-        for (auto i = 1; (i < size) && all_same; i++) {
+        for (std::size_t i = 1; (i < size) && all_same; i++) {
           all_same = first == ValueOf((*phi_node)[i].value());
         }
         if (all_same) Replace(phi_node, first, BB, it);

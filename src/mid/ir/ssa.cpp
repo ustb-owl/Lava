@@ -1077,7 +1077,7 @@ void PhiNode::Dump(std::ostream &os, IdManager &id_mgr) const {
   auto guard = InExpr();
   os << "phi ";
   DumpType(os, type());
-  for (auto i = 0; i < this->size(); i++) {
+  for (std::size_t i = 0; i < this->size(); i++) {
     os << " [ ";
     DumpValue(os, id_mgr, (*this)[i].value());
     os << ", %";

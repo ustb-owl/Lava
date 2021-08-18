@@ -29,6 +29,7 @@ void LinearScanRegisterAllocation::runOn(const LLFunctionPtr &func) {
     auto i = _live_intervals.size();
     _live_intervals.insert({it.second, it.first});
     DBG_ASSERT(_live_intervals.size() - 1 == i, "insert live interval failed");
+    static_cast<void>(i);
   }
   DBG_ASSERT(_live_intervals.size() == live_intervals.size(), "size of _live_intervals is wrong");
 

@@ -558,7 +558,7 @@ void LLModule::HandlePhiNode(const mid::FuncPtr &function) {
         auto vreg = LLOperand::Virtual(_virtual_max);
         auto dst = CreateOperand(inst);
         phi_dst.emplace_back(dst, vreg);
-        for (auto i = 0; i < phi_inst->size(); i++) {
+        for (std::size_t i = 0; i < phi_inst->size(); i++) {
           auto pred = dyn_cast<BasicBlock>(block->GetOperand(i));
           DBG_ASSERT(pred != nullptr, "get predecessor of current block failed");
 

@@ -58,22 +58,14 @@ bool PassManager::RunPass(const PassPtr &pass) {
 }
 
 void PassManager::RunPasses(const PassPtrList &passes) {
-  bool changed = true;
   PassNameSet valid;
-
-//  while (changed) {
-  changed = false;
-
-
   // run all passes
   for (const auto &it : passes) {
-
-    changed = RunPass(valid, it);
+    RunPass(valid, it);
   }
 }
 
 bool PassManager::RunRequiredPasses(PassNameSet &valid, const PassInfoPtr &info) {
-  bool changed = false;
   for (const auto &name : info->required_passes()) {
 
     // get pointer of pass
@@ -89,7 +81,7 @@ bool PassManager::RunRequiredPasses(PassNameSet &valid, const PassInfoPtr &info)
 
     RunPass(valid, it->second);
   }
-  return changed;
+  return false;
 }
 
 void PassManager::InvalidatePass(PassNameSet &valid, const std::string &name) {

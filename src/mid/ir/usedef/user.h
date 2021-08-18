@@ -52,20 +52,12 @@ public:
   }
 
   void Reserve() {
-    for (auto i = 0; i < _operands_num; i++) {
+    for (unsigned int i = 0; i < _operands_num; i++) {
       _operands.push_back(Use(nullptr, this));
     }
   }
 
   void RemoveValue(Value *V) {
-//    for (auto it = _operands.begin(); it != _operands.end();) {
-//      if (it->value().get() == V) {
-//        it = _operands.erase(it);
-//      } else {
-//        it++;
-//      }
-//    }
-//
     _operands.erase(
         std::remove_if(_operands.begin(), _operands.end(),
               [&V](const Use &use) {

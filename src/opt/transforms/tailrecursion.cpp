@@ -36,7 +36,7 @@ public:
           // else return x;
           // phi1 = phi [F()], [x]
           if (auto phi_node = dyn_cast<PhiNode>(ret_value)) {
-            for (auto i = 0; i < phi_node->size(); i++) {
+            for (std::size_t i = 0; i < phi_node->size(); i++) {
               if (auto call_inst = dyn_cast<CallInst>((*phi_node)[i].value())) {
                 if (dyn_cast<Function>(call_inst->Callee()) == F) {
 
@@ -55,13 +55,11 @@ public:
             // return F();
             // %1 = call F; ret %1
             if (dyn_cast<Function>(call_inst->Callee()) == F) {
-              bool is_tail = false;
               for (const auto &bb_use : *F) {
                 auto bb = dyn_cast<BasicBlock>(bb_use.value());
                 for (auto inst_it = bb->insts().begin(); inst_it != bb->insts().end(); inst_it++) {
                   if (*inst_it == call_inst) {
                     if (std::next(std::next(inst_it)) == bb->insts().end()) {
-                      is_tail = true;
                       goto found;
                     }
                   }

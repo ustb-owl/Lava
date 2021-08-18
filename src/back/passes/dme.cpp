@@ -65,7 +65,7 @@ void DeadMoveElimination::runOn(const LLFunctionPtr &func) {
               // mov r0, 2
               // add dst, r0, r1, ... => add dst, 2, r1, ...
               auto operands = binary_inst->operands();
-              for (auto i = 0; i < operands.size(); i++) {
+              for (std::size_t i = 0; i < operands.size(); i++) {
                 if (src->IsImmediate()) break;
                 if (dst == operands[i]) {
                   changed = true;
@@ -78,7 +78,7 @@ void DeadMoveElimination::runOn(const LLFunctionPtr &func) {
               // store r0, [...] => store r2, [...]
               // store ..., [r0] => store ..., [r2]
               auto operands = store_inst->operands();
-              for (auto i = 0; i < operands.size(); i++) {
+              for (std::size_t i = 0; i < operands.size(); i++) {
                 if (src->IsImmediate() && i < 2) continue;
                 if (dst == operands[i]) {
                   changed = true;
@@ -90,7 +90,7 @@ void DeadMoveElimination::runOn(const LLFunctionPtr &func) {
               // ldr rd, [r0] => ldr rd, [r2]
               // ldr r0, [rs] => ldr r2, [rs]
               auto operands = load_inst->operands();
-              for (auto i = 0; i < operands.size(); i++) {
+              for (std::size_t i = 0; i < operands.size(); i++) {
                 if (src->IsImmediate() && i < 2) continue;
                 if (dst == operands[i]) {
                   changed = true;
