@@ -1,5 +1,3 @@
-// reference: LLVM 2.0
-
 // Provide definitions of macros so that users of this file do not have to
 // define everything to use it...
 //
