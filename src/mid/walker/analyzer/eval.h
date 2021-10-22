@@ -6,15 +6,15 @@
 #include <cstdint>
 
 #include "define/ast.h"
-
 #include "lib/guard.h"
 #include "lib/nested.h"
+#include "mid/visitor/visitor.h"
 
 namespace lava::mid {
 
 // perform compile time evaluation
 // NOTE: this evaluator will only try to eval all 'const' definitions
-class Evaluator {
+class Evaluator : public Visitor<std::optional<std::uint32_t>> {
  public:
   Evaluator() { Reset(); }
 
@@ -24,39 +24,39 @@ class Evaluator {
         xstl::MakeNestedMap<std::string, std::optional<std::uint32_t>>();
   }
 
-  std::optional<std::uint32_t> EvalOn(define::TranslationUnitDecl &ast);
-  std::optional<std::uint32_t> EvalOn(define::VariableDecl &ast);
-  std::optional<std::uint32_t> EvalOn(define::VariableDefAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::InitListAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::ProtoTypeAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::FunctionDefAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::FuncParamAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::StructDefAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::EnumDefAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::TypeAliasAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::StructElemAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::StructElemDefAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::EnumElemAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::CompoundStmt &ast);
-  std::optional<std::uint32_t> EvalOn(define::IfElseStmt &ast);
-  std::optional<std::uint32_t> EvalOn(define::WhileStmt &ast);
-  std::optional<std::uint32_t> EvalOn(define::ControlAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::BinaryStmt &ast);
-  std::optional<std::uint32_t> EvalOn(define::CastStmt &ast);
-  std::optional<std::uint32_t> EvalOn(define::UnaryStmt &ast);
-  std::optional<std::uint32_t> EvalOn(define::IndexAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::CallStmt &ast);
-  std::optional<std::uint32_t> EvalOn(define::AccessAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::IntAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::CharAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::StringAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::VariableAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::PrimTypeAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::StructTypeAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::EnumTypeAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::ConstTypeAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::PointerTypeAST &ast);
-  std::optional<std::uint32_t> EvalOn(define::UserTypeAST &ast);
+  std::optional<std::uint32_t> visit(TranslationUnitDecl  *) override;
+  std::optional<std::uint32_t> visit(VariableDecl         *) override;
+  std::optional<std::uint32_t> visit(VariableDefAST       *) override;
+  std::optional<std::uint32_t> visit(InitListAST          *) override;
+  std::optional<std::uint32_t> visit(ProtoTypeAST         *) override;
+  std::optional<std::uint32_t> visit(FunctionDefAST       *) override;
+  std::optional<std::uint32_t> visit(FuncParamAST         *) override;
+  std::optional<std::uint32_t> visit(StructDefAST         *) override;
+  std::optional<std::uint32_t> visit(EnumDefAST           *) override;
+  std::optional<std::uint32_t> visit(TypeAliasAST         *) override;
+  std::optional<std::uint32_t> visit(StructElemAST        *) override;
+  std::optional<std::uint32_t> visit(StructElemDefAST     *) override;
+  std::optional<std::uint32_t> visit(EnumElemAST          *) override;
+  std::optional<std::uint32_t> visit(CompoundStmt         *) override;
+  std::optional<std::uint32_t> visit(IfElseStmt           *) override;
+  std::optional<std::uint32_t> visit(WhileStmt            *) override;
+  std::optional<std::uint32_t> visit(ControlAST           *) override;
+  std::optional<std::uint32_t> visit(BinaryStmt           *) override;
+  std::optional<std::uint32_t> visit(CastStmt             *) override;
+  std::optional<std::uint32_t> visit(UnaryStmt            *) override;
+  std::optional<std::uint32_t> visit(IndexAST             *) override;
+  std::optional<std::uint32_t> visit(CallStmt             *) override;
+  std::optional<std::uint32_t> visit(AccessAST            *) override;
+  std::optional<std::uint32_t> visit(IntAST               *) override;
+  std::optional<std::uint32_t> visit(CharAST              *) override;
+  std::optional<std::uint32_t> visit(StringAST            *) override;
+  std::optional<std::uint32_t> visit(VariableAST          *) override;
+  std::optional<std::uint32_t> visit(PrimTypeAST          *) override;
+  std::optional<std::uint32_t> visit(StructTypeAST        *) override;
+  std::optional<std::uint32_t> visit(EnumTypeAST          *) override;
+  std::optional<std::uint32_t> visit(ConstTypeAST         *) override;
+  std::optional<std::uint32_t> visit(PointerTypeAST       *) override;
+  std::optional<std::uint32_t> visit(UserTypeAST          *) override;
 
  private:
   // definition of environment that storing evaluated values

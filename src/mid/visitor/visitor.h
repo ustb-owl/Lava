@@ -19,10 +19,10 @@ public:
   virtual RETURN_TYPE visit(VariableAST         *) = 0;
   virtual RETURN_TYPE visit(VariableDecl        *) = 0;
   virtual RETURN_TYPE visit(VariableDefAST      *) = 0;
-  virtual RETURN_TYPE visit(InitListAST         *) = 0; // new
-  virtual RETURN_TYPE visit(StructDefAST        *) = 0; // new
+  virtual RETURN_TYPE visit(InitListAST         *) = 0;
+  virtual RETURN_TYPE visit(StructDefAST        *) = 0;
   virtual RETURN_TYPE visit(EnumDefAST          *) = 0;
-  virtual RETURN_TYPE visit(TypeAliasAST        *) = 0; // new
+  virtual RETURN_TYPE visit(TypeAliasAST        *) = 0;
   virtual RETURN_TYPE visit(StructElemAST       *) = 0;
   virtual RETURN_TYPE visit(StructElemDefAST    *) = 0;
   virtual RETURN_TYPE visit(EnumElemAST         *) = 0;

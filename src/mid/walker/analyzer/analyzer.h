@@ -11,52 +11,53 @@
 #include "lib/guard.h"
 #include "lib/nested.h"
 #include "define/ast.h"
+#include "mid/visitor/visitor.h"
 #include "mid/walker/analyzer/eval.h"
 
 namespace lava::mid {
 
 // perform semantic analysis
-class Analyzer {
- public:
+class Analyzer : public Visitor<TypePtr> {
+public:
   Analyzer(Evaluator &eval) : eval_(eval) { Reset(); }
 
   void Reset();
 
-  define::TypePtr AnalyzeOn(define::TranslationUnitDecl &ast);
-  define::TypePtr AnalyzeOn(define::VariableDecl &ast);
-  define::TypePtr AnalyzeOn(define::VariableDefAST &ast);
-  define::TypePtr AnalyzeOn(define::InitListAST &ast);
-  define::TypePtr AnalyzeOn(define::ProtoTypeAST &ast);
-  define::TypePtr AnalyzeOn(define::FunctionDefAST &ast);
-  define::TypePtr AnalyzeOn(define::FuncParamAST &ast);
-  define::TypePtr AnalyzeOn(define::StructDefAST &ast);
-  define::TypePtr AnalyzeOn(define::EnumDefAST &ast);
-  define::TypePtr AnalyzeOn(define::TypeAliasAST &ast);
-  define::TypePtr AnalyzeOn(define::StructElemAST &ast);
-  define::TypePtr AnalyzeOn(define::StructElemDefAST &ast);
-  define::TypePtr AnalyzeOn(define::EnumElemAST &ast);
-  define::TypePtr AnalyzeOn(define::CompoundStmt &ast);
-  define::TypePtr AnalyzeOn(define::IfElseStmt &ast);
-  define::TypePtr AnalyzeOn(define::WhileStmt &ast);
-  define::TypePtr AnalyzeOn(define::ControlAST &ast);
-  define::TypePtr AnalyzeOn(define::BinaryStmt &ast);
-  define::TypePtr AnalyzeOn(define::CastStmt &ast);
-  define::TypePtr AnalyzeOn(define::UnaryStmt &ast);
-  define::TypePtr AnalyzeOn(define::IndexAST &ast);
-  define::TypePtr AnalyzeOn(define::CallStmt &ast);
-  define::TypePtr AnalyzeOn(define::AccessAST &ast);
-  define::TypePtr AnalyzeOn(define::IntAST &ast);
-  define::TypePtr AnalyzeOn(define::CharAST &ast);
-  define::TypePtr AnalyzeOn(define::StringAST &ast);
-  define::TypePtr AnalyzeOn(define::VariableAST &ast);
-  define::TypePtr AnalyzeOn(define::PrimTypeAST &ast);
-  define::TypePtr AnalyzeOn(define::StructTypeAST &ast);
-  define::TypePtr AnalyzeOn(define::EnumTypeAST &ast);
-  define::TypePtr AnalyzeOn(define::ConstTypeAST &ast);
-  define::TypePtr AnalyzeOn(define::PointerTypeAST &ast);
-  define::TypePtr AnalyzeOn(define::UserTypeAST &ast);
+  TypePtr visit(TranslationUnitDecl *) override;
+  TypePtr visit(VariableDecl        *) override;
+  TypePtr visit(VariableDefAST      *) override;
+  TypePtr visit(InitListAST         *) override;
+  TypePtr visit(ProtoTypeAST        *) override;
+  TypePtr visit(FunctionDefAST      *) override;
+  TypePtr visit(FuncParamAST        *) override;
+  TypePtr visit(StructDefAST        *) override;
+  TypePtr visit(EnumDefAST          *) override;
+  TypePtr visit(TypeAliasAST        *) override;
+  TypePtr visit(StructElemAST       *) override;
+  TypePtr visit(StructElemDefAST    *) override;
+  TypePtr visit(EnumElemAST         *) override;
+  TypePtr visit(CompoundStmt        *) override;
+  TypePtr visit(IfElseStmt          *) override;
+  TypePtr visit(WhileStmt           *) override;
+  TypePtr visit(ControlAST          *) override;
+  TypePtr visit(BinaryStmt          *) override;
+  TypePtr visit(CastStmt            *) override;
+  TypePtr visit(UnaryStmt           *) override;
+  TypePtr visit(IndexAST            *) override;
+  TypePtr visit(CallStmt            *) override;
+  TypePtr visit(AccessAST           *) override;
+  TypePtr visit(IntAST              *) override;
+  TypePtr visit(CharAST             *) override;
+  TypePtr visit(StringAST           *) override;
+  TypePtr visit(VariableAST         *) override;
+  TypePtr visit(PrimTypeAST         *) override;
+  TypePtr visit(StructTypeAST       *) override;
+  TypePtr visit(EnumTypeAST         *) override;
+  TypePtr visit(ConstTypeAST        *) override;
+  TypePtr visit(PointerTypeAST      *) override;
+  TypePtr visit(UserTypeAST         *) override;
 
- private:
+private:
   // pointer of symbol table (environment)
   using EnvPtr = xstl::NestedMapPtr<std::string, define::TypePtr>;
 

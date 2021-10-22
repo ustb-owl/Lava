@@ -4,6 +4,7 @@
 #include <ostream>
 #include <optional>
 #include <memory>
+#include <utility>
 #include <vector>
 #include <string>
 #include <cstdint>
@@ -18,6 +19,7 @@
 
 // forward declarations for visitor pattern
 namespace lava::mid {
+//class Visitor;
 class Analyzer;
 class Evaluator;
 class IRBuilder;
@@ -134,8 +136,8 @@ class VariableDecl : public BaseAST {
 // variable/constant definition
 class VariableDefAST : public BaseAST {
  public:
-  VariableDefAST(const std::string &id, ASTPtrList arr_lens, ASTPtr init)
-      : id_(id), arr_lens_(std::move(arr_lens)), init_(std::move(init)) {}
+  VariableDefAST(std::string id, ASTPtrList arr_lens, ASTPtr init)
+      : id_(std::move(id)), arr_lens_(std::move(arr_lens)), init_(std::move(init)) {}
 
   bool IsLiteral() const override { return false; }
   bool IsInitList() const override { return false; }
@@ -196,8 +198,8 @@ class InitListAST : public BaseAST {
 // function declaration
 class ProtoTypeAST : public BaseAST {
  public:
-  ProtoTypeAST(ASTPtr type, const std::string &id, ASTPtrList params)
-      : type_(std::move(type)), id_(id), params_(std::move(params)) {}
+  ProtoTypeAST(ASTPtr type, std::string id, ASTPtrList params)
+      : type_(std::move(type)), id_(std::move(id)), params_(std::move(params)) {}
 
   bool IsLiteral() const override { return false; }
   bool IsInitList() const override { return false; }
@@ -245,8 +247,8 @@ class FunctionDefAST : public BaseAST {
 //       but it's first element can be 'nullptr' (e.g. int arg[])
 class FuncParamAST : public BaseAST {
  public:
-  FuncParamAST(ASTPtr type, const std::string &id, ASTPtrList arr_lens)
-      : type_(std::move(type)), id_(id), arr_lens_(std::move(arr_lens)) {}
+  FuncParamAST(ASTPtr type, std::string id, ASTPtrList arr_lens)
+      : type_(std::move(type)), id_(std::move(id)), arr_lens_(std::move(arr_lens)) {}
 
   bool IsLiteral() const override { return false; }
   bool IsInitList() const override { return false; }
@@ -270,8 +272,8 @@ class FuncParamAST : public BaseAST {
 // structure definition
 class StructDefAST : public BaseAST {
  public:
-  StructDefAST(const std::string &id, ASTPtrList elems)
-      : id_(id), elems_(std::move(elems)) {}
+  StructDefAST(std::string id, ASTPtrList elems)
+      : id_(std::move(id)), elems_(std::move(elems)) {}
 
   bool IsLiteral() const override { return false; }
   bool IsInitList() const override { return false; }
@@ -294,8 +296,8 @@ class StructDefAST : public BaseAST {
 // NOTE: property 'id' can be empty
 class EnumDefAST : public BaseAST {
  public:
-  EnumDefAST(const std::string &id, ASTPtrList elems)
-      : id_(id), elems_(std::move(elems)) {}
+  EnumDefAST(std::string id, ASTPtrList elems)
+      : id_(std::move(id)), elems_(std::move(elems)) {}
 
   bool IsLiteral() const override { return false; }
   bool IsInitList() const override { return false; }
@@ -317,8 +319,8 @@ class EnumDefAST : public BaseAST {
 // type alias
 class TypeAliasAST : public BaseAST {
  public:
-  TypeAliasAST(ASTPtr type, const std::string &id)
-      : type_(std::move(type)), id_(id) {}
+  TypeAliasAST(ASTPtr type, std::string id)
+      : type_(std::move(type)), id_(std::move(id)) {}
 
   bool IsLiteral() const override { return false; }
   bool IsInitList() const override { return false; }
@@ -363,8 +365,8 @@ class StructElemAST : public BaseAST {
 // element definition of structure
 class StructElemDefAST : public BaseAST {
  public:
-  StructElemDefAST(const std::string &id, ASTPtrList arr_lens)
-      : id_(id), arr_lens_(std::move(arr_lens)) {}
+  StructElemDefAST(std::string id, ASTPtrList arr_lens)
+      : id_(std::move(id)), arr_lens_(std::move(arr_lens)) {}
 
   bool IsLiteral() const override { return false; }
   bool IsInitList() const override { return false; }
@@ -386,8 +388,8 @@ class StructElemDefAST : public BaseAST {
 // element of enumeration
 class EnumElemAST : public BaseAST {
  public:
-  EnumElemAST(const std::string &id, ASTPtr expr)
-      : id_(id), expr_(std::move(expr)) {}
+  EnumElemAST(std::string id, ASTPtr expr)
+      : id_(std::move(id)), expr_(std::move(expr)) {}
 
   bool IsLiteral() const override { return false; }
   bool IsInitList() const override { return false; }
@@ -737,7 +739,7 @@ class CharAST : public BaseAST {
 // string literal
 class StringAST : public BaseAST {
  public:
-  StringAST(const std::string &str) : str_(str) {}
+  StringAST(std::string str) : str_(std::move(str)) {}
 
   bool IsLiteral() const override { return true; }
   bool IsInitList() const override { return false; }
@@ -757,7 +759,7 @@ class StringAST : public BaseAST {
 // identifier
 class VariableAST : public BaseAST {
  public:
-  VariableAST(const std::string &id) : id_(id) {}
+  VariableAST(std::string id) : id_(std::move(id)) {}
 
   bool IsLiteral() const override { return false; }
   bool IsInitList() const override { return false; }
@@ -797,7 +799,7 @@ class PrimTypeAST : public BaseAST {
 // structure type
 class StructTypeAST : public BaseAST {
  public:
-  StructTypeAST(const std::string &id) : id_(id) {}
+  StructTypeAST(std::string id) : id_(std::move(id)) {}
 
   bool IsLiteral() const override { return false; }
   bool IsInitList() const override { return false; }
@@ -817,7 +819,7 @@ class StructTypeAST : public BaseAST {
 // enumeration type
 class EnumTypeAST : public BaseAST {
  public:
-  EnumTypeAST(const std::string &id) : id_(id) {}
+  EnumTypeAST(std::string id) : id_(std::move(id)) {}
 
   bool IsLiteral() const override { return false; }
   bool IsInitList() const override { return false; }
@@ -881,7 +883,7 @@ class PointerTypeAST : public BaseAST {
 // user defined type (type aliases)
 class UserTypeAST : public BaseAST {
  public:
-  UserTypeAST(const std::string &id) : id_(id) {}
+  UserTypeAST(std::string id) : id_(std::move(id)) {}
 
   bool IsLiteral() const override { return false; }
   bool IsInitList() const override { return false; }

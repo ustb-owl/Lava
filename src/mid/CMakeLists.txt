@@ -4,7 +4,6 @@ add_library(mid
         ../common/idmanager.cpp
         ir/usedef/use.cpp
         ir/usedef/value.cpp
-        walker/analyzer/sema.cpp
         walker/analyzer/eval.cpp
         walker/analyzer/analyzer.cpp
         walker/irbuilder/irbuilder.cpp
