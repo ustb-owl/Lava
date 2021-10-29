@@ -43,18 +43,13 @@ public:
   }
 
   void AddValue(const SSAPtr &V) {
-    DBG_ASSERT((_operands.size() < _operands_num) || ( _operands_num == 0), " out of range");
+//    DBG_ASSERT((_operands.size() < _operands_num) || ( _operands_num == 0), " out of range");
     _operands.push_back(Use(V, this));
   }
 
   void RemoveValue(const SSAPtr& V) {
-    return RemoveValue(V.get());
-  }
-
-  void Reserve() {
-    for (unsigned int i = 0; i < _operands_num; i++) {
-      _operands.push_back(Use(nullptr, this));
-    }
+    RemoveValue(V.get());
+    _operands_num = _operands.size();
   }
 
   void RemoveValue(Value *V) {
@@ -63,6 +58,22 @@ public:
               [&V](const Use &use) {
                   return use.value().get() == V;
               }),_operands.end());
+    _operands_num = _operands.size();
+  }
+
+  void RemoveValue(unsigned idx) {
+    DBG_ASSERT(idx < size(), "idx out of bound");
+    auto it = _operands.begin();
+    for (unsigned i = 0; i < idx; i++) it++;
+    DBG_ASSERT(it != _operands.end(), "it is out of bound");
+    _operands.erase(it);
+    _operands_num = _operands.size();
+  }
+
+  void Reserve() {
+    for (unsigned int i = 0; i < _operands_num; i++) {
+      _operands.push_back(Use(nullptr, this));
+    }
   }
 
   // clear all uses
@@ -70,7 +81,7 @@ public:
 
   // access value in current user
   Use &operator[](std::size_t pos) {
-    if(_operands_num == 0) { _operands_num = _operands.size(); }
+    _operands_num = _operands.size();
     DBG_ASSERT(pos < _operands_num, "position out of range");
     return _operands[pos];
   }

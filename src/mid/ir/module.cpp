@@ -3,6 +3,7 @@
 #include "module.h"
 #include "constant.h"
 #include "common/casting.h"
+#include "mid/ir/dump_cfg.h"
 #include "common/idmanager.h"
 
 using namespace lava::define;
@@ -549,6 +550,39 @@ bool Module::IsGlobalVariable(const SSAPtr &var) const {
     if (var == it) return true;
   }
   return false;
+}
+
+void Module::DumpCFG() {
+#ifdef ENABLE_CFG
+  IdManager id_mgr;
+  GVC_t *gvc = gvContext();
+  graph_t *g = agopen((char *) "g", Agdirected, nullptr);
+
+  MakeGlobalVariables(g, this, id_mgr);
+
+  auto dom = lava::opt::PassManager::GetAnalysis<lava::opt::DominanceInfo>("DominanceInfo");
+  dom->initialize();
+
+  for (const auto &func : _functions) {
+    dom->runOnFunction(func);
+    MakeCFG(g, func, id_mgr);
+  }
+  dom->finalize();
+
+  gvLayout(gvc, g, "dot");
+//  gvRender(gvc, g, "dot", stdout);
+  gvRenderFilename(gvc, g, "pdf", "ir.pdf");
+  gvRenderFilename(gvc, g, "png", "ir.png");
+  gvRenderFilename(gvc, g, "svg", "ir.svg");
+
+
+
+  gvFreeLayout(gvc, g);
+  agclose(g);
+  gvFreeContext(gvc);
+#else
+  ERROR("Build with graphviz please");
+#endif
 }
 
 

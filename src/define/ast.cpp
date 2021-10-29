@@ -267,13 +267,13 @@ void IntAST::Dump(std::ostream &os) const {
 
 void CharAST::Dump(std::ostream &os) const {
   std::ostringstream oss;
-  utils::DumpChar(oss, c_);
+  lib::DumpChar(oss, c_);
   ATOM(Char, std::make_tuple("c", oss.str()));
 }
 
 void StringAST::Dump(std::ostream &os) const {
   std::ostringstream oss;
-  utils::DumpStr(oss, str_);
+  lib::DumpStr(oss, str_);
   ATOM(String, std::make_tuple("str", oss.str()));
 }
 

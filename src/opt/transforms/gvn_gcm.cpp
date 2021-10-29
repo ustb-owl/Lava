@@ -1,8 +1,9 @@
 #include "gvn_gcm.h"
+#include "opt/transforms/blocksimp.h"
 
 int GlobalValueNumbering;
 
-#define OPEN 0
+#define OPEN 1
 
 namespace lava::opt {
 
@@ -16,6 +17,7 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
 
   _cur_func = F.get();
 
+  GVN:
   GlobalValueNumbering(F);
 
   // clear value number, otherwise we can't remove dead code
@@ -23,10 +25,19 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
 
   // run dead code elimination before gcm
   auto dce = PassManager::GetTransformPass<DeadCodeElimination>("DeadCodeElimination");
-  dce->runOnFunction(F);
+  dce->initialize();
+//  dce->runOnFunction(F);
   dce->finalize();
 
-#if 1
+  // run block simplification
+  auto blk = PassManager::GetTransformPass<BlockSimplification>("BlockSimplification");
+  blk->initialize();
+  auto changed = false;
+//  changed = blk->runOnFunction(F);
+  blk->finalize();
+  if (changed) goto GVN;
+
+#if 0
   if (_cnt > 0) return _changed;
   if (!A->IsNeedGcm()) return _changed;
   CollectInstBlockMap(F);
@@ -216,8 +227,8 @@ SSAPtr GlobalValueNumberingGlobalCodeMotion::ValueOf(const SSAPtr &value) {
   }
 #if OPEN
   else if (auto icmp_inst = dyn_cast<ICmpInst>(value)) {
-      _value_number[idx].second = FindValue(icmp_inst);
-    }
+    _value_number[idx].second = FindValue(icmp_inst);
+  }
 #endif
 
   return _value_number[idx].second;
@@ -268,14 +279,14 @@ GlobalValueNumbering(const FuncPtr &F) {
       } else if (auto icmp_inst = dyn_cast<ICmpInst>(*it)) {
 #if OPEN
         // try to get lhs and rhs as constant value
-          auto lhs_const = dyn_cast<ConstantInt>(icmp_inst->LHS());
-          auto rhs_const = dyn_cast<ConstantInt>(icmp_inst->RHS());
-          if ((lhs_const != nullptr) && (rhs_const != nullptr)) {
-            auto const_inst = icmp_inst->EvalArithOnConst();
-            Replace(icmp_inst, const_inst, BB, it);
-          } else {
-            Replace(icmp_inst, ValueOf(icmp_inst), BB, it);
-          }
+        auto lhs_const = dyn_cast<ConstantInt>(icmp_inst->LHS());
+        auto rhs_const = dyn_cast<ConstantInt>(icmp_inst->RHS());
+        if ((lhs_const != nullptr) && (rhs_const != nullptr)) {
+          auto const_inst = icmp_inst->EvalArithOnConst();
+          Replace(icmp_inst, const_inst, BB, it);
+        } else {
+          Replace(icmp_inst, ValueOf(icmp_inst), BB, it);
+        }
 #endif
       }
 

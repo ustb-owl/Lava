@@ -1,5 +1,5 @@
-#include "compiler.h"
 #include <sstream>
+#include "compiler.h"
 
 using namespace lava::opt;
 
@@ -71,6 +71,10 @@ void Compiler::CodeGeneAction() {
   _codegen.RegisterPasses();
   _codegen.CodeGene();
   _codegen.RunPasses();
+}
+
+void Compiler::DumpCFG() const {
+  this->_irbuilder->module().DumpCFG();
 }
 
 }

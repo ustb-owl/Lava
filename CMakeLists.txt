@@ -19,6 +19,24 @@ else ()
     set (OPT_FLAGS "-O2")
 endif ()
 
+#add graphviz
+option(ENABLE_CFG "Dump CFG picture" OFF)
+MESSAGE(STATUS "CFG option ${ENABLE_CFG}")
+if (${ENABLE_CFG})
+    if (NOT GRAPHVIZ_HOME)
+        set (GRAPHVIZ_HOME "$ENV{GRAPHVIZ_HOME}")
+    endif()
+    if (NOT GRAPHVIZ_HOME)
+        message (FATAL_ERROR "GRAPHVIZ_HOME isn't set. Use -DGRAPHVIZ_HOME=<path_to_graphviz> to specify graphviz lib")
+    else()
+        message (STATUS "Check for GRAPHVIZ_HOME: ${GRAPHVIZ_HOME}")
+    endif()
+
+    add_definitions (-DENABLE_CFG)
+    include_directories(${GRAPHVIZ_HOME}/include/graphviz)
+    link_directories(${GRAPHVIZ_HOME}/lib)
+endif()
+
 set(LAVA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(LAVA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
@@ -36,10 +54,11 @@ add_subdirectory("${LAVA_SOURCE_DIR}/opt")
 add_subdirectory("${LAVA_SOURCE_DIR}/back")
 add_subdirectory("${LAVA_SOURCE_DIR}/driver")
 
+
 # executable
 add_executable(lacc main.cpp link.cpp)
 
-IF (APPLE)
+if (APPLE)
     target_link_libraries(lacc
         lava::front
         lava::definelib
@@ -48,7 +67,10 @@ IF (APPLE)
         lava::back
         lava::driver
     )
-ELSEIF (UNIX)
+    if (${ENABLE_CFG})
+      target_link_libraries(lacc gvc cgraph cdt)
+    endif()
+elseif (UNIX)
     target_link_libraries(lacc
         -Wl,--start-group
         lava::front
@@ -58,5 +80,8 @@ ELSEIF (UNIX)
         lava::back
         lava::driver
         -Wl,--end-group
-)
-ENDIF()
+    )
+    if (${ENABLE_CFG})
+        target_link_libraries(lacc gvc cgraph cdt)
+    endif()
+endif()

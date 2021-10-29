@@ -373,10 +373,13 @@ std::vector<BasicBlock *> BasicBlock::successors() {
   std::vector<BasicBlock *> succes;
   auto inst = insts().back();
   if (auto jumpInst = dyn_cast<JumpInst>(inst)) {
-    succes.push_back(dyn_cast<BasicBlock>(jumpInst->target()).get());
+    if (jumpInst->size())
+      succes.push_back(dyn_cast<BasicBlock>(jumpInst->target()).get());
   } else if (auto branchInst = dyn_cast<BranchInst>(inst)) {
-    succes.push_back(dyn_cast<BasicBlock>(branchInst->true_block()).get());
-    succes.push_back(dyn_cast<BasicBlock>(branchInst->false_block()).get());
+    if (auto true_block = branchInst->true_block())
+      succes.push_back(dyn_cast<BasicBlock>(true_block).get());
+    if (auto false_block = branchInst->false_block())
+      succes.push_back(dyn_cast<BasicBlock>(false_block).get());
   } else {
     // do nothing, maybe function exit
   }
@@ -599,6 +602,27 @@ bool NeedLoad(const SSAPtr &ptr) {
   return true;
 }
 
+std::vector<BlockPtr> PhiNode::blocks() const {
+  std::vector<BlockPtr> res;
+  for (const auto &it : (*_block)) {
+    auto pred = dyn_cast<BasicBlock>(it.value());
+    DBG_ASSERT(pred != nullptr, "pred is not a basic block");
+    res.push_back(pred);
+  }
+  return res;
+}
+
+BlockPtr PhiNode::getIncomingBlock(const Use &val) const  {
+  DBG_ASSERT(val.getUser() == this, "val is not PHI's use");
+  unsigned idx = 0;
+  for (const auto &it : (*this)) {
+    if (&it != &val) idx++;
+    else break;
+  }
+  DBG_ASSERT(idx < size(), "PHI index out of bound");
+  return blocks()[idx];
+}
+
 
 /* ---------------------------- Methods of dumping IR ------------------------------- */
 
@@ -640,7 +664,7 @@ inline void DumpValue(std::ostream &os, IdManager &id_mgr, It begin, It end) {
   }
 }
 
-inline void DumpBlockName(std::ostream &os, IdManager &id_mgr, const BasicBlock *block) {
+void DumpBlockName(std::ostream &os, IdManager &id_mgr, const BasicBlock *block) {
   auto &npos = std::string::npos;
   auto name = block->name();
   if (name.find("if.cond") != npos) {
@@ -715,26 +739,40 @@ void BinaryOperator::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << std::endl;
 }
 
-void BasicBlock::Dump(std::ostream &os, IdManager &id_mgr) const {
-  if (!_name.empty()) {
-    if (in_branch) os << "%"; // add '%' if in branch instructions
-    DumpBlockName(os, id_mgr, this);
-  } else {
-    PrintId(os, id_mgr, this);
-  }
-  if (in_expr) return;
+void BasicBlock::Dump(std::ostream &os, IdManager &id_mgr, const std::string &separator) const {
+  bool dump_cfg = false;
+  if (!separator.empty()) dump_cfg = true;
 
-  os << ":";
+  if (!dump_cfg) {
+    if (!_name.empty()) {
+      if (in_branch) os << "%"; // add '%' if in branch instructions
+      DumpBlockName(os, id_mgr, this);
+    } else {
+      PrintId(os, id_mgr, this);
+    }
+    if (in_expr) return;
 
-  // dump predecessors
-  if (!empty()) {
-    auto guard = InExpr();
-    os << " ; preds: ";
-    DumpValue(os, id_mgr, begin(), end());
+    os << ":";
+
+    // dump predecessors
+    if (!empty()) {
+      auto guard = InExpr();
+      os << " ; preds: ";
+      DumpValue(os, id_mgr, begin(), end());
+    }
   }
+
   os << std::endl;
   // dump each statements
-  for (const auto &it : _insts) DumpValue(os, id_mgr, it);
+  for (const auto &it : _insts) {
+    DumpValue(os, id_mgr, it);
+    if (dump_cfg) os << separator;
+    else os << std::endl;
+  }
+}
+
+void BasicBlock::Dump(std::ostream &os, IdManager &id_mgr) const {
+  Dump(os, id_mgr, "");
 }
 
 void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
@@ -793,7 +831,7 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
     auto it = worklist.front();
     worklist.pop();
     auto block = dyn_cast<BasicBlock>(it);
-    if (block->name() == "func_exit") {
+    if (block->name() == "func_exit" || IsSSA<ReturnInst>(block->insts().back())) {
       func_exit = it;
       bbs.push_back(nullptr);
     } else {
@@ -830,32 +868,7 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
 
   if (func_exit) {
     DumpValue(os, id_mgr, func_exit);
-    os << std::endl;
   }
-
-#if 0
-  // dump content of blocks
-  bool report_exit = false;
-  for (std::size_t i = 0; i < this->size(); i++) {
-
-    // dump function exit later
-    if (auto block = dyn_cast<BasicBlock>((*this)[i].value())) {
-      if (block->name() == "func_exit") {
-        report_exit = true;
-        continue;
-      }
-    }
-
-    DumpValue(os, id_mgr, (*this)[i]);
-    // end of block
-    os << "\n";
-  }
-
-  if (report_exit) {
-    DumpValue(os, id_mgr, (*this)[1]);
-    os << std::endl;
-  }
-#endif
 
 //   end of function
   os << "}\n" << std::endl;
@@ -866,7 +879,6 @@ void JumpInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   auto bguard = InBranch();
   os << xIndent << "br label ";
   DumpValue(os, id_mgr, target());
-  os << std::endl;
 }
 
 void ReturnInst::Dump(std::ostream &os, IdManager &id_mgr) const {
@@ -874,7 +886,6 @@ void ReturnInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << xIndent << "ret ";
   if (!RetVal()) os << "void";
   else DumpWithType(os, id_mgr, RetVal());
-//  os << std::endl;
 }
 
 void BranchInst::Dump(std::ostream &os, IdManager &id_mgr) const {
@@ -886,7 +897,6 @@ void BranchInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   DumpValue(os, id_mgr, true_block());
   os << ", label ";
   DumpValue(os, id_mgr, false_block());
-  os << std::endl;
 }
 
 void StoreInst::Dump(std::ostream &os, IdManager &id_mgr) const {
@@ -895,7 +905,6 @@ void StoreInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   DumpWithType(os, id_mgr, data());
   os << ", ";
   DumpWithType(os, id_mgr, pointer());
-  os << std::endl;
 }
 
 void AllocaInst::Dump(std::ostream &os, IdManager &id_mgr) const {
@@ -911,7 +920,6 @@ void AllocaInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   auto guard = InExpr();
   os << "alloca ";
   DumpType(os, type()->GetDerefedType());
-  os << std::endl;
 }
 
 void LoadInst::Dump(std::ostream &os, IdManager &id_mgr) const {
@@ -929,7 +937,6 @@ void LoadInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   DumpType(os, type());
   os << ", ";
   DumpWithType(os, id_mgr, Pointer());
-  os << std::endl;
 }
 
 void ArgRefSSA::Dump(std::ostream &os, IdManager &id_mgr) const {
@@ -942,16 +949,20 @@ void ConstantInt::Dump(std::ostream &os, IdManager &id_mgr) const {
 
 
 void ConstantString::Dump(std::ostream &os, IdManager &id_mgr) const {
-
+  os << _str;
 }
 
 void ConstantArray::Dump(std::ostream &os, IdManager &id_mgr) const {
+  Dump(os, id_mgr, "= global");
+}
+
+void ConstantArray::Dump(std::ostream &os, IdManager &id_mgr, const std::string &separator) const {
   if (!_name.empty()) {
     os << _name;
     if (in_expr) return;
   }
 
-  os << " = global ";
+  os << separator;
   DumpType(os, type()->GetDerefedType());
   os << " [";
   for (std::size_t i = 0; i < this->size(); i++) {
@@ -987,7 +998,7 @@ void CallInst::Dump(std::ostream &os, IdManager &id_mgr) const {
     if (i != size() - 1) os << ", ";
   }
 
-  os << ")" << std::endl;
+  os << ")";
 }
 
 void ICmpInst::Dump(std::ostream &os, IdManager &id_mgr) const {
@@ -997,7 +1008,6 @@ void ICmpInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   DumpType(os, LHS()->type());
   os << " ";
   DumpValue(os, id_mgr, begin(), end());
-  os << std::endl;
 }
 
 void CastInst::Dump(std::ostream &os, IdManager &id_mgr) const {
@@ -1018,7 +1028,6 @@ void CastInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   DumpWithType(os, id_mgr, operand());
   os << " to ";
   DumpType(os, type());
-  os << std::endl;
 }
 
 void GlobalVariable::Dump(std::ostream &os, IdManager &id_mgr) const {
@@ -1041,7 +1050,6 @@ void GlobalVariable::Dump(std::ostream &os, IdManager &id_mgr) const {
     DumpType(os, type()->GetDerefedType());
     os << " " << "zeroinitializer";
   }
-  os << std::endl;
 }
 
 void AccessInst::Dump(std::ostream &os, IdManager &id_mgr) const {
@@ -1061,7 +1069,6 @@ void AccessInst::Dump(std::ostream &os, IdManager &id_mgr) const {
     DumpWithType(os, id_mgr, index(i));
     if (i != index_len - 1) os << ", ";
   }
-  os << std::endl;
 }
 
 void UnDefineValue::Dump(std::ostream &os, IdManager &id_mgr) const {
@@ -1085,7 +1092,6 @@ void PhiNode::Dump(std::ostream &os, IdManager &id_mgr) const {
     os << " ]";
     if (i != this->size() - 1) os << ",";
   }
-  os << std::endl;
 }
 
 }

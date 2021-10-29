@@ -28,6 +28,9 @@ public:
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
+  // dump CFG
+  void Dump(std::ostream &os, IdManager &id_mgr, const std::string &separator) const;
+
   void set_parent(const FuncPtr &parent) { _parent = parent; }
 
   void AddInstToEnd(const SSAPtr &inst) { _insts.emplace_back(inst); }
@@ -797,6 +800,14 @@ public:
 
   BasicBlock *parent_block() { return _block; }
 
+  std::vector<BlockPtr> blocks() const;
+
+  BlockPtr getIncomingBlock(unsigned int i) const {
+    return blocks()[i];
+  }
+
+  BlockPtr getIncomingBlock(const Use &val) const;
+
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
@@ -814,6 +825,8 @@ public:
     return false;
   }
 };
+
+void DumpBlockName(std::ostream &os, IdManager &id_mgr, const BasicBlock *block);
 
 }
 #endif //LAVA_SSA_H

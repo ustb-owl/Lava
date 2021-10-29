@@ -51,6 +51,8 @@ public:
 
   const SSAPtr &value() const { return _value; }
 
+  const User *getUser() const { return _user; }
+
   User *getUser() { return _user; }
 
   SSAPtr operator->() { return _value; }

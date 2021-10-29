@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <functional>
 
-namespace lava::utils {
+namespace lava::lib {
 namespace __impl {
 inline void HashCombine(std::size_t &seed) {}
 
@@ -42,7 +42,7 @@ namespace std {
 template <typename T0, typename T1>
 struct hash<std::pair<T0, T1>> {
   inline std::size_t operator()(const std::pair<T0, T1> &val) const {
-    return lava::utils::HashCombine(val.first, val.second);
+    return lava::lib::HashCombine(val.first, val.second);
   }
 };
 

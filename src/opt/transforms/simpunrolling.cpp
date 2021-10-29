@@ -588,5 +588,5 @@ public:
   }
 };
 
-static PassRegisterFactory<SimpleUnrollingFactory> registry;
+//static PassRegisterFactory<SimpleUnrollingFactory> registry;
 }

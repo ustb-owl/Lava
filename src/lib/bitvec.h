@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <cassert>
 
-namespace lava::utils {
+namespace lava::lib {
 
 // vector that can holds N bits
 class BitVec {

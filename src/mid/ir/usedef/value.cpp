@@ -1,4 +1,3 @@
-#include "mid/ir/usedef/use.h"
 #include "mid/ir/usedef/user.h"
 #include "mid/ir/usedef/value.h"
 

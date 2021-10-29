@@ -21,7 +21,7 @@ using ValueNumber = std::vector<std::pair<SSAPtr, SSAPtr>>;
  */
 class GlobalValueNumberingGlobalCodeMotion : public FunctionPass {
 private:
-  int                 _cnt = 0;
+//  int                 _cnt = 0;
   bool               _changed;
   BlockWalker        _blkWalker;
   ValueNumber        _value_number;

@@ -72,6 +72,8 @@ public:
   // dump ir
   void Dump(std::ostream &os);
 
+  void DumpCFG();
+
   BlockPtr       CreateBlock(const FuncPtr &parent);
   BlockPtr       CreateBlock(const FuncPtr &parent, const std::string &name);
   SSAPtr         CreateJump(const BlockPtr &target);

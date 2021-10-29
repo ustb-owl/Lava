@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <cctype>
 
-namespace lava::utils {
+namespace lava::lib {
 
 // dump character to output stream (with C-style escaped characters)
 inline void DumpChar(std::ostream &os, char c) {

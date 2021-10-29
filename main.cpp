@@ -1,3 +1,4 @@
+#include <gvc.h>
 #include <fstream>
 #include <sstream>
 #include <utility>
@@ -16,11 +17,13 @@ enum class OPTION {
   DUMP_AST,
   DUMP_IR,
   DUMP_ASM,
+  DUMP_CFG,
 };
 
 int Main(bool AST = fire::arg({"-T", "--dump-ast"}),
          bool IR = fire::arg({"-I", "--dump-ir"}),
          bool ASM = fire::arg({"-S", "--dump-asm"}),
+         bool CFG = fire::arg({"-C", "--dump-cfg"}),
          const fire::optional<std::string>& output = fire::arg({"-o", "--output", "set output file name"}),
          std::vector<std::string> filename = fire::arg(fire::variadic()),
          bool Opt = fire::arg({"-O", "--opt", "optimization level is {num}"}),
@@ -39,6 +42,8 @@ int Main(bool AST = fire::arg({"-T", "--dump-ast"}),
     option = OPTION::DUMP_IR;
   } else if (ASM) {
     option = OPTION::DUMP_ASM;
+  } else if (CFG) {
+    option = OPTION::DUMP_CFG;
   } else {
     ERROR("should not reach here");
   }
@@ -90,6 +95,10 @@ int Main(bool AST = fire::arg({"-T", "--dump-ast"}),
     }
     case OPTION::DUMP_ASM: {
       comp.DumpASM(*os);
+      break;
+      }
+    case OPTION::DUMP_CFG: {
+      comp.DumpCFG();
       break;
     }
   }

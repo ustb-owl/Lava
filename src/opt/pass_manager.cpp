@@ -1,6 +1,7 @@
 #include "lib/debug.h"
 #include "pass_manager.h"
 
+
 namespace lava::opt {
 
 PassManager *PassManager::_instance = nullptr;
