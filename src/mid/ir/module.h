@@ -72,7 +72,7 @@ public:
   // dump ir
   void Dump(std::ostream &os);
 
-  void DumpCFG();
+  void DumpCFG(const std::string &output_name);
 
   BlockPtr       CreateBlock(const FuncPtr &parent);
   BlockPtr       CreateBlock(const FuncPtr &parent, const std::string &name);

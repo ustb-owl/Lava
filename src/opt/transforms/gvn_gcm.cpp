@@ -3,7 +3,7 @@
 
 int GlobalValueNumbering;
 
-#define OPEN 1
+#define OPEN 0
 
 namespace lava::opt {
 
@@ -26,19 +26,11 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   // run dead code elimination before gcm
   auto dce = PassManager::GetTransformPass<DeadCodeElimination>("DeadCodeElimination");
   dce->initialize();
-//  dce->runOnFunction(F);
+  dce->runOnFunction(F);
   dce->finalize();
 
-  // run block simplification
-  auto blk = PassManager::GetTransformPass<BlockSimplification>("BlockSimplification");
-  blk->initialize();
-  auto changed = false;
-//  changed = blk->runOnFunction(F);
-  blk->finalize();
-  if (changed) goto GVN;
 
-#if 0
-  if (_cnt > 0) return _changed;
+#if 1
   if (!A->IsNeedGcm()) return _changed;
   CollectInstBlockMap(F);
 
@@ -60,8 +52,15 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
 
   _visited.clear();
   for (auto &inst : insts) ScheduleLate(inst);
-  _cnt += 1;
 #endif
+
+  // run block simplification
+  auto blk = PassManager::GetTransformPass<BlockSimplification>("BlockSimplification");
+  blk->initialize();
+  auto changed = false;
+//  changed = blk->runOnFunction(F);
+  blk->finalize();
+  if (changed) goto GVN;
 
   return _changed;
 }

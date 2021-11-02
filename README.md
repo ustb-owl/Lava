@@ -25,6 +25,7 @@ Options:
     -S, --dump-asm         generate asm file
     -I, --dump-ir          generate ir file
     -T, --dump-ast         generate ast file
+    -C, --dump-cfg         generate visable CFG file
     filename               input filename          (Required)
     -h, --help             Shows this page
 ```

@@ -552,7 +552,7 @@ bool Module::IsGlobalVariable(const SSAPtr &var) const {
   return false;
 }
 
-void Module::DumpCFG() {
+void Module::DumpCFG(const std::string &output_name) {
 #ifdef ENABLE_CFG
   IdManager id_mgr;
   GVC_t *gvc = gvContext();
@@ -571,9 +571,9 @@ void Module::DumpCFG() {
 
   gvLayout(gvc, g, "dot");
 //  gvRender(gvc, g, "dot", stdout);
-  gvRenderFilename(gvc, g, "pdf", "ir.pdf");
-  gvRenderFilename(gvc, g, "png", "ir.png");
-  gvRenderFilename(gvc, g, "svg", "ir.svg");
+  gvRenderFilename(gvc, g, "pdf", (output_name + ".pdf").c_str());
+  gvRenderFilename(gvc, g, "png", (output_name + ".png").c_str());
+  gvRenderFilename(gvc, g, "svg", (output_name + ".svg").c_str());
 
 
 

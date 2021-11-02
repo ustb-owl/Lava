@@ -67,7 +67,7 @@ public:
   void DumpIR(std::ostream &os) const { _irbuilder->module().Dump(os); }
 
   // dump CFG
-  void DumpCFG() const;
+  void DumpCFG(const std::string &output_name) const;
 
   // run passes on IR
   void RunPasses();

@@ -736,7 +736,6 @@ void BinaryOperator::Dump(std::ostream &os, IdManager &id_mgr) const {
   DumpType(os, type());
   os << " ";
   DumpValue(os, id_mgr, begin(), end());
-  os << std::endl;
 }
 
 void BasicBlock::Dump(std::ostream &os, IdManager &id_mgr, const std::string &separator) const {

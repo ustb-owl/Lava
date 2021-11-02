@@ -1,4 +1,3 @@
-#include <gvc.h>
 #include <fstream>
 #include <sstream>
 #include <utility>
@@ -98,7 +97,7 @@ int Main(bool AST = fire::arg({"-T", "--dump-ast"}),
       break;
       }
     case OPTION::DUMP_CFG: {
-      comp.DumpCFG();
+      comp.DumpCFG(output_file.empty() ? "ir" : output_file);
       break;
     }
   }

@@ -13,11 +13,9 @@
 #include "opt/pass_manager.h"
 #include "opt/analysis/dominance.h"
 
-#endif
 
 namespace lava::mid {
 
-#ifdef ENABLE_CFG
 
 enum Edge_Type {
   TRUE_TARGET, FALSE_TARGET, NO_COND
@@ -136,10 +134,8 @@ void AddEdge(graph_t *g, Agnode_t *from, Agnode_t *to, Edge_Type type) {
   }
 }
 
-#endif
 
 void MakeGlobalVariables(graph_t *g, Module *module, IdManager &id_mgr) {
-#ifdef ENABLE_CFG
   Agnode_t *n = agnode(g, nullptr, 1);
   std::string table = "<table border='0' cellborder='1' cellspacing='0'>";
 
@@ -184,14 +180,11 @@ void MakeGlobalVariables(graph_t *g, Module *module, IdManager &id_mgr) {
   agsafeset((void *) n, (char *) "shape", "none", "");
   agsafeset((void *) n, (char *) "fontname", "Cambria Math", "");
   agstrfree(g, content);
-#endif
 
 }
 
 
 void MakeCFG(graph_t *g, const FuncPtr &func, IdManager &id_mgr) {
-
-#ifdef ENABLE_CFG
   // make CFG nodes
   std::unordered_map<SSAPtr, Agnode_t *> nodes;
   for (const auto &it : (*func)) {
@@ -235,13 +228,12 @@ void MakeCFG(graph_t *g, const FuncPtr &func, IdManager &id_mgr) {
       AddEdge(g, parent_node, child_node, type);
     }
   }
+
+}
+
+}
+
 #endif
-
-}
-
-}
-
-//}
 
 #endif //LAVA_DUMP_CFG_H
 

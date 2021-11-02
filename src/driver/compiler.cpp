@@ -73,8 +73,8 @@ void Compiler::CodeGeneAction() {
   _codegen.RunPasses();
 }
 
-void Compiler::DumpCFG() const {
-  this->_irbuilder->module().DumpCFG();
+void Compiler::DumpCFG(const std::string &output_name) const {
+  this->_irbuilder->module().DumpCFG(output_name);
 }
 
 }
