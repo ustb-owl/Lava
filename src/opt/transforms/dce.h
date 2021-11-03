@@ -4,6 +4,7 @@
 #include "opt/pass.h"
 #include "common/casting.h"
 #include "opt/pass_manager.h"
+#include "opt/analysis/funcanalysis.h"
 
 /*
  aggressive dead code elimination
@@ -15,13 +16,26 @@ namespace lava::opt {
 class DeadCodeElimination : public FunctionPass {
 private:
   bool _changed;
-  std::vector<User *> _work_list;
+  FuncInfoMap                 _func_infos;
+  std::vector<User *>         _work_list;
   std::unordered_set<Value *> _critical_list;
+
+  inline bool IsPureCall(const SSAPtr &value) {
+    if (auto call_inst = dyn_cast<CallInst>(value)) {
+      if (auto func = dyn_cast<Function>(call_inst->Callee())) {
+        return _func_infos[func.get()].IsPure();
+      }
+    }
+    return false;
+  }
 
 public:
   bool runOnFunction(const FuncPtr &F) final;
 
-  void initialize() final {}
+  void initialize() final {
+    auto func_info = PassManager::GetAnalysis<FunctionInfoPass>("FunctionInfoPass");
+    _func_infos = func_info->GetFunctionInfo();
+  }
 
   void finalize() final {
     DBG_ASSERT(_work_list.empty(), "work list is not empty");
@@ -50,6 +64,7 @@ public:
     auto pass = std::make_shared<DeadCodeElimination>();
     auto passinfo =
         std::make_shared<PassInfo>(pass, "DeadCodeElimination", false, 0, DEAD_CODE_ELIMINATION);
+    passinfo->Requires("FunctionInfoPass");
 
     return passinfo;
   }

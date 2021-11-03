@@ -34,6 +34,15 @@ private:
   std::unordered_map<Instruction *, InstPtr> _user_map;
   std::unordered_map<Instruction *, BasicBlock *> _inst_block_map;
 
+  inline bool IsPure(const SSAPtr &value) {
+    if (auto call_inst = dyn_cast<CallInst>(value)) {
+      if (auto func = dyn_cast<Function>(call_inst->Callee())) {
+        return _func_infos[func.get()].IsPure();
+      }
+    }
+    return false;
+  }
+
 public:
 
   bool runOnFunction(const FuncPtr &F) final;
@@ -75,9 +84,8 @@ public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<GlobalValueNumberingGlobalCodeMotion>();
     auto passinfo = std::make_shared<PassInfo>(pass, "GlobalValueNumberingGlobalCodeMotion", false, 2, GVN_GCM);
-    passinfo->Requires("FunctionInfoPass");
+//    passinfo->Requires("FunctionInfoPass");
     passinfo->Requires("LoopInfoPass");
-    passinfo->Requires("NeedGcm");
     return passinfo;
   }
 };

@@ -11,13 +11,9 @@ namespace lava::opt {
 bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   _changed = false;
   if (F->is_decl()) return _changed;
-  auto A = PassManager::GetAnalysis<NeedGcm>("NeedGcm");
-  if (A->IsCrypto()) return _changed;
-  TRACE0();
-
-  _cur_func = F.get();
 
   GVN:
+  _cur_func = F.get();
   GlobalValueNumbering(F);
 
   // clear value number, otherwise we can't remove dead code
@@ -59,7 +55,10 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   auto changed = false;
   changed = blk->runOnFunction(F);
   blk->finalize();
-  if (changed) goto GVN;
+  if (changed) {
+    initialize();
+    goto GVN;
+  }
 
   return _changed;
 }
@@ -295,6 +294,11 @@ GlobalValueNumbering(const FuncPtr &F) {
 
 void GlobalValueNumberingGlobalCodeMotion::
 CollectInstBlockMap(const FuncPtr &F) {
+  // clear instruction maps at first
+  _user_map.clear();
+  _inst_block_map.clear();
+  _visited.clear();
+
   std::size_t inst_num = 0;
   for (const auto &BB : *F) {
     auto block = dyn_cast<BasicBlock>(BB.value());
@@ -355,12 +359,18 @@ ScheduleEarly(BasicBlock *entry, const InstPtr &inst) {
       for (auto &it : *binary_inst) {
         ScheduleOp(entry, binary_inst, it.value());
       }
+    } else if (auto access_inst = dyn_cast<AccessInst>(inst)) {
+      TransferInst(access_inst, entry);
+      ScheduleOp(entry, access_inst, access_inst->ptr());
+      ScheduleOp(entry, access_inst, access_inst->index());
+    } else if (auto call_inst = dyn_cast<CallInst>(inst)) {
+      if (IsPure(call_inst)) {
+        TransferInst(inst, entry);
+        for (auto &it : *call_inst) {
+          ScheduleOp(entry, call_inst, it.value());
+        }
+      }
     }
-//      else if (auto access_inst = dyn_cast<AccessInst>(inst)) {
-//        TransferInst(access_inst, entry);
-//        ScheduleOp(entry, access_inst, access_inst->ptr());
-//        ScheduleOp(entry, access_inst, access_inst->index());
-//      }
   }
 }
 
@@ -378,7 +388,7 @@ BasicBlock *GlobalValueNumberingGlobalCodeMotion::FindLCA(BasicBlock *a, BasicBl
 
 void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
   if (_visited.insert(inst.get()).second) {
-    if (IsSSA<BinaryOperator>(inst)) {
+    if (IsSSA<BinaryOperator>(inst) || IsSSA<AccessInst>(inst) || IsPure(inst)) {
       BasicBlock *lca = nullptr;
 
       for (const auto &use : inst->uses()) {

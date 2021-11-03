@@ -19,6 +19,7 @@ bool DeadCodeElimination::IsCriticalInstruction(const SSAPtr &ptr) {
     // TODO: check if callee has side effect
     if (IsSSA<ReturnInst>(inst) || IsSSA<CallInst>(inst) ||
         IsSSA<BranchInst>(inst) || IsSSA<JumpInst>(inst)) {
+      if (IsPureCall(inst)) return false;
       return true;
     } else if (IsSSA<StoreInst>(inst)) {
       // TODO: check if is global

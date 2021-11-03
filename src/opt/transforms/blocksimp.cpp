@@ -23,7 +23,6 @@ bool BlockSimplification::runOnFunction(const FuncPtr &F) {
 }
 
 void BlockSimplification::OnePass(const FuncPtr &F) {
-  TRACE0();
   FoldRedundantBranch(F);
   CombineBlocks(F);
   RemoveEmptyBlock(F);
@@ -77,7 +76,6 @@ void BlockSimplification::FoldRedundantBranch(const FuncPtr &F) {
 
         // remove phi-node
         RemovePhiNode(BB, std::vector<BasicBlock *>{discord.get()});
-        TRACE0();
 
         // remove current block from discord block's predecessor list
         // this block will be sweep in the following pass
