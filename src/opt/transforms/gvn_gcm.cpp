@@ -31,7 +31,6 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
 
 
 #if 1
-  if (!A->IsNeedGcm()) return _changed;
   CollectInstBlockMap(F);
 
   // global code motion
@@ -49,16 +48,16 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   DBG_ASSERT(insts.size() == _user_map.size(), "instruction size is not equal _user_map");
 
   for (auto &inst : insts) ScheduleEarly(entry, inst);
-
   _visited.clear();
   for (auto &inst : insts) ScheduleLate(inst);
+
 #endif
 
   // run block simplification
   auto blk = PassManager::GetTransformPass<BlockSimplification>("BlockSimplification");
   blk->initialize();
   auto changed = false;
-//  changed = blk->runOnFunction(F);
+  changed = blk->runOnFunction(F);
   blk->finalize();
   if (changed) goto GVN;
 
@@ -109,7 +108,7 @@ FindValue(const std::shared_ptr<BinaryOperator> &binary_inst) {
   for (std::size_t i = 0; i < _value_number.size(); i++) {
     auto[k, v] = _value_number[i];
 
-    auto bin_value = dyn_cast<BinaryOperator>(binary_inst);
+    auto bin_value = dyn_cast<BinaryOperator>(k);
 
 
     if (bin_value && (bin_value != binary_inst)) {
@@ -317,7 +316,13 @@ TransferInst(const InstPtr &inst, BasicBlock *new_block) {
   DBG_ASSERT(_inst_block_map.find(inst.get()) != _inst_block_map.end(), "can't find this inst's block");
   auto inst_block = _inst_block_map[inst.get()];
   _inst_block_map[inst.get()] = new_block;
-  new_block->insts().insert(--new_block->insts().end(), inst);
+
+  if (IsSSA<BranchInst>(new_block->insts().back())) {
+    auto end = --new_block->insts().end();
+    new_block->insts().insert(--end, inst);
+  } else {
+    new_block->insts().insert(--new_block->insts().end(), inst);
+  }
 
   auto pos = inst_block->insts().begin();
   for (; pos != inst_block->insts().end(); pos++) {
@@ -361,13 +366,14 @@ ScheduleEarly(BasicBlock *entry, const InstPtr &inst) {
 
 BasicBlock *GlobalValueNumberingGlobalCodeMotion::FindLCA(BasicBlock *a, BasicBlock *b) {
   auto &info = _dom_info[_cur_func];
-  while (info.depth[b] < info.depth[a]) a = info.idom[a];
-  while (info.depth[a] < info.depth[b]) b = info.idom[b];
-  while (a != b) {
-    a = info.idom[a];
-    b = info.idom[b];
+  BasicBlock *tmp_a = a, *tmp_b = b;
+  while (info.depth[tmp_b] < info.depth[tmp_a]) tmp_a = info.idom[tmp_a];
+  while (info.depth[tmp_a] < info.depth[tmp_b]) tmp_b = info.idom[tmp_b];
+  while (tmp_a != tmp_b) {
+    tmp_a = info.idom[tmp_a];
+    tmp_b = info.idom[tmp_b];
   }
-  return a;
+  return tmp_a;
 }
 
 void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
