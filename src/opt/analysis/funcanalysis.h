@@ -57,8 +57,10 @@ private:
 
 public:
   void initialize() final {
+    _main = nullptr;
     _visited.clear();
     _func_infos.clear();
+    _func_map.clear();
   }
 
   void finalize() final {

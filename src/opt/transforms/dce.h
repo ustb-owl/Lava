@@ -23,7 +23,12 @@ private:
   inline bool IsPureCall(const SSAPtr &value) {
     if (auto call_inst = dyn_cast<CallInst>(value)) {
       if (auto func = dyn_cast<Function>(call_inst->Callee())) {
-        return _func_infos[func.get()].IsPure();
+        if (_func_infos[func.get()].IsPure()) {
+          auto none_array_arg = std::none_of(call_inst->begin(), call_inst->end(),[](const Use &use) {
+            return IsSSA<AccessInst>(use.value());
+          });
+          return none_array_arg;
+        }
       }
     }
     return false;
@@ -65,7 +70,6 @@ public:
     auto passinfo =
         std::make_shared<PassInfo>(pass, "DeadCodeElimination", false, 0, DEAD_CODE_ELIMINATION);
     passinfo->Requires("FunctionInfoPass");
-
     return passinfo;
   }
 };

@@ -127,6 +127,8 @@ public:
   static void RequiredBy(const std::string &slave, const std::string &master);
 
   // run required passes
+  static bool RunRequiredPasses(const PassPtr &info);
+  static bool RunRequiredPasses(const Pass *info);
   static bool RunRequiredPasses(PassNameSet &valid, const PassInfoPtr &info);
 
   // invalidate the specific pass

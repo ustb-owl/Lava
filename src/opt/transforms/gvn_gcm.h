@@ -13,7 +13,8 @@
 #include "opt/analysis/funcanalysis.h"
 
 namespace lava::opt {
-using ValueNumber = std::vector<std::pair<SSAPtr, SSAPtr>>;
+//using ValueNumber = std::vector<std::pair<SSAPtr, SSAPtr>>;
+using ValueNumber = std::unordered_map<SSAPtr, SSAPtr>;
 
 /*
  * Global value numbering and global code motion
@@ -34,10 +35,15 @@ private:
   std::unordered_map<Instruction *, InstPtr> _user_map;
   std::unordered_map<Instruction *, BasicBlock *> _inst_block_map;
 
-  inline bool IsPure(const SSAPtr &value) {
+  inline bool IsPureCall(const SSAPtr &value) {
     if (auto call_inst = dyn_cast<CallInst>(value)) {
       if (auto func = dyn_cast<Function>(call_inst->Callee())) {
-        return _func_infos[func.get()].IsPure();
+        if (_func_infos[func.get()].IsPure()) {
+          auto none_array_arg = std::none_of(call_inst->begin(), call_inst->end(),[](const Use &use) {
+            return IsSSA<AccessInst>(use.value());
+          });
+          return none_array_arg;
+        }
       }
     }
     return false;
@@ -63,7 +69,7 @@ public:
 
   SSAPtr ValueOf(const SSAPtr &value);
 
-  void GlobalValueNumbering(const FuncPtr &F);
+  int GlobalValueNumbering(const FuncPtr &F);
 
   void CollectInstBlockMap(const FuncPtr &F);
 
@@ -84,8 +90,9 @@ public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<GlobalValueNumberingGlobalCodeMotion>();
     auto passinfo = std::make_shared<PassInfo>(pass, "GlobalValueNumberingGlobalCodeMotion", false, 2, GVN_GCM);
-//    passinfo->Requires("FunctionInfoPass");
+    passinfo->Requires("FunctionInfoPass");
     passinfo->Requires("LoopInfoPass");
+    passinfo->Requires("DominanceInfo");
     return passinfo;
   }
 };

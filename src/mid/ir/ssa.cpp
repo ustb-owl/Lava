@@ -208,7 +208,8 @@ SSAPtr BinaryOperator::EvalArithOnConst() {
  *   => c = a * 6;
  */
 
-void BinaryOperator::TryToFold() {
+int BinaryOperator::TryToFold() {
+  bool res = false;
   if (auto rhs = dyn_cast<ConstantInt>(RHS())) {
     // a - 1 ---> a + (-1)
     if (opcode() == BinaryOps::Sub) {
@@ -242,12 +243,14 @@ void BinaryOperator::TryToFold() {
           auto new_rhs = std::make_shared<ConstantInt>(value);
           new_rhs->set_type(RHS()->type());
           (*this)[1].set(new_rhs);
+          res = true;
         } else if ((opcode() == BinaryOps::Mul) && (lhs_bin_inst->opcode() == BinaryOps::Mul)) {
           (*this)[0].set(lhs_bin_inst->LHS());
           int value = lhs_bin_rhs->value() * dyn_cast<ConstantInt>(RHS())->value();
           auto new_rhs = std::make_shared<ConstantInt>(value);
           new_rhs->set_type(RHS()->type());
           (*this)[1].set(new_rhs);
+          res = true;
         }
       } else if (auto lhs_bin_lhs = dyn_cast<ConstantInt>(lhs_bin_inst->LHS())) {
         // 3. Sub: b = 3 - a; c = b + 4 ---> c = 7 - a;
@@ -259,6 +262,7 @@ void BinaryOperator::TryToFold() {
             (*this)[0].set(new_lhs);
             (*this)[1].set(lhs_bin_inst->RHS());
             set_opcode(BinaryOps::Sub);
+            res = true;
           }
         }
       }
@@ -273,10 +277,13 @@ void BinaryOperator::TryToFold() {
           new_lhs->set_type(lhs->type());
           (*this)[1].set(new_lhs);
           set_opcode(BinaryOps::Add);
+          res = true;
         }
       }
     }
   }
+
+  return res;
 }
 
 SSAPtr BinaryOperator::OptimizedValue() {

@@ -99,7 +99,7 @@ public:
   }
 
   void finalize() final {
-    _dom_info.clear();
+//    _dom_info.clear();
     _visited.clear();
   }
 
@@ -117,6 +117,7 @@ public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<LoopInfoPass>();
     auto passinfo =  std::make_shared<PassInfo>(pass, "LoopInfoPass", true, 0, LOOP_INFO);
+    passinfo->Requires("DominanceInfo");
     return passinfo;
   }
 };

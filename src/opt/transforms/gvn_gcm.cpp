@@ -12,9 +12,15 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   _changed = false;
   if (F->is_decl()) return _changed;
 
+  TRACE("%s\n", F->GetFunctionName().c_str());
+
   GVN:
+  PassManager::RunRequiredPasses(this);
+  initialize();
+
   _cur_func = F.get();
-  GlobalValueNumbering(F);
+  _changed = GlobalValueNumbering(F);
+  TRACE0();
 
   // clear value number, otherwise we can't remove dead code
   _value_number.clear();
@@ -22,12 +28,17 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   // run dead code elimination before gcm
   auto dce = PassManager::GetTransformPass<DeadCodeElimination>("DeadCodeElimination");
   dce->initialize();
+  PassManager::RunRequiredPasses(dce);
   dce->runOnFunction(F);
   dce->finalize();
 
+  TRACE0();
 
 #if 1
   CollectInstBlockMap(F);
+
+  TRACE0();
+
 
   // global code motion
   auto entry = dyn_cast<BasicBlock>(F->entry()).get();
@@ -43,20 +54,27 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   }
   DBG_ASSERT(insts.size() == _user_map.size(), "instruction size is not equal _user_map");
 
+  TRACE0();
+
+
   for (auto &inst : insts) ScheduleEarly(entry, inst);
+  TRACE0();
   _visited.clear();
-  for (auto &inst : insts) ScheduleLate(inst);
+  TRACE0();
+  for (auto &inst : insts) {
+    ScheduleLate(inst);
+  }
+  TRACE0();
 
 #endif
 
   // run block simplification
   auto blk = PassManager::GetTransformPass<BlockSimplification>("BlockSimplification");
   blk->initialize();
-  auto changed = false;
-  changed = blk->runOnFunction(F);
+  _changed |= blk->runOnFunction(F);
   blk->finalize();
-  if (changed) {
-    initialize();
+  if (_changed) {
+    _changed = false;
     goto GVN;
   }
 
@@ -91,8 +109,9 @@ Replace(const InstPtr &inst, const SSAPtr &value,
                               return kv.first == inst;
                             });
     if (res != _value_number.end()) {
-      std::swap(*res, _value_number.back());
-      _value_number.pop_back();
+//      std::swap(*res, _value_number.back());
+//      _value_number.pop_back();
+      _value_number.erase(res);
     }
 
   }
@@ -104,27 +123,27 @@ FindValue(const std::shared_ptr<BinaryOperator> &binary_inst) {
   SSAPtr lhs = ValueOf(binary_inst->LHS());
   SSAPtr rhs = ValueOf(binary_inst->RHS());
 
-  for (std::size_t i = 0; i < _value_number.size(); i++) {
-    auto[k, v] = _value_number[i];
+  for (auto [k, v] : _value_number) {
+//    auto [k, v] = _value_number[i];
 
     auto bin_value = dyn_cast<BinaryOperator>(k);
 
 
     if (bin_value && (bin_value != binary_inst)) {
       BinaryOperator::BinaryOps opcode2 = bin_value->opcode();
+      if (opcode != opcode2) return binary_inst;
       SSAPtr lhs2 = ValueOf(bin_value->LHS());
       SSAPtr rhs2 = ValueOf(bin_value->RHS());
 
       bool same = false;
-      if (opcode == opcode2) {
-        if (lhs == lhs2 && rhs == rhs2) same = true;
-        else if (lhs == rhs2 && rhs == lhs2) {
-          if (opcode == BinaryOperator::BinaryOps::Add || opcode == BinaryOperator::BinaryOps::Mul ||
-              opcode == BinaryOperator::BinaryOps::And || opcode == BinaryOperator::BinaryOps::Or) {
-            same = true;
-          }
+      if (lhs == lhs2 && rhs == rhs2) same = true;
+      else if (lhs == rhs2 && rhs == lhs2) {
+        if (opcode == BinaryOperator::BinaryOps::Add || opcode == BinaryOperator::BinaryOps::Mul ||
+        opcode == BinaryOperator::BinaryOps::And || opcode == BinaryOperator::BinaryOps::Or) {
+          same = true;
         }
       }
+
       if (same) return v;
     }
   }
@@ -133,8 +152,8 @@ FindValue(const std::shared_ptr<BinaryOperator> &binary_inst) {
 
 SSAPtr GlobalValueNumberingGlobalCodeMotion::
 FindValue(const std::shared_ptr<AccessInst> &access_inst) {
-  for (std::size_t i = 0; i < _value_number.size(); i++) {
-    auto[k, v] = _value_number[i];
+  for (auto [k, v] : _value_number) {
+//    auto [k, v] = _value_number[i];
     auto gep = dyn_cast<AccessInst>(k);
     if (gep && (gep != access_inst)) {
       bool same = false;
@@ -154,8 +173,8 @@ FindValue(const std::shared_ptr<CallInst> &call_inst) {
   auto callee = dyn_cast<Function>(call_inst->Callee());
   if (!_func_infos[callee.get()].IsPure()) return call_inst;
 
-  for (std::size_t i = 0; i < _value_number.size(); i++) {
-    auto[k, v] = _value_number[i];
+  for (auto [k, v] : _value_number) {
+//    auto [k, v] = _value_number[i];
     auto call_value = dyn_cast<CallInst>(k);
     if (call_value && (call_value->Callee() == call_inst->Callee())) {
       DBG_ASSERT(call_inst->param_size() == call_value->param_size(),
@@ -183,8 +202,8 @@ FindValue(const std::shared_ptr<ICmpInst> &icmp_inst) {
   auto lhs1 = ValueOf(icmp_inst->LHS());
   auto rhs1 = ValueOf(icmp_inst->RHS());
 
-  for (std::size_t i = 0; i < _value_number.size(); i++) {
-    auto[k, v] = _value_number[i];
+  for (auto [k, v] : _value_number) {
+//    auto [k, v] = _value_number[i];
     auto num_value = dyn_cast<ICmpInst>(k);
     if (num_value && (num_value != icmp_inst)) {
       front::Operator op2 = num_value->op();
@@ -206,21 +225,33 @@ FindValue(const std::shared_ptr<ICmpInst> &icmp_inst) {
 }
 
 SSAPtr GlobalValueNumberingGlobalCodeMotion::ValueOf(const SSAPtr &value) {
-  auto it = std::find_if(_value_number.begin(), _value_number.end(), [value](const std::pair<SSAPtr, SSAPtr> &kv) {
-    return kv.first == value;
-  });
+  auto it = _value_number.find(value);
   if (it != _value_number.end()) return it->second;
+  if (auto const_value = dyn_cast<ConstantInt>(value)) {
+    // need to handle const value
+    it = std::find_if(_value_number.begin(), _value_number.end(),
+                      [value, &const_value](const std::pair<SSAPtr, SSAPtr> &kv) {
+                        if (kv.first == value) return true;
 
-  uint32_t idx = _value_number.size();
-  _value_number.emplace_back(value, value);
+                        auto const_kv = dyn_cast<ConstantInt>(kv.first);
+                        if (const_kv && (const_value->value() == const_kv->value())) return true;
+
+                        return false;
+                      });
+    if (it != _value_number.end()) return it->second;
+  }
+
+  auto [res, state] = _value_number.emplace(value, value);
+  DBG_ASSERT(state == true, "insert new value failed");
+  TRACE("size %lu\n", _value_number.size());
 
   // find any way
   if (auto binary_inst = dyn_cast<BinaryOperator>(value)) {
-    _value_number[idx].second = FindValue(binary_inst);
+    res->second = FindValue(binary_inst);
   } else if (auto access_inst = dyn_cast<AccessInst>(value)) {
-    _value_number[idx].second = FindValue(access_inst);
+    res->second = FindValue(access_inst);
   } else if (auto call_inst = dyn_cast<CallInst>(value)) {
-    _value_number[idx].second = FindValue(call_inst);
+    res->second = FindValue(call_inst);
   }
 #if OPEN
   else if (auto icmp_inst = dyn_cast<ICmpInst>(value)) {
@@ -228,16 +259,27 @@ SSAPtr GlobalValueNumberingGlobalCodeMotion::ValueOf(const SSAPtr &value) {
   }
 #endif
 
-  return _value_number[idx].second;
+  return res->second;
 }
 
-void GlobalValueNumberingGlobalCodeMotion::
+int GlobalValueNumberingGlobalCodeMotion::
 GlobalValueNumbering(const FuncPtr &F) {
+  bool need_loop = false;
   auto entry = dyn_cast<BasicBlock>(F->entry());
   auto rpo = _blkWalker.RPOTraverse(entry.get());
 
   for (const auto &BB : rpo) {
+    TRACE("%lu\n", BB->insts().size());
+//    long long ii = 0;
     for (auto it = BB->insts().begin(); it != BB->inst_end();) {
+//      if (_value_number.size() > 1000) {
+//        for (const auto &[k,v] : _value_number) {
+//          if (auto ist = dyn_cast<Instruction>(k)) {
+//            TRACE("%d\n",ist->opcode());
+//          }
+//        }
+//      }
+
       auto next = std::next(it);
       if (auto binary_inst = dyn_cast<BinaryOperator>(*it)) {
         // always move const value to rhs
@@ -253,11 +295,11 @@ GlobalValueNumbering(const FuncPtr &F) {
           auto const_inst = binary_inst->EvalArithOnConst();
           Replace(binary_inst, const_inst, BB, it);
         } else {
-          binary_inst->TryToFold();
+          need_loop = binary_inst->TryToFold();
           if (auto simp_val = binary_inst->OptimizedValue()) {
             Replace(binary_inst, simp_val, BB, it);
           } else {
-            Replace(binary_inst, ValueOf(binary_inst), BB, it);
+            Replace(binary_inst, (need_loop ? binary_inst : ValueOf(binary_inst)), BB, it);
           }
         }
       } else if (auto call_inst = dyn_cast<CallInst>(*it)) {
@@ -270,9 +312,11 @@ GlobalValueNumbering(const FuncPtr &F) {
         bool all_same = true;
         auto size = phi_node->size();
         for (std::size_t i = 1; (i < size) && all_same; i++) {
-          all_same = first == ValueOf((*phi_node)[i].value());
+          all_same &= (first == ValueOf((*phi_node)[i].value()));
         }
         if (all_same) Replace(phi_node, first, BB, it);
+      } else if (auto access_inst = dyn_cast<AccessInst>(*it)) {
+        Replace(access_inst, ValueOf(access_inst), BB, it);
       } else if (auto icmp_inst = dyn_cast<ICmpInst>(*it)) {
 #if OPEN
         // try to get lhs and rhs as constant value
@@ -286,10 +330,10 @@ GlobalValueNumbering(const FuncPtr &F) {
         }
 #endif
       }
-
       it = next;
     }
   }
+  return need_loop;
 }
 
 void GlobalValueNumberingGlobalCodeMotion::
@@ -364,7 +408,7 @@ ScheduleEarly(BasicBlock *entry, const InstPtr &inst) {
       ScheduleOp(entry, access_inst, access_inst->ptr());
       ScheduleOp(entry, access_inst, access_inst->index());
     } else if (auto call_inst = dyn_cast<CallInst>(inst)) {
-      if (IsPure(call_inst)) {
+      if (IsPureCall(call_inst)) {
         TransferInst(inst, entry);
         for (auto &it : *call_inst) {
           ScheduleOp(entry, call_inst, it.value());
@@ -388,7 +432,7 @@ BasicBlock *GlobalValueNumberingGlobalCodeMotion::FindLCA(BasicBlock *a, BasicBl
 
 void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
   if (_visited.insert(inst.get()).second) {
-    if (IsSSA<BinaryOperator>(inst) || IsSSA<AccessInst>(inst) || IsPure(inst)) {
+    if (IsSSA<BinaryOperator>(inst) || IsSSA<AccessInst>(inst) || IsPureCall(inst)) {
       BasicBlock *lca = nullptr;
 
       for (const auto &use : inst->uses()) {
@@ -415,6 +459,7 @@ void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
       auto best = lca;
       auto best_loop_depth = _loop_info.depth_of(best);
       while (true) {
+//        TRACE("%s\n", _cur_func->GetFunctionName().c_str());
         auto cur_loop_depth = _loop_info.depth_of(lca);
         if (cur_loop_depth < best_loop_depth) {
           best = lca;

@@ -49,6 +49,7 @@ bool PassManager::RunPass(const PassPtr &pass) {
     DBG_ASSERT(pass->IsFunctionPass(), "unknown pass class");
     for (const auto &it : module().Functions()) {
       auto func = std::static_pointer_cast<Function>(it);
+//      TRACE("%s\n", pass->name().c_str());
       changed = pass->runOnFunction(func);
       // perform finalization
       pass->finalize();
@@ -62,8 +63,35 @@ void PassManager::RunPasses(const PassPtrList &passes) {
   PassNameSet valid;
   // run all passes
   for (const auto &it : passes) {
+    if (it->is_analysis()) continue;
     RunPass(valid, it);
   }
+}
+
+bool PassManager::RunRequiredPasses(const PassPtr &info) {
+  return RunRequiredPasses(info.get());
+}
+
+bool PassManager::RunRequiredPasses(const Pass *info) {
+  PassNameSet valid;
+
+  auto pass = GetPasses().find(info->name());
+  DBG_ASSERT(pass != GetPasses().end(), "find pass failed");
+
+  for (const auto &name : (*pass).second->required_passes()) {
+    // get pointer of pass
+    const auto &passes = GetPasses();
+    auto it = passes.find(name);
+    DBG_ASSERT(it != passes.end(), "required pass not found");
+
+    // check if current pass can be run
+    if (!it->second->is_analysis() &&
+        it->second->min_opt_level() > opt_level()) {
+      continue;
+    }
+    RunPass(valid, it->second);
+  }
+  return false;
 }
 
 bool PassManager::RunRequiredPasses(PassNameSet &valid, const PassInfoPtr &info) {
@@ -111,6 +139,7 @@ void PassManager::init() {
     auto pass = it->CreatePass(this);
     auto pass_name = pass->name();
     DBG_ASSERT(_pass_infos.find(pass_name) == _pass_infos.end(), "pass %s has been registered", pass_name.c_str());
+    pass->pass()->SetName(pass_name);
     _pass_infos.insert(std::make_pair(pass_name, pass));
   }
 }

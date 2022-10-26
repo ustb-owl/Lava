@@ -41,7 +41,7 @@ class DominanceInfoPassFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<DominanceInfo>();
-    auto passinfo =  std::make_shared<PassInfo>(pass, "DominanceInfo", true, false, DOMINANCE_INFO);
+    auto passinfo =  std::make_shared<PassInfo>(pass, "DominanceInfo", true, 0, DOMINANCE_INFO);
     return passinfo;
   }
 };

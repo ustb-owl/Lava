@@ -211,7 +211,8 @@ public:
   // try to eval when both lhs and rhs are constant value
   SSAPtr EvalArithOnConst();
 
-  void TryToFold();
+  // return true if fold successfully
+  int TryToFold();
 
   SSAPtr OptimizedValue();
 

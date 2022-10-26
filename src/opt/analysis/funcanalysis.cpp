@@ -14,6 +14,7 @@ bool FunctionInfoPass::runOnModule(Module &M) {
     _func_infos.insert({F.get(), FunctionInfo()});
     if (F->is_decl()) {
       _func_infos[F.get()].has_size_effect = true;
+      TRACE("%s %d\n", F->GetFunctionName().c_str(), _func_infos[F.get()].IsPure());
     }
   }
 
@@ -27,6 +28,7 @@ bool FunctionInfoPass::runOnModule(Module &M) {
   while (!worklist.empty()) {
     auto f = worklist.back();
     worklist.pop_back();
+    if (_func_map.find(f) == _func_map.end()) continue;
     for (auto &caller : _func_map[f]->Callers()) {
       if (!_func_infos[caller->GetFunction()].has_size_effect) {
         _func_infos[caller->GetFunction()].has_size_effect = true;
