@@ -50,7 +50,7 @@ xstl::Guard Module::SetContext(const front::LoggerPtr &logger) {
 
 FuncPtr Module::CreateFunction(const std::string &name, const define::TypePtr &type, bool is_decl) {
   DBG_ASSERT(type->IsFunction(), "not function type");
-  auto func = MakeSSA<Function>(name, is_decl);
+  auto func = MakeSSA<Function>(name, is_decl, this);
   func->set_type(type);
   _functions.push_back(func);
   return func;
@@ -76,11 +76,11 @@ BlockPtr Module::CreateBlock(const FuncPtr &parent) {
 
 BlockPtr Module::CreateBlock(const FuncPtr &parent, const std::string &name) {
   DBG_ASSERT((parent != nullptr) && parent->type()->IsFunction(),
-             "block's parent should be function type");
+             "block's getParent should be function type");
   auto block = MakeSSA<BasicBlock>(parent, name);
   block->set_type(nullptr);
 
-  // update parent function use-def info
+  // update getParent function use-def info
   parent->AddValue(block);
   return block;
 }
@@ -316,6 +316,7 @@ SSAPtr Module::CreatePureBinaryInst(Instruction::BinaryOps opcode,
 
   // add inst into basic block
   _insert_point->AddInstToEnd(bin_inst);
+  bin_inst->setParent(_insert_point.get());
   return bin_inst;
 }
 
@@ -541,7 +542,7 @@ SSAPtr Module::CreateElemAccess(const SSAPtr &ptr, const SSAPtrList &index) {
 std::string Module::GetArrayName() {
   std::string func_name;
   if (_value_symtab->is_root()) return "";
-  func_name = "@__const." + _insert_point->parent()->GetFunctionName();
+  func_name = "@__const." + _insert_point->getParent()->GetFunctionName();
   return func_name + "." + std::to_string(_array_id++);
 }
 

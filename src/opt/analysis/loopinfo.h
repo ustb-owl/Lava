@@ -22,8 +22,9 @@ public:
 
   BasicBlock *header() const { return _bbs[0]; }
 
-  LoopPtr parent() { return _parent; }
-  void set_parent(const LoopPtr &p) {
+  LoopPtr getParent() { return _parent; }
+
+  void setParent(const LoopPtr &p) {
     _parent = p;
   }
 
@@ -43,6 +44,7 @@ public:
   }
 
   std::vector<BasicBlock *> &blocks() { return _bbs; }
+
   const std::vector<BasicBlock *> &blocks() const { return _bbs; }
 
   std::vector<LoopPtr> &sub_loops() { return _sub_loops; }
@@ -84,9 +86,9 @@ public:
 
 class LoopInfoPass : public FunctionPass {
 private:
-  DomInfo                          _dom_info;
-  LoopInfo                         _loop_info;
-  Function                        *_cur_func;
+  DomInfo _dom_info;
+  LoopInfo _loop_info;
+  Function *_cur_func;
   std::unordered_set<BasicBlock *> _visited;
 
 public:
@@ -116,7 +118,7 @@ class LoopInfoPassFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<LoopInfoPass>();
-    auto passinfo =  std::make_shared<PassInfo>(pass, "LoopInfoPass", true, 0, LOOP_INFO);
+    auto passinfo = std::make_shared<PassInfo>(pass, "LoopInfoPass", true, 0, LOOP_INFO);
     passinfo->Requires("DominanceInfo");
     return passinfo;
   }

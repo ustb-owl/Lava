@@ -41,7 +41,7 @@ public:
                 if (dyn_cast<Function>(call_inst->Callee()) == F) {
 
                   // check if the call instruction is the last inst of its block
-                  auto pred = dyn_cast<BasicBlock>((*(phi_node->parent_block()))[i].value());
+                  auto pred = dyn_cast<BasicBlock>((*(phi_node->getParent()))[i].value());
                   DBG_ASSERT(pred != nullptr, "get pred block of phi-node failed");
                   auto inst = *std::prev(std::prev(pred->insts().end()));
                   if (inst == call_inst) {

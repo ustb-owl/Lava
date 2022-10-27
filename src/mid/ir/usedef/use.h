@@ -12,12 +12,15 @@ namespace lava::mid {
 class Use;
 class User;
 class Value;
+class Instruction;
 
 using UseList    = std::list<Use *>;
 using Operands   = std::vector<Use>;
 using SSAPtr     = std::shared_ptr<Value>;
 using UserPtr    = std::shared_ptr<User>;
+using InstPtr    = std::shared_ptr<Instruction>;
 using SSAPtrList = std::list<SSAPtr>;
+using InstList   = std::list<InstPtr>;
 
 class Use {
 private:
@@ -56,6 +59,7 @@ public:
   User *getUser() { return _user; }
 
   SSAPtr operator->() { return _value; }
+  const SSAPtr operator->() const { return _value; }
 
   Use &operator=(const Use &RHS) {
     if (this != &RHS) {

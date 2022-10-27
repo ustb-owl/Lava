@@ -539,8 +539,8 @@ public:
     return res;
   }
 
-  void CloneInstruction(const SSAPtr &inst, BasicBlock *block) {
-    SSAPtr result = nullptr;
+  void CloneInstruction(const InstPtr &inst, BasicBlock *block) {
+    InstPtr result = nullptr;
     if (auto binary_inst = dyn_cast<BinaryOperator>(inst)) {
       result = BinaryOperator::Create(binary_inst->opcode(), GetSSA(binary_inst->LHS()), GetSSA(binary_inst->RHS()));
       DBG_ASSERT(result != nullptr, "copy binary instruction failed");

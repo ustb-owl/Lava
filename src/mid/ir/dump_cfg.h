@@ -62,7 +62,7 @@ MakeGraphNode(graph_t *g, const BlockPtr &block,
 
   // add function in entry block
   if (block->name() == "entry") {
-    head = "<tr><td colspan='2'>" + block->parent()->GetFunctionName() + "</td></tr><tr colspan='2'>";
+    head = "<tr><td colspan='2'>" + block->getParent()->GetFunctionName() + "</td></tr><tr colspan='2'>";
   }
 
   std::stringstream ss;
@@ -84,7 +84,7 @@ MakeGraphNode(graph_t *g, const BlockPtr &block,
 
   // generate dominance frontier
   auto dom = lava::opt::PassManager::GetAnalysis<lava::opt::DominanceInfo>("DominanceInfo")->GetDomInfo();
-  auto DF = dom[block->parent().get()].DF[block.get()];
+  auto DF = dom[block->getParent().get()].DF[block.get()];
   std::string df;
   if (!DF.empty()) {
     df = "<tr><td>Dominance Frontier</td><td>";

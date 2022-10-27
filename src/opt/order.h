@@ -10,7 +10,8 @@
 #define GVN_GCM                       9
 #define LOCAL_MEM_PROP                10
 #define DEAD_CODE_ELIMINATION         11
-#define LOOP_UNROLLING                12
+#define FUNCTION_INLINING             12
+#define LOOP_UNROLLING                13
 
 
 // analysis

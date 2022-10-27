@@ -45,9 +45,9 @@ void LoopInfoPass::CollectLoops(BasicBlock *header) {
       } else {
 
         auto sub_loop = it->second;
-        while (auto parent = sub_loop->parent()) { sub_loop = parent; }
+        while (auto parent = sub_loop->getParent()) { sub_loop = parent; }
         if (sub_loop != loop) {
-          sub_loop->set_parent(loop);
+          sub_loop->setParent(loop);
           for (auto &BB : *(sub_loop->header())) {
             auto P = dyn_cast<BasicBlock>(BB.value());
             auto res = _loop_info.loop_of_bb().find(P.get());
@@ -74,11 +74,11 @@ void LoopInfoPass::Populate(BasicBlock *header) {
   auto it = _loop_info.loop_of_bb().find(header);
   auto sub_loop = (it == _loop_info.loop_of_bb().end()) ? nullptr : it->second;
   if (sub_loop && (sub_loop->header() == header)) {
-    (sub_loop->parent() ? sub_loop->parent()->sub_loops() : _loop_info.top_level()).push_back(sub_loop);
+    (sub_loop->getParent() ? sub_loop->getParent()->sub_loops() : _loop_info.top_level()).push_back(sub_loop);
     std::reverse(sub_loop->blocks().begin() + 1, sub_loop->blocks().end());
     std::reverse(sub_loop->sub_loops().begin(), sub_loop->sub_loops().end());
   }
-  for (; sub_loop; sub_loop = sub_loop->parent()) sub_loop->blocks().push_back(header);
+  for (; sub_loop; sub_loop = sub_loop->getParent()) sub_loop->blocks().push_back(header);
 }
 
 static PassRegisterFactory<LoopInfoPassFactory> registry;

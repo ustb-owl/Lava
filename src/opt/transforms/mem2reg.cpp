@@ -136,7 +136,7 @@ public:
         {entry, std::vector<SSAPtr>(_alloca_ids.size(), undef)}
     };
 
-    std::vector<std::pair<BasicBlock *, SSAPtrList::iterator>> alloc_pos;
+    std::vector<std::pair<BasicBlock *, InstList::iterator>> alloc_pos;
 
 
     while (!worklist.empty()) {

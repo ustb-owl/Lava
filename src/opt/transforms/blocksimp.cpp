@@ -55,6 +55,7 @@ void BlockSimplification::FoldRedundantBranch(const FuncPtr &F) {
 
         // replace the last instruction with jump
         BB->insts().back() = jump;
+        jump->setParent(BB);
 
         // set changed flag
         _changed = true;
@@ -71,6 +72,7 @@ void BlockSimplification::FoldRedundantBranch(const FuncPtr &F) {
         }
 
         auto jump_inst = std::make_shared<JumpInst>(target);
+        jump_inst->setParent(BB);
         BB->insts().erase(--(BB->insts().end()));
         BB->insts().push_back(jump_inst);
 
@@ -242,6 +244,11 @@ void BlockSimplification::MergeBlocks(BasicBlock *pred, BasicBlock *succ) {
   auto jumpInst = dyn_cast<JumpInst>(back);
   jumpInst->RemoveValue(succ);
   insts.pop_back();
+
+  // update the getParent of instructions
+  for (auto &it : succ->insts()) {
+    it->setParent(pred);
+  }
 
   // move successor's instructions into predecessor
   insts.insert(pred->inst_end(), succ->inst_begin(), succ->inst_end());

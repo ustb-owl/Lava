@@ -11,6 +11,7 @@ add_library(opt
         transforms/dge.cpp
         transforms/dce.cpp
         transforms/hello.cpp
+        transforms/inline.cpp
         transforms/mem2reg.cpp
         transforms/gvn_gcm.cpp
         transforms/blocksimp.cpp

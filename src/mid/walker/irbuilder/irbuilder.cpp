@@ -485,7 +485,7 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     type = lhs->type();
   }
 
-  const auto &func = _module.InsertPoint()->parent();
+  const auto &func = _module.InsertPoint()->getParent();
   auto zero = _module.GetZeroValue(type->GetType());
   if (node->op() == front::Operator::LAnd) {
     bin_inst = _module.CreateAlloca(MakePrimType(Type::Bool, false));
@@ -676,7 +676,7 @@ SSAPtr IRBuilder::visit(ControlAST *node) {
   auto context = _module.SetContext(node->logger());
 
   // create a new block
-  const auto &func = _module.InsertPoint()->parent();
+  const auto &func = _module.InsertPoint()->getParent();
   auto new_block = _module.CreateBlock(func);
 
   switch (node->type()) {
@@ -723,7 +723,7 @@ SSAPtr IRBuilder::visit(CompoundStmt *node) {
   }
 
   // create new block
-  const auto &cur_func = _module.InsertPoint()->parent();
+  const auto &cur_func = _module.InsertPoint()->getParent();
   auto block = _module.CreateBlock(cur_func, (set_name ? "body" : "block"));
   _module.CreateJump(block);
   _module.SetInsertPoint(block);
@@ -745,7 +745,7 @@ SSAPtr IRBuilder::visit(CompoundStmt *node) {
  */
 SSAPtr IRBuilder::visit(IfElseStmt *node) {
   auto context = _module.SetContext(node->logger());
-  auto func = _module.InsertPoint()->parent();
+  auto func = _module.InsertPoint()->getParent();
 
   // create if-else blocks
   auto &cond = node->cond();
@@ -923,7 +923,7 @@ SSAPtr IRBuilder::visit(PrimTypeAST *node) {
 SSAPtr IRBuilder::visit(WhileStmt *node) {
   auto context = _module.SetContext(node->logger());
   auto cur_insert = _module.InsertPoint();  // save current insert point
-  auto func = cur_insert->parent();
+  auto func = cur_insert->getParent();
 
   // create while blocks
   auto cond_block = _module.CreateBlock(func, "while.cond");

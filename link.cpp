@@ -12,6 +12,7 @@ extern int GlobalValueNumbering;
 extern int DeadCodeElimination;
 extern int LoopUnrolling;
 extern int GlobalConstPropagation;
+extern int Inlining;
 
 // analysis
 extern int Dominance;
@@ -31,6 +32,7 @@ int GVNGCMLinked         = GlobalValueNumbering;
 int DeadCodeLinked       = DeadCodeElimination;
 int LoopUnrollingLinked  = LoopUnrolling;
 int GlbConstPropLinked   = GlobalConstPropagation;
+int InliningLinked       = Inlining;
 
 int DominanceLinked      = Dominance;
 int PostDominanceLinked  = PostDominance;

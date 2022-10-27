@@ -12,15 +12,12 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   _changed = false;
   if (F->is_decl()) return _changed;
 
-  TRACE("%s\n", F->GetFunctionName().c_str());
-
   GVN:
   PassManager::RunRequiredPasses(this);
   initialize();
 
   _cur_func = F.get();
   _changed = GlobalValueNumbering(F);
-  TRACE0();
 
   // clear value number, otherwise we can't remove dead code
   _value_number.clear();
@@ -32,12 +29,8 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   dce->runOnFunction(F);
   dce->finalize();
 
-  TRACE0();
-
 #if 1
   CollectInstBlockMap(F);
-
-  TRACE0();
 
 
   // global code motion
@@ -54,17 +47,12 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   }
   DBG_ASSERT(insts.size() == _user_map.size(), "instruction size is not equal _user_map");
 
-  TRACE0();
-
 
   for (auto &inst : insts) ScheduleEarly(entry, inst);
-  TRACE0();
   _visited.clear();
-  TRACE0();
   for (auto &inst : insts) {
     ScheduleLate(inst);
   }
-  TRACE0();
 
 #endif
 
@@ -95,12 +83,11 @@ void GlobalValueNumberingGlobalCodeMotion::finalize() {
   _value_number.clear();
   _visited.clear();
   _user_map.clear();
-  _inst_block_map.clear();
 }
 
 void GlobalValueNumberingGlobalCodeMotion::
 Replace(const InstPtr &inst, const SSAPtr &value,
-        BasicBlock *block, SSAPtrList::iterator it) {
+        BasicBlock *block, InstList::iterator it) {
   if (inst != value) {
     inst->ReplaceBy(value);
 
@@ -109,8 +96,6 @@ Replace(const InstPtr &inst, const SSAPtr &value,
                               return kv.first == inst;
                             });
     if (res != _value_number.end()) {
-//      std::swap(*res, _value_number.back());
-//      _value_number.pop_back();
       _value_number.erase(res);
     }
 
@@ -124,10 +109,7 @@ FindValue(const std::shared_ptr<BinaryOperator> &binary_inst) {
   SSAPtr rhs = ValueOf(binary_inst->RHS());
 
   for (auto [k, v] : _value_number) {
-//    auto [k, v] = _value_number[i];
-
     auto bin_value = dyn_cast<BinaryOperator>(k);
-
 
     if (bin_value && (bin_value != binary_inst)) {
       BinaryOperator::BinaryOps opcode2 = bin_value->opcode();
@@ -243,7 +225,6 @@ SSAPtr GlobalValueNumberingGlobalCodeMotion::ValueOf(const SSAPtr &value) {
 
   auto [res, state] = _value_number.emplace(value, value);
   DBG_ASSERT(state == true, "insert new value failed");
-  TRACE("size %lu\n", _value_number.size());
 
   // find any way
   if (auto binary_inst = dyn_cast<BinaryOperator>(value)) {
@@ -269,16 +250,7 @@ GlobalValueNumbering(const FuncPtr &F) {
   auto rpo = _blkWalker.RPOTraverse(entry.get());
 
   for (const auto &BB : rpo) {
-    TRACE("%lu\n", BB->insts().size());
-//    long long ii = 0;
     for (auto it = BB->insts().begin(); it != BB->inst_end();) {
-//      if (_value_number.size() > 1000) {
-//        for (const auto &[k,v] : _value_number) {
-//          if (auto ist = dyn_cast<Instruction>(k)) {
-//            TRACE("%d\n",ist->opcode());
-//          }
-//        }
-//      }
 
       auto next = std::next(it);
       if (auto binary_inst = dyn_cast<BinaryOperator>(*it)) {
@@ -340,7 +312,6 @@ void GlobalValueNumberingGlobalCodeMotion::
 CollectInstBlockMap(const FuncPtr &F) {
   // clear instruction maps at first
   _user_map.clear();
-  _inst_block_map.clear();
   _visited.clear();
 
   std::size_t inst_num = 0;
@@ -348,10 +319,10 @@ CollectInstBlockMap(const FuncPtr &F) {
     auto block = dyn_cast<BasicBlock>(BB.value());
     for (const auto &inst : block->insts()) {
       auto I = dyn_cast<Instruction>(inst);
+      DBG_ASSERT(I->getParent() == block.get(), "getParent is wrong");
       if (I->isBinaryOp() && I->uses().empty()) {
         ERROR("instruction is dead");
       }
-      _inst_block_map.insert({I.get(), block.get()});
       _user_map.insert({I.get(), I});
     }
     inst_num += block->insts().size();
@@ -361,9 +332,8 @@ CollectInstBlockMap(const FuncPtr &F) {
 
 void GlobalValueNumberingGlobalCodeMotion::
 TransferInst(const InstPtr &inst, BasicBlock *new_block) {
-  DBG_ASSERT(_inst_block_map.find(inst.get()) != _inst_block_map.end(), "can't find this inst's block");
-  auto inst_block = _inst_block_map[inst.get()];
-  _inst_block_map[inst.get()] = new_block;
+  auto inst_block = inst->getParent();
+  inst->setParent(new_block);
 
   if (IsSSA<BranchInst>(new_block->insts().back())) {
     auto end = --new_block->insts().end();
@@ -383,10 +353,8 @@ void GlobalValueNumberingGlobalCodeMotion::
 ScheduleOp(BasicBlock *entry, const InstPtr &I, const SSAPtr &operand) {
   if (auto op = dyn_cast<Instruction>(operand)) {
     ScheduleEarly(entry, op);
-    DBG_ASSERT(_inst_block_map.find(I.get()) != _inst_block_map.end(), "can't find this inst's block");
-    auto inst_block = _inst_block_map[I.get()];
-    DBG_ASSERT(_inst_block_map.find(op.get()) != _inst_block_map.end(), "can't find this op's block");
-    auto op_block = _inst_block_map[op.get()];
+    auto inst_block = I->getParent();
+    auto op_block = op->getParent();
     auto &dom_info = _dom_info[_cur_func];
     if (dom_info.depth[inst_block] < dom_info.depth[op_block]) {
       TransferInst(I, op_block);
@@ -442,7 +410,7 @@ void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
         DBG_ASSERT(_user_map.find(i) != _user_map.end(), "can't find user cast of i");
         auto user = _user_map[i];
         ScheduleLate(user);
-        auto user_block = _inst_block_map[user.get()];
+        auto user_block = user->getParent();
 
         // handle phi node
         if (auto phi_node = dyn_cast<PhiNode>(user)) {
@@ -450,7 +418,7 @@ void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
             return &U == use;
           });
 
-          user_block = dyn_cast<BasicBlock>((*(phi_node->parent_block()))[it - phi_node->begin()].value()).get();
+          user_block = dyn_cast<BasicBlock>((*(phi_node->getParent()))[it - phi_node->begin()].value()).get();
         }
         lca = lca ? FindLCA(lca, user_block) : user_block;
       }
@@ -465,7 +433,7 @@ void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
           best = lca;
           best_loop_depth = cur_loop_depth;
         }
-        if (lca == _inst_block_map[inst.get()]) break;
+        if (lca == inst->getParent()) break;
         lca = _dom_info[_cur_func].idom[lca];
       }
 
@@ -475,7 +443,7 @@ void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
           for (auto &u : inst->uses()) {
             if (u->getUser() == dyn_cast<User>(it).get()) {
               best->insts().remove(inst);
-              SSAPtrList::iterator pos;
+              InstList::iterator pos;
               for (pos = best->inst_begin(); pos != best->inst_end(); pos++) {
                 if (*pos == it) break;
               }

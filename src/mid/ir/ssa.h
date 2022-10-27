@@ -9,14 +9,16 @@
 
 namespace lava::mid {
 
+class Module;
+
 bool NeedLoad(const SSAPtr &ptr);
 
 // operands: pred1, pred2 ...
 class BasicBlock : public User {
 private:
-  SSAPtrList  _insts;
+  InstList     _insts;
   std::string _name;    // block name
-  FuncPtr     _parent;  // block's parent(function)
+  FuncPtr     _parent;  // block's getParent(function)
 
 public:
 
@@ -31,11 +33,11 @@ public:
   // dump CFG
   void Dump(std::ostream &os, IdManager &id_mgr, const std::string &separator) const;
 
-  void set_parent(const FuncPtr &parent) { _parent = parent; }
+  void setParent(const FuncPtr &parent) { _parent = parent; }
 
-  void AddInstToEnd(const SSAPtr &inst) { _insts.emplace_back(inst); }
+  void AddInstToEnd(const InstPtr &inst) { _insts.emplace_back(inst); }
 
-  void AddInstBefore(const SSAPtr &insertBefore, const SSAPtr &inst);
+  void AddInstBefore(const InstPtr &insertBefore, const SSAPtr &inst);
 
   // remove all instructions
   void ClearInst();
@@ -44,11 +46,11 @@ public:
   void DeleteSelf();
 
   //getters
-  SSAPtrList          &insts()        { return _insts;         }
-  SSAPtrList::iterator inst_begin()   { return _insts.begin(); }
-  SSAPtrList::iterator inst_end()     { return _insts.end();   }
-  const FuncPtr       &parent() const { return _parent;        }
-  const std::string   &name()   const { return _name;          }
+  InstList          &insts()           { return _insts;         }
+  InstList::iterator inst_begin()      { return _insts.begin(); }
+  InstList::iterator inst_end()        { return _insts.end();   }
+  const FuncPtr     &getParent() const { return _parent;        }
+  const std::string &name()   const    { return _name;          }
 
   std::vector<BasicBlock *> successors();
 
@@ -62,6 +64,7 @@ public:
 class Instruction : public User {
 private:
   unsigned _opcode;
+  BasicBlock *_bb;
 
 public:
   Instruction(unsigned opcode, unsigned operand_nums, ClassId classId);
@@ -127,6 +130,10 @@ public:
   bool isInstruction() const override { return true; }
 
   bool NeedLoad() const;
+
+  BasicBlock *getParent();
+  const BasicBlock *getParent() const;
+  void setParent(BasicBlock *bb);
 
 
   //----------------------------------------------------------------------
@@ -256,10 +263,13 @@ private:
   bool _is_tail_recursion;
   std::vector<SSAPtr> _args;
   std::string _function_name;
+  Module *_module;
 
 public:
-  explicit Function(std::string name, bool is_decl = false)
-    : User(ClassId::FunctionId), _is_decl(is_decl), _is_tail_recursion(false), _function_name(std::move(name)) {}
+  explicit Function(std::string name, bool is_decl = false, Module *module = nullptr)
+    : User(ClassId::FunctionId), _is_decl(is_decl),
+     _is_tail_recursion(false), _function_name(std::move(name)),
+     _module(module) {}
 
   bool isInstruction() const override { return false; }
 
@@ -274,6 +284,18 @@ public:
 
   void SetName(const std::string &name) {
     _function_name = name;
+  }
+
+  Module *getParent() {
+    return _module;
+  }
+
+  const Module *getParent() const {
+    return _module;
+  }
+
+  void setParent(Module *module) {
+    _module = module;
   }
 
   void SetIsRecursion(bool value) { _is_tail_recursion = value; }
@@ -692,10 +714,12 @@ class GlobalVariable : public User {
 private:
   bool        _is_var;
   std::string _name;
+  Module *    _module;
 
 public:
-  GlobalVariable(bool is_var, const std::string &name, const SSAPtr &init)
-    : User(ClassId::GlobalVariableId), _is_var(is_var), _name(name) {
+  GlobalVariable(bool is_var, const std::string &name, const SSAPtr &init, Module *module = nullptr)
+    : User(ClassId::GlobalVariableId), _is_var(is_var),
+      _name(name), _module(module) {
     AddValue(init);
   }
 
@@ -708,7 +732,19 @@ public:
   const std::string &name()   const { return _name;              }
 
   void set_is_var(bool is_var)      { _is_var = is_var;          }
-  void set_init(const SSAPtr &init) { (*this)[0].set(init);      }
+  void set_init(const SSAPtr &init) { (*this)[0].set(init);   }
+
+  Module *getParent() {
+    return _module;
+  }
+
+  const Module *getParent() const {
+    return _module;
+  }
+
+  void setParent(Module *module) {
+    _module = module;
+  }
 
   // methods for dyn_cast
   static inline bool classof(GlobalVariable *) { return true;       }
@@ -792,14 +828,11 @@ public:
 // phi node
 // operands: value1, value2, ...
 class PhiNode : public Instruction {
-private:
-  BasicBlock *_block;
-
 public:
   explicit PhiNode(BasicBlock *BB)
-  : Instruction(Instruction::OtherOps::PHI, BB->size(), ClassId::PHINodeId), _block(BB) {}
-
-  BasicBlock *parent_block() { return _block; }
+  : Instruction(Instruction::OtherOps::PHI, BB->size(), ClassId::PHINodeId) {
+    setParent(BB);
+  }
 
   std::vector<BlockPtr> blocks() const;
 

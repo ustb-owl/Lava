@@ -33,7 +33,6 @@ private:
 
   std::unordered_set<Instruction *> _visited;
   std::unordered_map<Instruction *, InstPtr> _user_map;
-  std::unordered_map<Instruction *, BasicBlock *> _inst_block_map;
 
   inline bool IsPureCall(const SSAPtr &value) {
     if (auto call_inst = dyn_cast<CallInst>(value)) {
@@ -57,7 +56,7 @@ public:
 
   void finalize() final;
 
-  void Replace(const InstPtr &inst, const SSAPtr &value, BasicBlock *block, SSAPtrList::iterator it);
+  void Replace(const InstPtr &inst, const SSAPtr &value, BasicBlock *block, InstList::iterator it);
 
   SSAPtr FindValue(const std::shared_ptr<BinaryOperator> &binary_inst);
 

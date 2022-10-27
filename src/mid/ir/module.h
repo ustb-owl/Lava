@@ -33,7 +33,7 @@ private:
   BlockPtr                     _insert_point;
   ValueEnvPtr                  _value_symtab;
   FunctionList                 _functions;
-  SSAPtrList::iterator         _insert_pos;
+  InstList::iterator           _insert_pos;
   std::stack<front::LoggerPtr> _loggers;
   std::stack<BreakContPair>    _break_cont;
   std::deque<int>              _array_lens;
@@ -48,8 +48,8 @@ public:
   auto MakeSSA(Args &&... args) {
     static_assert(std::is_base_of_v<Value, T>);
     auto ssa = std::make_shared<T>(std::forward<Args>(args)...);
-    ssa->SetParent(_insert_point);
-    ssa->set_logger(_loggers.top());
+    if (!_loggers.empty())
+      ssa->set_logger(_loggers.top());
     return ssa;
   }
 
@@ -58,6 +58,7 @@ public:
   auto AddInst(Args &&... args) {
     auto inst = MakeSSA<T>(std::forward<Args>(args)...);
     _insert_pos = ++_insert_point->insts().insert(_insert_pos, inst);
+    inst->setParent(_insert_point.get());
     return inst;
   }
 
@@ -118,7 +119,7 @@ public:
     SetInsertPoint(BB, BB->insts().end());
   }
 
-  void SetInsertPoint(const BlockPtr &BB, SSAPtrList::iterator it) {
+  void SetInsertPoint(const BlockPtr &BB, InstList::iterator it) {
     _insert_point = BB;
     _insert_pos = it;
   }
@@ -157,7 +158,7 @@ public:
   BlockPtr                  &InsertPoint() { return _insert_point; }
   BlockPtr                  &FuncEntry()   { return _func_entry;   }
   BlockPtr                  &FuncExit()    { return _func_exit;    }
-  SSAPtrList::iterator       InsertPos()   { return _insert_pos;   }
+  InstList::iterator         InsertPos()   { return _insert_pos;   }
   std::deque<int>           &array_lens()  { return _array_lens;   }
   std::stack<BreakContPair> &BreakCont()   { return _break_cont;   }
 

@@ -11,11 +11,26 @@
 namespace lava::mid {
 
 Instruction::Instruction(unsigned opcode, unsigned operand_nums, ClassId classId)
-    : User(classId, operand_nums), _opcode(opcode) {}
+    : User(classId, operand_nums), _opcode(opcode), _bb(nullptr) {}
 
 Instruction::Instruction(unsigned opcode, unsigned operand_nums,
                          const Operands &operands, ClassId classId)
-    : User(classId, operand_nums, operands), _opcode(opcode) {}
+    : User(classId, operand_nums, operands), _opcode(opcode), _bb(nullptr) {}
+
+BasicBlock *Instruction::getParent() {
+  DBG_ASSERT(_bb != nullptr, "The getParent basic block is nullptr");
+  return _bb;
+}
+
+const BasicBlock *Instruction::getParent() const {
+  DBG_ASSERT(_bb != nullptr, "The getParent basic block is nullptr");
+  return _bb;
+}
+
+void Instruction::setParent(lava::mid::BasicBlock *bb) {
+  DBG_ASSERT(bb != nullptr, "The getParent basic block shouldn't be nullptr");
+  _bb = bb;
+}
 
 bool Instruction::classof(Value *value) {
   switch (value->classId()) {
@@ -611,7 +626,7 @@ bool NeedLoad(const SSAPtr &ptr) {
 
 std::vector<BlockPtr> PhiNode::blocks() const {
   std::vector<BlockPtr> res;
-  for (const auto &it : (*_block)) {
+  for (const auto &it : (*getParent())) {
     auto pred = dyn_cast<BasicBlock>(it.value());
     DBG_ASSERT(pred != nullptr, "pred is not a basic block");
     res.push_back(pred);
@@ -629,6 +644,8 @@ BlockPtr PhiNode::getIncomingBlock(const Use &val) const  {
   DBG_ASSERT(idx < size(), "PHI index out of bound");
   return blocks()[idx];
 }
+
+
 
 
 /* ---------------------------- Methods of dumping IR ------------------------------- */
@@ -656,7 +673,10 @@ void DumpType(std::ostream &os, const define::TypePtr &type) {
 }
 
 void DumpValue(std::ostream &os, IdManager &id_mgr, const SSAPtr &value) {
-  value->Dump(os, id_mgr);
+  if (value == nullptr)
+    os << "nullptr";
+  else
+    value->Dump(os, id_mgr);
 }
 
 void DumpValue(std::ostream &os, IdManager &id_mgr, const Use &operand) {
@@ -1094,7 +1114,7 @@ void PhiNode::Dump(std::ostream &os, IdManager &id_mgr) const {
     os << " [ ";
     DumpValue(os, id_mgr, (*this)[i].value());
     os << ", %";
-    (*_block)[i]->Dump(os, id_mgr);
+    (*getParent())[i]->Dump(os, id_mgr);
     os << " ]";
     if (i != this->size() - 1) os << ",";
   }
