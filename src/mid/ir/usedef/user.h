@@ -28,6 +28,10 @@ public:
 
   unsigned operandNum() const { return _operands.size(); }
 
+  const Operands &GetOperands() const {
+    return _operands;
+  }
+
   void SetOperandNum(std::size_t size) {
     _operands_num = size;
   }
@@ -112,6 +116,13 @@ public:
       case ClassId::ConstantStringId: return false;
       default: return true;
     }
+  }
+
+  bool isUser() const override { return true;}
+
+  // Dump method
+  void Dump(std::ostream &os, IdManager &id_mgr) const override {
+    DBG_ASSERT(false, "Should not reach here!");
   }
 
 };

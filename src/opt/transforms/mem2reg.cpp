@@ -60,7 +60,7 @@ public:
         if (auto alloc_inst = dyn_cast<AllocaInst>(inst)) {
           auto type = alloc_inst->type();
           DBG_ASSERT(type->IsPointer(), "type of alloca instruction is not pointer");
-          if (type->GetDerefedType()->IsInteger()) {
+          if (type->GetDerefedType()->IsInteger() || type->GetDerefedType()->IsPointer()) {
             _alloca_ids.insert({alloc_inst.get(), (uint32_t)_alloca_ids.size()});
             _allocas.push_back(alloc_inst.get());
           }

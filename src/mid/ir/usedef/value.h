@@ -75,6 +75,10 @@ public:
   // dump the content of SSA value to output stream
   virtual void Dump(std::ostream &os, IdManager &id_mgr) const = 0;
 
+  // DEBUG method: dump DEBUG IR info
+  void dump() const;
+  void AssignId(IdManager &id_mgr) const;
+
 //   dump to C code
 //  virtual void DumpToC(std::ostream &os)
 
@@ -88,6 +92,9 @@ public:
   static inline bool classof(const Value *) { return true; }
 
   ClassId classId() const { return _class_id; }
+
+  // check if this object is User
+  virtual bool isUser() const { return false; }
 };
 };
 
