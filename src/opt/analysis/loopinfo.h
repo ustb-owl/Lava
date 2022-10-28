@@ -28,9 +28,9 @@ public:
     _parent = p;
   }
 
-  int depth() {
+  int depth() const {
     int ret = 0;
-    for (Loop *x = this; x; x = x->_parent.get()) ++ret;
+    for (const Loop *x = this; x; x = x->_parent.get()) ++ret;
     return ret;
   }
 
@@ -59,7 +59,7 @@ private:
 
 public:
   // get depth of basic block
-  int depth_of(BasicBlock *BB) {
+  int depth_of(BasicBlock *BB) const {
     auto it = _loop_of_bb.find(BB);
     return it == _loop_of_bb.end() ? 0 : it->second->depth();
   }

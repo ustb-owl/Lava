@@ -7,8 +7,49 @@
 #include "common/idmanager.h"
 #include "lib/guard.h"
 #include "define/type.h"
+#include "mid/ir/module.h"
 
 namespace lava::mid {
+
+Function::BlockList Function::GetBlockList() {
+  BlockList list;
+  for (const auto &bb_use : *this) {
+    auto bb = dyn_cast<BasicBlock>(bb_use.value());
+    list.push_back(bb);
+  }
+  return list;
+}
+
+void Function::RemoveFromParent() {
+  auto &functions = _module->Functions();
+  for (auto it = functions.begin(); it != functions.end(); it++) {
+    if (it->get() == this) {
+      functions.erase(it);
+      return;
+    }
+  }
+}
+
+InstList::iterator Instruction::RemoveFromParent() {
+  DBG_ASSERT(size() == 0, "The operand of this instruction is not cleared");
+  auto BB = getParent();
+  for (auto it = BB->inst_begin(); it != BB->inst_end(); it++) {
+    if (it->get() == this) {
+      return BB->insts().erase(it);
+    }
+  }
+  return BB->inst_end();
+}
+
+InstList::iterator Instruction::GetPosition() {
+  auto BB = getParent();
+  for (auto it = BB->inst_begin(); it != BB->inst_end(); it++) {
+    if (it->get() == this) {
+      return it;
+    }
+  }
+  return BB->inst_end();
+}
 
 Instruction::Instruction(unsigned opcode, unsigned operand_nums, ClassId classId)
     : User(classId, operand_nums), _opcode(opcode), _bb(nullptr) {}

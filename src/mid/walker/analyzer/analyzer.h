@@ -75,7 +75,8 @@ private:
                               std::string_view id, bool is_param);
 
   define::ASTPtrList GetLinearInitList(define::ASTPtrList &result);
-  define::ASTPtrList ListToMatrix(std::deque<int> dim, define::ASTPtrList &initList, bool is_top = false);
+  define::ASTPtrList ListToMatrix(std::deque<std::size_t> dim,
+                                  define::ASTPtrList &initList, bool is_top = false);
 
   // base type of all enumerators
   static define::TypePtr enum_base_;
@@ -89,7 +90,7 @@ private:
   // used when analyzing initializer list
   std::stack<define::TypePtr> final_types_;
   // array length list
-  std::deque<int> array_lens_;
+  std::deque<std::size_t> array_lens_;
   // is the top dimension of init list
   bool is_top_dim_ = false;
   // used when analyzing function related stuffs

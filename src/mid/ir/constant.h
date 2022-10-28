@@ -11,15 +11,22 @@ namespace lava::mid {
 
 using lava::define::PrimType;
 
+class ConstantValue : public User {
+public:
+  explicit ConstantValue(ClassId id) : User(id) {}
+
+  bool IsConst() const final { return true; }
+
+  virtual SSAPtr Copy() const = 0;
+};
+
 // Constant int value ssa
-class ConstantInt : public Value {
+class ConstantInt : public ConstantValue {
 private:
   int _value;
 
 public:
-  explicit ConstantInt(unsigned int value) : Value(ClassId::ConstantIntId), _value(value) {}
-
-  bool IsConst() const override { return true; }
+  explicit ConstantInt(unsigned int value) : ConstantValue(ClassId::ConstantIntId), _value(value) {}
 
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
@@ -27,6 +34,12 @@ public:
   int value() const { return _value; }
 
   bool IsZero() const { return _value == 0; }
+
+  SSAPtr Copy() const final {
+    auto res = std::make_shared<ConstantInt>(_value);
+    res->set_type(type());
+    return res;
+  }
 
   static inline bool classof(ConstantInt *) { return true; }
 
@@ -42,15 +55,19 @@ public:
 };
 
 // Constant string value ssa
-class ConstantString : public Value {
+class ConstantString : public ConstantValue {
 private:
   std::string _str;
 
 public:
   explicit ConstantString(std::string str)
-      : Value(ClassId::ConstantStringId), _str(std::move(str)) {}
+      : ConstantValue(ClassId::ConstantStringId), _str(std::move(str)) {}
 
-  bool IsConst() const override { return true; }
+  SSAPtr Copy() const final {
+    auto res = std::make_shared<ConstantString>(_str);
+    res->set_type(type());
+    return res;
+  }
 
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
@@ -61,16 +78,26 @@ public:
 
 // constant array value ssa
 // operands: elem1, elem2, ...
-class ConstantArray : public User {
+class ConstantArray : public ConstantValue {
 private:
   std::string _name;
 public:
   explicit ConstantArray(const SSAPtrList &elems, std::string name)
-      : User(ClassId::ConstantArrayId), _name(std::move(name)) {
+      : ConstantValue(ClassId::ConstantArrayId), _name(std::move(name)) {
     for (const auto &it : elems) AddValue(it);
   }
 
-  bool IsConst() const override { return true; }
+  SSAPtr Copy() const final {
+    SSAPtrList vals;
+    for (const auto &it : *this) {
+      DBG_ASSERT(it.value()->IsConst(), "the element of constant array should be constant value");
+      vals.push_back(std::static_pointer_cast<ConstantValue>(it.value())->Copy());
+    }
+    DBG_ASSERT(vals.size() == size(), "the size of the new constant array is wrong");
+    auto res = std::make_shared<ConstantArray>(vals, _name);
+    res->set_type(type());
+    return res;
+  }
 
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 

@@ -47,8 +47,10 @@ bool PassManager::RunPass(const PassPtr &pass) {
     pass->finalize();
   } else {
     DBG_ASSERT(pass->IsFunctionPass(), "unknown pass class");
-    for (const auto &it : module().Functions()) {
-      auto func = std::static_pointer_cast<Function>(it);
+    auto &functions = module().Functions();
+    for (std::size_t i = 0; i < functions.size(); i++) {
+      auto func = std::static_pointer_cast<Function>(functions[i]);
+      if (func->is_copied()) continue;
 //      TRACE("%s\n", pass->name().c_str());
       changed = pass->runOnFunction(func);
       // perform finalization

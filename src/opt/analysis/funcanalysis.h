@@ -7,7 +7,20 @@
 
 namespace lava::opt {
 
-struct FunctionInfo {
+class FunctionNode;
+class FunctionInfo;
+using FuncNodePtr = std::shared_ptr<FunctionNode>;
+using FuncInfoMap = std::unordered_map<Function *, FunctionInfo>;
+
+class FunctionInfo {
+public:
+  using RetInstPtr = std::shared_ptr<ReturnInst>;
+
+private:
+  FuncNodePtr F;
+  RetInstPtr ret_inst;
+
+public:
   bool is_leaf;
   bool load_global;
   bool store_global;
@@ -15,15 +28,31 @@ struct FunctionInfo {
   bool has_size_effect;
 
   FunctionInfo()
-    : is_leaf(false), load_global(false), store_global(false),
+    : F(nullptr), is_leaf(false),
+      load_global(false), store_global(false),
       load_global_array(false), has_size_effect(false) {}
 
   bool IsPure() const { return !(load_global || has_size_effect); }
-};
 
-class FunctionNode;
-using FuncNodePtr = std::shared_ptr<FunctionNode>;
-using FuncInfoMap = std::unordered_map<Function *, FunctionInfo>;
+  bool IsRecursive() const;
+
+  const FuncNodePtr &FuncNode() const {
+    return F;
+  }
+
+  void SetFuncNode(const FuncNodePtr &f) {
+    DBG_ASSERT(F == nullptr, "FunctionInfo already has a function pointer");
+    F = f;
+  }
+
+  void SetRetInst(const RetInstPtr &ret) {
+    ret_inst = ret;
+  }
+
+  const RetInstPtr RetInst() const {
+    return ret_inst;
+  }
+};
 
 class FunctionNode {
   Function *_func;
@@ -42,6 +71,10 @@ public:
 
   std::unordered_set<FuncNodePtr> &Callers() { return caller; }
   std::unordered_set<FuncNodePtr> &Callees() { return callee; }
+  const std::unordered_set<FuncNodePtr> &Callers() const { return caller; }
+  const std::unordered_set<FuncNodePtr> &Callees() const { return callee; }
+
+  void dump() const;
 };
 
 
@@ -73,12 +106,11 @@ public:
 
   void DumpCallGraph();
 
-  void DumpFunctionInfo();
+  void dump();
 
   const FuncInfoMap &GetFunctionInfo() { return _func_infos; }
 
   bool runOnModule(Module &M) final;
-
 };
 
 class FunctionInfoPassFactory : public PassFactory {

@@ -43,15 +43,15 @@ ASTPtrList Analyzer::GetLinearInitList(ASTPtrList &initList) {
   ASTPtrList result;
 
   // update dimension information
-  int current_dim = array_lens_.front();
+  std::size_t current_dim = array_lens_.front();
   array_lens_.pop_front();
 
   // get current dim size
-  int rest_size = 1;
+  std::size_t rest_size = 1;
   for (const auto &it : array_lens_) rest_size *= it;
 
   // get current dim size
-  int current_size = current_dim * rest_size;
+  std::size_t current_size = current_dim * rest_size;
 
   auto init = initList.begin();
   while (true) {
@@ -59,7 +59,7 @@ ASTPtrList Analyzer::GetLinearInitList(ASTPtrList &initList) {
 
     if ((*init)->ast_type()->IsInteger()) {
       int loc = result.size();
-      for (int size = result.size(); size < loc + rest_size; size++) {
+      for (std::size_t size = result.size(); size < loc + rest_size; size++) {
         if ((init != initList.end()) && (*init)->ast_type()->IsInteger()) {
           result.push_back(std::move(*init));
           init++;
@@ -88,7 +88,7 @@ ASTPtrList Analyzer::GetLinearInitList(ASTPtrList &initList) {
   }
 
   // padding with 0
-  while ((int)result.size() < current_size) {
+  while (result.size() < current_size) {
     auto zero = std::make_unique<IntAST>(0);
     zero->set_ast_type(MakePrimType(Type::Int32, true));
     result.push_back(std::move(zero));
@@ -99,16 +99,16 @@ ASTPtrList Analyzer::GetLinearInitList(ASTPtrList &initList) {
   return result;
 }
 
-ASTPtrList Analyzer::ListToMatrix(std::deque<int> dims, ASTPtrList &initList, bool is_top) {
+ASTPtrList Analyzer::ListToMatrix(std::deque<std::size_t> dims, ASTPtrList &initList, bool is_top) {
   auto current_dim = dims.front();
   dims.pop_front();
 
   ASTPtrList result;
   if (dims.empty()) {
-    int count = 0;
+    std::size_t count = 0;
     for (auto it = initList.begin(); it != initList.end(); ) {
       ASTPtrList tmp;
-      for (int i = 0; i < current_dim; i++, it++, count++) {
+      for (std::size_t i = 0; i < current_dim; i++, it++, count++) {
         tmp.push_back(std::move(*it));
       }
       DBG_ASSERT(tmp.size() == current_dim, "tmp list size is incorrect");
@@ -121,14 +121,14 @@ ASTPtrList Analyzer::ListToMatrix(std::deque<int> dims, ASTPtrList &initList, bo
 
     DBG_ASSERT(count == initList.size(), "didn't handle all initList elements");
   } else {
-    int count = 0;
+    std::size_t count = 0;
     auto sub = ListToMatrix(dims, initList);
 
     if (is_top) return sub;
 
     for (auto it = sub.begin(); it != sub.end();) {
       ASTPtrList tmp;
-      for (int i = 0; i < current_dim; i++, it++, count++) {
+      for (std::size_t i = 0; i < current_dim; i++, it++, count++) {
         tmp.push_back(std::move(*it));
       }
       DBG_ASSERT(tmp.size() == current_dim, "tmp list size is incorrect");

@@ -49,6 +49,7 @@ public:
   void AddValue(const SSAPtr &V) {
 //    DBG_ASSERT((_operands.size() < _operands_num) || ( _operands_num == 0), " out of range");
     _operands.push_back(Use(V, this));
+    _operands_num = _operands.size();
   }
 
   void RemoveValue(const SSAPtr& V) {
@@ -103,6 +104,9 @@ public:
   auto end() { return _operands.end(); }
   auto end() const { return _operands.end(); }
 
+  Use &back() { return _operands.back(); }
+  const Use &back() const { return _operands.back(); }
+
   bool empty() const { return _operands.empty(); }
   unsigned size() const { return _operands.size(); }
 
@@ -118,7 +122,7 @@ public:
     }
   }
 
-  bool isUser() const override { return true;}
+  bool isUser() const override { return true; }
 
   // Dump method
   void Dump(std::ostream &os, IdManager &id_mgr) const override {

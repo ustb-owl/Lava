@@ -18,6 +18,7 @@ void IdManager::Reset() {
   _lhs_false_id     = 0;
   _land_end         = 0;
   _lor_end          = 0;
+  _phi_id           = 0;
 
   // LLIR
   _ll_block_id      = 0;

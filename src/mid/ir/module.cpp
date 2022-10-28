@@ -489,6 +489,7 @@ GlobalVarPtr Module::CreateGlobalVar(bool is_var, const std::string &name, const
 
   auto global = MakeSSA<GlobalVariable>(is_var, name, init);
   global->set_type(MakePointer(var_type, false));
+  global->setParent(this);
 
   // add to global variables
   _global_vars.push_back(global);

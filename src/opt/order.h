@@ -1,17 +1,18 @@
 #define DIRTY_ARRAY_CONV              1
 #define DIRTY_FUNCTION_CONV           2
 #define BLOCK_SIMPLIFICATION          3
-#define DEAD_GLOBAL_CODE_ELIMINATION  4
 
-#define LOOP_UNROLL                   5
-#define MEMORY_TO_REGISTER            6
-#define GLOBAL_CONST_PROP             7
-#define TAIL_RECURSION                8
-#define GVN_GCM                       9
-#define LOCAL_MEM_PROP                10
-#define DEAD_CODE_ELIMINATION         11
-#define FUNCTION_INLINING             12
-#define LOOP_UNROLLING                13
+#define LOOP_UNROLL                   4
+#define MEMORY_TO_REGISTER            5
+#define GLOBAL_CONST_PROP             6
+#define TAIL_RECURSION                7
+#define GVN_GCM                       8
+#define LOCAL_MEM_PROP                9
+#define DEAD_CODE_ELIMINATION         10
+#define FUNCTION_INLINING             11
+#define FUNCTION_CLEANUP              12
+#define DEAD_GLOBAL_CODE_ELIMINATION  13
+#define LOOP_UNROLLING                14
 
 
 // analysis

@@ -25,7 +25,8 @@ public:
   BasicBlock(FuncPtr parent, std::string name)
       : User(ClassId::BasicBlockId), _name(std::move(name)), _parent(std::move(parent)) {}
 
-  bool isInstruction() const override { return false; }
+  bool isInstruction() const final { return false; }
+  bool isBlock() const final { return true; }
 
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
@@ -51,6 +52,10 @@ public:
   InstList::iterator inst_end()        { return _insts.end();   }
   const FuncPtr     &getParent() const { return _parent;        }
   const std::string &name()   const    { return _name;          }
+
+  void SetBlockName(const std::string name) {
+    _name = name;
+  }
 
   std::vector<BasicBlock *> successors();
 
@@ -135,6 +140,11 @@ public:
   const BasicBlock *getParent() const;
   void setParent(BasicBlock *bb);
 
+  // remove this instruction from parent
+  InstList::iterator RemoveFromParent();
+
+  // get position in the instruction list
+  InstList::iterator GetPosition();
 
   //----------------------------------------------------------------------
   // Exported opcode enumerations...
@@ -260,6 +270,7 @@ public:
 class Function : public User {
 private:
   bool _is_decl;
+  bool _is_copied;
   bool _is_tail_recursion;
   std::vector<SSAPtr> _args;
   std::string _function_name;
@@ -268,8 +279,8 @@ private:
 public:
   explicit Function(std::string name, bool is_decl = false, Module *module = nullptr)
     : User(ClassId::FunctionId), _is_decl(is_decl),
-     _is_tail_recursion(false), _function_name(std::move(name)),
-     _module(module) {}
+     _is_copied(false), _is_tail_recursion(false),
+     _function_name(std::move(name)), _module(module) {}
 
   bool isInstruction() const override { return false; }
 
@@ -298,6 +309,8 @@ public:
     _module = module;
   }
 
+  void RemoveFromParent();
+
   void SetIsRecursion(bool value) { _is_tail_recursion = value; }
 
   // getters
@@ -305,10 +318,21 @@ public:
 
   const SSAPtr      &entry() { return (*this)[0].value(); }
 
-  const std::vector<SSAPtr> &args() { return _args;              }
+  std::vector<SSAPtr> &args() {
+    return _args;
+  }
+
+  const std::vector<SSAPtr> &args() const {
+    return _args;
+  }
+
   bool is_decl()              const { return _is_decl;           }
   bool is_tail_recursion()    const { return _is_tail_recursion; }
+  bool is_copied()            const { return _is_copied;         }
+  void is_copied(bool val)          { _is_copied = val;          }
 
+  using BlockList = std::vector<BlockPtr>;
+  BlockList GetBlockList();
 
   // methods for dyn_cast
   static inline bool classof(Function *) { return true; }

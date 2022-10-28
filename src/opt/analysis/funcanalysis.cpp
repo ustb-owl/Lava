@@ -5,6 +5,9 @@ int FunctionInfo;
 
 namespace lava::opt {
 
+bool FunctionInfo::IsRecursive() const {
+  return F->Callers().count(F) != 0;
+}
 
 bool FunctionInfoPass::runOnModule(Module &M) {
   for (const auto &F : M.Functions()) {
@@ -14,7 +17,7 @@ bool FunctionInfoPass::runOnModule(Module &M) {
     _func_infos.insert({F.get(), FunctionInfo()});
     if (F->is_decl()) {
       _func_infos[F.get()].has_size_effect = true;
-      TRACE("%s %d\n", F->GetFunctionName().c_str(), _func_infos[F.get()].IsPure());
+//      TRACE("%s %d\n", F->GetFunctionName().c_str(), _func_infos[F.get()].IsPure());
     }
   }
 
@@ -51,7 +54,7 @@ bool FunctionInfoPass::runOnModule(Module &M) {
   }
 
 //  DumpCallGraph();
-//  DumpFunctionInfo();
+//  dump();
 
   return false;
 }
@@ -69,6 +72,7 @@ void FunctionInfoPass::CalculateCallGraph(Function *F) {
     _func_map.insert({F, caller});
   }
   auto &info = _func_infos[F];
+  info.SetFuncNode(caller);
 
   for (const auto &use : *F) {
     auto BB = dyn_cast<BasicBlock>(use.value());
@@ -103,6 +107,8 @@ void FunctionInfoPass::CalculateCallGraph(Function *F) {
           info.load_global_array = true;
           info.has_size_effect = true;
         }
+      } else if (auto ret_inst = dyn_cast<ReturnInst>(inst)) {
+        info.SetRetInst(ret_inst);
       }
     }
   }
@@ -135,17 +141,30 @@ void FunctionInfoPass::DumpCallGraph() {
   }
 }
 
-void FunctionInfoPass::DumpFunctionInfo() {
+void FunctionInfoPass::dump() {
   for (const auto &[k, v] : _func_infos) {
     std::cout << k->GetFunctionName() << ":" << std::endl;
     std::cout << "is leaf: " << v.is_leaf << "\tload global: " << v.load_global
               << "\tstore global: " << v.store_global << "\tload global array" << v.load_global_array
               << "\thas side effect: " << v.has_size_effect << "\tIsPure: " << v.IsPure()
               << std::endl;
+    v.FuncNode()->dump();
   }
 }
 
+void FunctionNode::dump() const {
+  std::cout << _func->GetFunctionName() << ":" << std::endl;
+  std::cout << "callers: ";
+  for (const auto &it : Callers()) {
+    std::cout << it->GetFunction()->GetFunctionName() << " ";
+  }
+  std::cout << "\ncallees: ";
+  for (const auto &it : Callees()) {
+    std::cout << it->GetFunction()->GetFunctionName() << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "---------\n" << std::endl;
+}
+
 static PassRegisterFactory<FunctionInfoPassFactory> registry;
-
-
 }

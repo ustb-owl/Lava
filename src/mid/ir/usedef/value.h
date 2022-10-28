@@ -83,6 +83,7 @@ public:
 //  virtual void DumpToC(std::ostream &os)
 
   virtual bool isInstruction() const { return false; }
+  virtual bool isBlock() const { return false; }
   const UseList &uses() const { return _use_list; }
   const front::LoggerPtr &logger() const { return _logger; }
   const define::TypePtr &type() const { return _type; }
