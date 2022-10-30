@@ -3,7 +3,6 @@
 
 int GlobalValueNumbering;
 
-#define OPEN 0
 
 namespace lava::opt {
 
@@ -121,7 +120,7 @@ FindValue(const std::shared_ptr<BinaryOperator> &binary_inst) {
       if (lhs == lhs2 && rhs == rhs2) same = true;
       else if (lhs == rhs2 && rhs == lhs2) {
         if (opcode == BinaryOperator::BinaryOps::Add || opcode == BinaryOperator::BinaryOps::Mul ||
-        opcode == BinaryOperator::BinaryOps::And || opcode == BinaryOperator::BinaryOps::Or) {
+            opcode == BinaryOperator::BinaryOps::And || opcode == BinaryOperator::BinaryOps::Or) {
           same = true;
         }
       }
@@ -216,7 +215,10 @@ SSAPtr GlobalValueNumberingGlobalCodeMotion::ValueOf(const SSAPtr &value) {
                         if (kv.first == value) return true;
 
                         auto const_kv = dyn_cast<ConstantInt>(kv.first);
-                        if (const_kv && (const_value->value() == const_kv->value())) return true;
+                        if (const_kv && (const_value->value() == const_kv->value())) {
+                          if (const_value->type()->IsIdentical(const_kv->type()))
+                            return true;
+                        }
 
                         return false;
                       });
@@ -234,11 +236,9 @@ SSAPtr GlobalValueNumberingGlobalCodeMotion::ValueOf(const SSAPtr &value) {
   } else if (auto call_inst = dyn_cast<CallInst>(value)) {
     res->second = FindValue(call_inst);
   }
-#if OPEN
   else if (auto icmp_inst = dyn_cast<ICmpInst>(value)) {
-    _value_number[idx].second = FindValue(icmp_inst);
+    res->second = FindValue(icmp_inst);
   }
-#endif
 
   return res->second;
 }
@@ -251,7 +251,6 @@ GlobalValueNumbering(const FuncPtr &F) {
 
   for (const auto &BB : rpo) {
     for (auto it = BB->insts().begin(); it != BB->inst_end();) {
-
       auto next = std::next(it);
       if (auto binary_inst = dyn_cast<BinaryOperator>(*it)) {
         // always move const value to rhs
@@ -290,7 +289,6 @@ GlobalValueNumbering(const FuncPtr &F) {
       } else if (auto access_inst = dyn_cast<AccessInst>(*it)) {
         Replace(access_inst, ValueOf(access_inst), BB, it);
       } else if (auto icmp_inst = dyn_cast<ICmpInst>(*it)) {
-#if OPEN
         // try to get lhs and rhs as constant value
         auto lhs_const = dyn_cast<ConstantInt>(icmp_inst->LHS());
         auto rhs_const = dyn_cast<ConstantInt>(icmp_inst->RHS());
@@ -300,7 +298,6 @@ GlobalValueNumbering(const FuncPtr &F) {
         } else {
           Replace(icmp_inst, ValueOf(icmp_inst), BB, it);
         }
-#endif
       }
       it = next;
     }
@@ -337,7 +334,7 @@ TransferInst(const InstPtr &inst, BasicBlock *new_block) {
 
   if (IsSSA<BranchInst>(new_block->insts().back())) {
     auto end = --new_block->insts().end();
-    new_block->insts().insert(--end, inst);
+    new_block->insts().insert(end, inst);
   } else {
     new_block->insts().insert(--new_block->insts().end(), inst);
   }
@@ -382,6 +379,10 @@ ScheduleEarly(BasicBlock *entry, const InstPtr &inst) {
           ScheduleOp(entry, call_inst, it.value());
         }
       }
+    } else if (auto icmp_inst = dyn_cast<ICmpInst>(inst)) {
+      TransferInst(inst, entry);
+      ScheduleOp(entry, icmp_inst, icmp_inst->LHS());
+      ScheduleOp(entry, icmp_inst, icmp_inst->RHS());
     }
   }
 }
@@ -400,7 +401,7 @@ BasicBlock *GlobalValueNumberingGlobalCodeMotion::FindLCA(BasicBlock *a, BasicBl
 
 void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
   if (_visited.insert(inst.get()).second) {
-    if (IsSSA<BinaryOperator>(inst) || IsSSA<AccessInst>(inst) || IsPureCall(inst)) {
+    if (IsSSA<BinaryOperator>(inst) || IsSSA<AccessInst>(inst) || IsPureCall(inst) || IsSSA<ICmpInst>(inst)) {
       BasicBlock *lca = nullptr;
 
       for (const auto &use : inst->uses()) {

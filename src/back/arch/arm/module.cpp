@@ -384,13 +384,14 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       }
 
     } else if (auto branchInst = dyn_cast<mid::BranchInst>(inst)) {
-      ArmCond armCond = ArmCond::Eq;
+      // FIXME: need to add a "mov[cond] vreg, icmp" here!!!
+      ArmCond armCond = ArmCond::Ne;
       auto cond = CreateNoImmOperand(branchInst->cond());
-      if (auto it = _cond_map.find(branchInst->cond()); it != _cond_map.end()) {
-        armCond = it->second.second;
-      } else {
+//      if (auto it = _cond_map.find(branchInst->cond()); it != _cond_map.end()) {
+//        armCond = it->second.second;
+//      } else {
         auto cmp_inst = AddInst<LLCompare>(ArmCond::Ne, cond, CreateImmediate(0));
-      }
+//      }
 
 
       DBG_ASSERT(_block_map.find(dyn_cast<mid::BasicBlock>(branchInst->true_block())) != _block_map.end(),

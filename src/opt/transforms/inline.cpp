@@ -7,6 +7,7 @@
 #include "opt/pass_manager.h"
 #include "opt/analysis/loopinfo.h"
 #include "opt/analysis/funcanalysis.h"
+#include "opt/transforms/gvn_gcm.h"
 #include "opt/transforms/blocksimp.h"
 
 int Inlining;
@@ -101,6 +102,11 @@ public:
     blk->initialize();
     changed |= blk->runOnFunction(F);
     blk->finalize();
+
+    auto gvn_gcm = PassManager::GetTransformPass<GlobalValueNumberingGlobalCodeMotion>("GlobalValueNumberingGlobalCodeMotion");
+    gvn_gcm->initialize();
+    changed |= gvn_gcm->runOnFunction(F);
+    gvn_gcm->finalize();
 
     return changed;
   }
@@ -230,6 +236,7 @@ SSAPtr FunctionInlining::GetOperand(const SSAPtr &value) {
 }
 
 void FunctionInlining::CopyInstruction(const InstPtr &inst) {
+  if (ssa_map.count(inst)) return;
   SSAPtr copied_inst = nullptr;
 
   // preserve the insert point
