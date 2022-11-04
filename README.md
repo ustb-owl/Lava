@@ -61,8 +61,9 @@ inline_exit0: ; preds: while.cond0
   ret i32 %phi1
 }
 ```
+  
 
-CFG genereated by Lava:
+CFG genereated by Lava:  
 ![cfg](https://github.com/ustb-owl/Lava/blob/master/doc/ir.svg?raw=true)
 
 ## Automated Testing Tools
