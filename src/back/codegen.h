@@ -17,6 +17,7 @@ private:
   mid::Module*          _module;
   LLModule              _ll_module;
   std::vector<PassPtr>  _passes;
+  bool                  _no_ra;       // disable register allocation
 
 public:
   CodeGenerator() : _target_arch(TargetArch::ARM), _module(nullptr) {}
@@ -53,6 +54,10 @@ public:
   void DumpASM(std::ostream &os) const { _ll_module.DumpASM(os); }
 
   TargetArch targetArch() const { return _target_arch; }
+
+  bool no_ra() const { return _no_ra; }
+
+  void no_ra(bool no_ra) { _no_ra = no_ra; }
 };
 
 }

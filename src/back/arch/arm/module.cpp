@@ -222,7 +222,9 @@ LLFunctionPtr LLModule::CreateFunction(const mid::FuncPtr &function) {
 LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFunctionPtr &parent) {
   auto ll_block = _block_map[block];
   SetInsertPoint(ll_block);
-  for (const auto &inst : block->insts()) {
+  const auto &insts = block->insts();
+  for (auto it = insts.begin(); it != insts.end(); it++) {
+    const auto &inst = *it;
 
     /* Create each instruction */
     if (auto jumpInst = dyn_cast<mid::JumpInst>(inst)) {
@@ -235,7 +237,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
     } else if (auto loadInst = dyn_cast<mid::LoadInst>(inst)) {
       /* LOAD */
       // solve operand
-      auto src = CreateOperand(inst->GetAddr());
+      auto src = CreateOperand(loadInst->Pointer());
 
       auto dst = CreateOperand(loadInst);
       auto ll_loadInst = AddInst<LLLoad>(dst, src, nullptr);
@@ -387,11 +389,11 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       // FIXME: need to add a "mov[cond] vreg, icmp" here!!!
       ArmCond armCond = ArmCond::Ne;
       auto cond = CreateNoImmOperand(branchInst->cond());
-//      if (auto it = _cond_map.find(branchInst->cond()); it != _cond_map.end()) {
-//        armCond = it->second.second;
-//      } else {
+      if (auto it = _cond_map.find(branchInst->cond()); it != _cond_map.end()) {
+        armCond = it->second.second;
+      } else {
         auto cmp_inst = AddInst<LLCompare>(ArmCond::Ne, cond, CreateImmediate(0));
-//      }
+      }
 
 
       DBG_ASSERT(_block_map.find(dyn_cast<mid::BasicBlock>(branchInst->true_block())) != _block_map.end(),
@@ -508,8 +510,10 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       opposite = opposite_cond(cond);
 
       auto ll_cmp = AddInst<LLCompare>(cond, lhs, rhs);
-      if (icmp_inst->uses().size() == 1 &&
-          (*icmp_inst->uses().begin())->getUser()->classId() == ClassId::BranchInstId) {
+      auto user = (*icmp_inst->uses().begin())->getUser();
+      if ((icmp_inst->uses().size() == 1) && 
+          (user == std::next(it)->get())  &&
+          (user->classId() == ClassId::BranchInstId)) {
         auto pair = std::make_pair(ll_cmp, cond);
         _cond_map.insert({inst, pair});
       } else {

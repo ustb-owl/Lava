@@ -26,6 +26,7 @@ int Main(bool AST = fire::arg({"-T", "--dump-ast"}),
          const fire::optional<std::string>& output = fire::arg({"-o", "--output", "set output file name"}),
          std::vector<std::string> filename = fire::arg(fire::variadic()),
          bool Opt = fire::arg({"-O", "--opt", "optimization level is {num}"}),
+         bool NO_RA = fire::arg({"--no-ra", "disable register allocation"}),
          bool level = fire::arg{{"-2", "opt level"}}
          ) {
 
@@ -64,6 +65,11 @@ int Main(bool AST = fire::arg({"-T", "--dump-ast"}),
     comp.set_opt_flat(true);
   }
 
+  // if run register allocation
+  printf("nora: %d", NO_RA);
+  if (NO_RA) {
+    comp.no_ra(true);
+  }
 
   ifstream ifs(file);
   if (!ifs.is_open()) ERROR("open file %s failed", file.c_str());

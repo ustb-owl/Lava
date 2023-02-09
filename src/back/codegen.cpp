@@ -75,10 +75,12 @@ void CodeGenerator::RegisterPasses() {
   _passes.push_back(dme);
 
 //  _passes.push_back(liveness);
-  _passes.push_back(linear_scan);
-//
-//  _passes.push_back(fast_alloc);
-  _passes.push_back(spill);
+  if (!no_ra()) {
+    // _passes.push_back(fast_alloc);
+
+    _passes.push_back(linear_scan);
+    _passes.push_back(spill);
+  }
 
   _passes.push_back(post_peephole);
   _passes.push_back(func_fix);

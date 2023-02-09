@@ -30,13 +30,14 @@ private:
   bool            _dump_pass_info, _dump_code;
 
   bool            _opt_flag;
+  bool            _no_ra;
   std::ostream   *_os;
 public:
   Compiler()
       : _parser(_lexer), _analysis(_eval), _irbuilder(nullptr),
         _dump_ast(false), _dump_ir(false),
         _dump_pass_info(false), _dump_code(false),
-        _opt_flag(false),
+        _opt_flag(false), _no_ra(false),
         _os(&std::cout) {
     Reset();
   }
@@ -95,6 +96,8 @@ public:
 
   // getters
   define::ASTPtr &ast() { return _parser.ast(); }
+
+  void no_ra(bool no_ra) { _no_ra = no_ra; }
 };
 
 }
