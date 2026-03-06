@@ -76,6 +76,8 @@ public:
   }
 };
 
-static PassRegisterFactory<DeadGlobalCodeEliminationFactory> registry;
+void RegisterDeadGlobalCodeEliminationPass() {
+  static PassRegisterFactory<DeadGlobalCodeEliminationFactory> registry;
+}
 
 }

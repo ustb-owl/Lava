@@ -547,8 +547,6 @@ public:
   }
 };
 
-static PassRegisterFactory<FunctionInliningFactory> registry1;
-
 class FunctionCleanUp : public ModulePass {
 public:
   bool runOnModule(Module &M) final {
@@ -571,7 +569,10 @@ public:
   }
 };
 
-static PassRegisterFactory<FunctionCleanUpFactory> registry2;
+void RegisterFunctionInliningPasses() {
+  static PassRegisterFactory<FunctionInliningFactory> registry1;
+  static PassRegisterFactory<FunctionCleanUpFactory> registry2;
+}
 
 
 }

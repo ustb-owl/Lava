@@ -35,6 +35,8 @@ public:
   }
 };
 
-static PassRegisterFactory<LocalMemoryPropagationFactory> registry;
+void RegisterLocalMemoryPropagationPass() {
+  static PassRegisterFactory<LocalMemoryPropagationFactory> registry;
+}
 
 }

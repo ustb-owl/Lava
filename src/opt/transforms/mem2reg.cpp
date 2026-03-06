@@ -240,6 +240,8 @@ public:
   }
 };
 
-static PassRegisterFactory<Mem2RegFactory> registry;
+void RegisterMem2RegPass() {
+  static PassRegisterFactory<Mem2RegFactory> registry;
+}
 
 }

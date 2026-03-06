@@ -6,6 +6,7 @@
 
 #include "driver/compiler.h"
 #include "driver/pipeline.h"
+#include "opt/register.h"
 #include "opt/pass_manager.h"
 
 namespace lava::driver {
@@ -29,7 +30,7 @@ std::ostream *OpenOutputStream(const DriverOptions &options,
 }
 
 int RunDriver(const DriverOptions &options) {
-  EnsureMiddleEndPassesLinked();
+  opt::RegisterAllMiddleEndPasses();
   opt::PassManager::Initialize();
 
   if (options.list_passes) {

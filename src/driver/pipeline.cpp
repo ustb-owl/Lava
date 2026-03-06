@@ -12,51 +12,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-extern int DirtyArrayConvert;
-extern int DirtyFunctionConvert;
-extern int BlockMerge;
-extern int LoopUnrolling;
-extern int Mem2Reg;
-extern int GlobalConstPropagation;
-extern int TailRecursion;
-extern int StrengthReductionPass;
-extern int GlobalValueNumbering;
-extern int LoopInvariantHoistPass;
-extern int LocalMemoryProp;
-extern int DeadCodeElimination;
-extern int Inlining;
-extern int DeadGlobalCodeElimination;
-extern int SanitizeIRPass;
-extern int NeedGcm;
-extern int FunctionInfo;
-extern int Dominance;
-extern int PostDominance;
-extern int LoopInfo;
-
 namespace {
-
-[[maybe_unused, gnu::used]] void *const kMiddleEndPassLinkAnchors[] = {
-    &DirtyArrayConvert,
-    &DirtyFunctionConvert,
-    &BlockMerge,
-    &LoopUnrolling,
-    &Mem2Reg,
-    &GlobalConstPropagation,
-    &TailRecursion,
-    &StrengthReductionPass,
-    &GlobalValueNumbering,
-    &LoopInvariantHoistPass,
-    &LocalMemoryProp,
-    &DeadCodeElimination,
-    &Inlining,
-    &DeadGlobalCodeElimination,
-    &SanitizeIRPass,
-    &NeedGcm,
-    &FunctionInfo,
-    &Dominance,
-    &PostDominance,
-    &LoopInfo,
-};
 
 std::string LowerCase(std::string value) {
   std::ranges::transform(value, value.begin(), [](unsigned char ch) {
@@ -253,11 +209,6 @@ bool DumpModuleIR(lava::driver::Compiler &compiler,
 }
 
 namespace lava::driver {
-
-void EnsureMiddleEndPassesLinked() {
-  lava::opt::PassManager::GetPassManager();
-  static_cast<void>(kMiddleEndPassLinkAnchors);
-}
 
 std::vector<PassCliMetadata> GetMiddleEndPassMetadata() {
   std::vector<PassCliMetadata> metadata;

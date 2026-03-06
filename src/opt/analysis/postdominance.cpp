@@ -143,6 +143,8 @@ void PostDominanceInfo::SolveDominanceFrontier() {
   DBG_ASSERT(info.DF.size() == po.size(), "PDF size not equals to basic blocks");
 }
 
-static PassRegisterFactory<PostDominanceInfoPassFactory> registry;
+void RegisterPostDominanceInfoPass() {
+  static PassRegisterFactory<PostDominanceInfoPassFactory> registry;
+}
 
 }

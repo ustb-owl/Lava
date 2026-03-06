@@ -92,6 +92,7 @@ class PassManager {
 private:
   std::size_t     _opt_level;
   mid::Module    *_module;
+  std::size_t     _initialized_factories;
   PassInfoMap     _pass_infos;
   RequirementMap  _requirements;
   PassPtrList     _candidates;
@@ -106,23 +107,23 @@ private:
 public:
   static PassManager *_instance;
 
-  PassManager() : _opt_level(0), _module(nullptr) {}
+  PassManager() : _opt_level(0), _module(nullptr), _initialized_factories(0) {}
 
   explicit PassManager(mid::Module &module)
-    : _opt_level(0), _module(&module) {}
+    : _opt_level(0), _module(&module), _initialized_factories(0) {}
 
-  static void Initialize() { _instance->init(); }
+  static void Initialize() { GetPassManager()->init(); }
 
   static PassManager *GetPassManager() {
     if (_instance == nullptr) _instance = new PassManager();
     return _instance;
   }
 
-  static PassInfoMap &GetPasses() { return _instance->_pass_infos; }
+  static PassInfoMap &GetPasses() { return GetPassManager()->_pass_infos; }
 
-  static RequirementMap &GetRequiredBy() { return _instance->_requirements; }
+  static RequirementMap &GetRequiredBy() { return GetPassManager()->_requirements; }
 
-  static PassPtrList &Candidates() { return _instance->_candidates; }
+  static PassPtrList &Candidates() { return GetPassManager()->_candidates; }
 
   static void RequiredBy(const std::string &slave, const std::string &master);
 
@@ -169,7 +170,7 @@ public:
 
   // register pass
   static void RegisterPassFactory(const PassFactoryPtr &factory) {
-    _instance->AddFactory(factory);
+    GetPassManager()->AddFactory(factory);
   }
 
   // run a specific pass
@@ -184,11 +185,11 @@ public:
   static void RunPasses();
 
   // getter/setter
-  static std::size_t  opt_level()      { return _instance->_opt_level;  }
-  static mid::Module &module()         { return *_instance->_module;    }
-  static void set_opt_level(int value) { _instance->_opt_level = value; }
+  static std::size_t  opt_level()      { return GetPassManager()->_opt_level;  }
+  static mid::Module &module()         { return *GetPassManager()->_module;    }
+  static void set_opt_level(int value) { GetPassManager()->_opt_level = value; }
 
-  static void SetModule(mid::Module &module) { _instance->_module = &module; }
+  static void SetModule(mid::Module &module) { GetPassManager()->_module = &module; }
 };
 
 template <typename PassClassFactory>

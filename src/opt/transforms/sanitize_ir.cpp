@@ -98,8 +98,6 @@ bool SanitizeFunctionCFG(const FuncPtr &F) {
 
 namespace lava::opt {
 
-void ForceSanitizeIRLink() {}
-
 bool SanitizeIR::runOnModule(Module &M) {
   bool changed = false;
   for (const auto &F : M.Functions()) {
@@ -108,6 +106,8 @@ bool SanitizeIR::runOnModule(Module &M) {
   return changed;
 }
 
-static PassRegisterFactory<SanitizeIRFactory> registry;
+void RegisterSanitizeIRPass() {
+  static PassRegisterFactory<SanitizeIRFactory> registry;
+}
 
 }

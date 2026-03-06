@@ -1,6 +1,7 @@
 add_library(opt
         pass.cpp
         pass_manager.cpp
+        register.cpp
         blkwalker.cpp
         analysis/identiy.cpp
         analysis/loopinfo.cpp

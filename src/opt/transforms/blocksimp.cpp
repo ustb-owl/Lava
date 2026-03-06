@@ -372,6 +372,8 @@ void BlockSimplification::RebuildPredecessors(const FuncPtr &F) {
 }
 
 
-static PassRegisterFactory<BlockSimplificationFactory> registry;
+void RegisterBlockSimplificationPass() {
+  static PassRegisterFactory<BlockSimplificationFactory> registry;
+}
 
 }

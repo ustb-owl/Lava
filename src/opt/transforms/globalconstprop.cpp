@@ -89,6 +89,8 @@ public:
   }
 };
 
-static PassRegisterFactory<GlobalConstPropagationFactory> registry;
+void RegisterGlobalConstPropagationPass() {
+  static PassRegisterFactory<GlobalConstPropagationFactory> registry;
+}
 
 }

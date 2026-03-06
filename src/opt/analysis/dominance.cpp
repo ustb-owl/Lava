@@ -153,6 +153,8 @@ void DominanceInfo::SolveDepth(BasicBlock *BB, uint32_t depth) {
 }
 
 
-static PassRegisterFactory<DominanceInfoPassFactory> registry;
+void RegisterDominanceInfoPass() {
+  static PassRegisterFactory<DominanceInfoPassFactory> registry;
+}
 
 }

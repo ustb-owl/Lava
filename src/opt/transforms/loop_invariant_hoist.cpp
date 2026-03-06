@@ -146,6 +146,8 @@ void LoopInvariantHoist::finalize() {
   _loop_info.Clear();
 }
 
-static PassRegisterFactory<LoopInvariantHoistFactory> registry;
+void RegisterLoopInvariantHoistPass() {
+  static PassRegisterFactory<LoopInvariantHoistFactory> registry;
+}
 
 }

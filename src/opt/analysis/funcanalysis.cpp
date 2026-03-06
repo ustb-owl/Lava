@@ -166,5 +166,7 @@ void FunctionNode::dump() const {
   std::cout << "---------\n" << std::endl;
 }
 
-static PassRegisterFactory<FunctionInfoPassFactory> registry;
+void RegisterFunctionInfoPass() {
+  static PassRegisterFactory<FunctionInfoPassFactory> registry;
+}
 }

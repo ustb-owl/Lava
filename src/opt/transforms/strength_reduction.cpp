@@ -70,6 +70,8 @@ bool StrengthReduction::runOnFunction(const FuncPtr &F) {
   return _changed;
 }
 
-static PassRegisterFactory<StrengthReductionFactory> registry;
+void RegisterStrengthReductionPass() {
+  static PassRegisterFactory<StrengthReductionFactory> registry;
+}
 
 }

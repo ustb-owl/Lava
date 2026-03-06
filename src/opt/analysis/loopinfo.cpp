@@ -81,5 +81,7 @@ void LoopInfoPass::Populate(BasicBlock *header) {
   for (; sub_loop; sub_loop = sub_loop->getParent()) sub_loop->blocks().push_back(header);
 }
 
-static PassRegisterFactory<LoopInfoPassFactory> registry;
+void RegisterLoopInfoPass() {
+  static PassRegisterFactory<LoopInfoPassFactory> registry;
+}
 }

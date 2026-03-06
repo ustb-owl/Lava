@@ -18,8 +18,6 @@ struct PassCliMetadata {
   std::string description;
 };
 
-void EnsureMiddleEndPassesLinked();
-
 std::vector<PassCliMetadata> GetMiddleEndPassMetadata();
 
 bool BuildMiddleEndPipeline(const DriverOptions &options,

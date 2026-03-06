@@ -6,8 +6,6 @@
 
 namespace lava::opt {
 
-void ForceSanitizeIRLink();
-
 class SanitizeIR : public ModulePass {
 public:
   bool runOnModule(Module &M) final;

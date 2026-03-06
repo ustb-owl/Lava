@@ -136,13 +136,14 @@ void PassManager::RunPasses() {
 }
 
 void PassManager::init() {
-  for (const auto &it : _factories) {
-    auto pass = it->CreatePass(this);
+  for (std::size_t i = _initialized_factories; i < _factories.size(); ++i) {
+    auto pass = _factories[i]->CreatePass(this);
     auto pass_name = pass->name();
     DBG_ASSERT(_pass_infos.find(pass_name) == _pass_infos.end(), "pass %s has been registered", pass_name.c_str());
     pass->pass()->SetName(pass_name);
     _pass_infos.insert(std::make_pair(pass_name, pass));
   }
+  _initialized_factories = _factories.size();
 }
 
 bool compare(const PassInfoPtr &ptr1, const PassInfoPtr &ptr2) {

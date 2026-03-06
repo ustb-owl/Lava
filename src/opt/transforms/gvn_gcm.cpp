@@ -464,6 +464,8 @@ void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
   }
 }
 
-static PassRegisterFactory<GlobalValueNumberingGlobalCodeMotionFactory> registry;
+void RegisterGlobalValueNumberingPass() {
+  static PassRegisterFactory<GlobalValueNumberingGlobalCodeMotionFactory> registry;
+}
 
 }

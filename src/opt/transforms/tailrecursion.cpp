@@ -85,6 +85,8 @@ public:
   }
 };
 
-static PassRegisterFactory<TailRecursionFactory> registry;
+void RegisterTailRecursionPass() {
+  static PassRegisterFactory<TailRecursionFactory> registry;
+}
 
 }

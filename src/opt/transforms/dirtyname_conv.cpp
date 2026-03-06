@@ -87,5 +87,7 @@ public:
   }
 };
 
-static PassRegisterFactory<DirtyFunctionNameConvertFactory> registry;
+void RegisterDirtyFunctionNameConvertPass() {
+  static PassRegisterFactory<DirtyFunctionNameConvertFactory> registry;
+}
 }

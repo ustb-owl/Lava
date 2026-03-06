@@ -140,7 +140,9 @@ void NeedGcm::IsCrypto(Module &M) {
 
 }
 
-static PassRegisterFactory<NeedGcmFactory> registry;
+void RegisterNeedGcmPass() {
+  static PassRegisterFactory<NeedGcmFactory> registry;
+}
 
 
 }

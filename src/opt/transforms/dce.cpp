@@ -106,7 +106,9 @@ void DeadCodeElimination::Sweep(const FuncPtr &F) {
 }
 
 
-static PassRegisterFactory<DeadCodeEliminationFactory> registry;
+void RegisterDeadCodeEliminationPass() {
+  static PassRegisterFactory<DeadCodeEliminationFactory> registry;
+}
 
 
 }

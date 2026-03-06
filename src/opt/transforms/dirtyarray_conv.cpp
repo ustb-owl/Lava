@@ -100,6 +100,8 @@ public:
   }
 };
 
-static PassRegisterFactory<DirtyArrayConvertFactory> registry;
+void RegisterDirtyArrayConvertPass() {
+  static PassRegisterFactory<DirtyArrayConvertFactory> registry;
+}
 
 }
