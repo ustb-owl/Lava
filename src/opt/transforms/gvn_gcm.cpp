@@ -352,22 +352,7 @@ void GlobalValueNumberingGlobalCodeMotion::CollectInstBlockMap(
 
 void GlobalValueNumberingGlobalCodeMotion::TransferInst(const InstPtr &inst,
                                                         BasicBlock *new_block) {
-  auto inst_block = inst->getParent();
-  inst->setParent(new_block);
-
-  if (IsSSA<BranchInst>(new_block->insts().back())) {
-    auto end = --new_block->insts().end();
-    new_block->insts().insert(end, inst);
-  } else {
-    new_block->insts().insert(--new_block->insts().end(), inst);
-  }
-
-  auto pos = inst_block->insts().begin();
-  for (; pos != inst_block->insts().end(); pos++) {
-    if (*pos == inst)
-      break;
-  }
-  inst_block->insts().erase(pos);
+  inst->MoveBeforeTerminator(new_block);
 }
 
 void GlobalValueNumberingGlobalCodeMotion::ScheduleOp(BasicBlock    *entry,
@@ -477,14 +462,7 @@ void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
         if (!IsSSA<PhiNode>(it)) {
           for (auto &u : inst->uses()) {
             if (u->getUser() == dyn_cast<User>(it).get()) {
-              best->insts().remove(inst);
-              InstList::iterator pos;
-              for (pos = best->inst_begin(); pos != best->inst_end(); pos++) {
-                if (*pos == it)
-                  break;
-              }
-              DBG_ASSERT(pos != best->insts().end(), "find its user failed");
-              best->insts().insert(pos, inst);
+              inst->MoveBefore(dyn_cast<Instruction>(it));
               goto out;
             }
           }

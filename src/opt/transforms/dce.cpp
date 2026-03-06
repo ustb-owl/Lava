@@ -89,13 +89,9 @@ void DeadCodeElimination::Sweep(const FuncPtr &F) {
           }
 
           // clear operand
-          for (auto &use : *inst) {
-            use.set(nullptr);
-          }
-
           // break circular reference
-          (*it)->ReplaceBy(nullptr);
-          it       = block->insts().erase(it);
+          inst->ReplaceBy(nullptr);
+          it       = inst->EraseFromParent();
           _changed = true;
         } else {
           it++;

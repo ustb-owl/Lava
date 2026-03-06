@@ -179,6 +179,9 @@ public:
   // move this instruction before another instruction
   void MoveBefore(const InstPtr &insertBefore);
 
+  // move this instruction to the end of a block, or before its terminator
+  void MoveBeforeTerminator(BasicBlock *bb);
+
   //----------------------------------------------------------------------
   // Exported opcode enumerations...
   // TermOps, BinaryOps, MemoryOps, CastOps, OtherOps

@@ -138,7 +138,7 @@ public:
     std::vector<std::pair<BasicBlock *, std::vector<SSAPtr>>> worklist{
         {entry, std::vector<SSAPtr>(_alloca_ids.size(), undef)}};
 
-    std::vector<std::pair<BasicBlock *, InstList::iterator>> alloc_pos;
+    std::vector<InstPtr> allocas_to_remove;
 
     while (!worklist.empty()) {
       BasicBlock         *BB     = worklist.back().first;
@@ -153,7 +153,7 @@ public:
           if (auto res = _alloca_ids.find(it->get());
               res != _alloca_ids.end()) {
             // remove from instruction list
-            alloc_pos.emplace_back(BB, it);
+            allocas_to_remove.push_back(*it);
           } else if (auto load_inst = dyn_cast<LoadInst>(*it)) {
             // if alloc has been removed
             DBG_ASSERT(load_inst->Pointer() != nullptr,
@@ -165,14 +165,13 @@ public:
                 target->set_type(load_inst->type());
               }
               load_inst->ReplaceBy(values[alloc_it->second]);
-              BB->insts().erase(it);
+              load_inst->EraseFromParent();
             }
           } else if (auto store_inst = dyn_cast<StoreInst>(*it)) {
             auto alloc_it = _alloca_ids.find(store_inst->pointer().get());
             if (alloc_it != _alloca_ids.end()) {
               values[alloc_it->second] = store_inst->data();
-              store_inst->RemoveOperand(store_inst->data());
-              BB->insts().erase(it);
+              store_inst->EraseFromParent();
             }
           } else if (auto phi_node = dyn_cast<PhiNode>(*it)) {
             auto phi_it = _phi_nodes.find(phi_node);
@@ -207,8 +206,10 @@ public:
     }
 
     // remove from instruction list
-    for (const auto &it : alloc_pos) {
-      it.first->insts().erase(it.second);
+    for (const auto &alloca : allocas_to_remove) {
+      auto inst = dyn_cast<Instruction>(alloca);
+      DBG_ASSERT(inst != nullptr, "alloca is not an instruction");
+      inst->EraseFromParent();
     }
   }
 };

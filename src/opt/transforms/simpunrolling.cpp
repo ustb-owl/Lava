@@ -136,8 +136,9 @@ public:
             }
 
             auto loop_end_block = branch_inst->false_block();
-            auto br             = loop_body->insts().back();
-            loop_body->insts().pop_back(); // remove br to while_cond;
+            auto br = dyn_cast<Instruction>(loop_body->terminator());
+            DBG_ASSERT(br != nullptr, "loop body terminator is nullptr");
+            loop_body->EraseInst(br); // remove br to while_cond;
 
             // save last jump instruction
             auto last_inst = loop_body->insts().back();
@@ -176,11 +177,10 @@ public:
             // replace phi-node's value with latest value
             for (auto &[k, v] : _phi_map) {
               auto phi = dyn_cast<PhiNode>(k);
-              phi->RemoveOperand((*phi)[1].value());
-              phi->AppendOperand(v);
+              phi->setIncomingValue(loop_body, v);
             }
 
-            loop_body->insts().push_back(br);
+            loop_body->AppendInst(br);
 
             _ssa_map.clear();
             _phi_map.clear();
@@ -321,14 +321,14 @@ public:
               BinaryOperator::Create(BinaryOperator::BinaryOps::Sub, tmp, mult);
           rem->set_type(init_var->type());
 
-          cmp_pos = header->insts().insert(cmp_pos, rem);
-          cmp_pos = header->insts().insert(cmp_pos, new_loop_end);
-          cmp_pos = header->insts().insert(cmp_pos, mult);
-          cmp_pos = header->insts().insert(cmp_pos, count);
-          cmp_pos = header->insts().insert(cmp_pos, tmp);
+          cmp_pos = header->InsertInst(cmp_pos, rem);
+          cmp_pos = header->InsertInst(cmp_pos, new_loop_end);
+          cmp_pos = header->InsertInst(cmp_pos, mult);
+          cmp_pos = header->InsertInst(cmp_pos, count);
+          cmp_pos = header->InsertInst(cmp_pos, tmp);
 
           // replace compare condition
-          (*cmp_inst)[1].set(new_loop_end);
+          cmp_inst->SetOperand(1, new_loop_end);
 
           auto loop_body = loop->blocks()[1];
 
@@ -347,11 +347,11 @@ public:
 
           auto branch_to_last =
               std::make_shared<BranchInst>(cmp_rem, while_end, last_loop_block);
-          check_rem_block->insts().push_back(cmp_rem);
-          check_rem_block->insts().push_back(branch_to_last);
+          check_rem_block->AppendInst(cmp_rem);
+          check_rem_block->AppendInst(branch_to_last);
 
           // connect while cond to rem_check
-          (*branch_inst)[2].set(check_rem_block);
+          branch_inst->SetFalseBlock(check_rem_block);
 
           // add header to check_rem 's pred
           DBG_ASSERT(!loop_body->predecessors().empty(),
@@ -376,8 +376,9 @@ public:
           }
 
           auto loop_end_block = branch_inst->false_block();
-          auto br             = loop_body->insts().back();
-          loop_body->insts().pop_back(); // remove br to while_cond;
+          auto br             = dyn_cast<Instruction>(loop_body->terminator());
+          DBG_ASSERT(br != nullptr, "loop body terminator is nullptr");
+          loop_body->EraseInst(br); // remove br to while_cond;
 
           // save last jump instruction
           auto last_inst = loop_body->insts().back();
@@ -398,8 +399,7 @@ public:
           // replace phi-node's value with latest value
           for (auto &[k, v] : _phi_map) {
             auto phi = dyn_cast<PhiNode>(k);
-            phi->RemoveOperand((*phi)[1].value());
-            phi->AppendOperand(v);
+            phi->setIncomingValue(loop_body, v);
           }
 
           // copy instruction in last block
@@ -418,11 +418,11 @@ public:
                      "last value number is wrong");
           _in_last_loop = false;
 
-          loop_body->insts().push_back(br);
+          loop_body->AppendInst(br);
 
           // connect last body to while.end
           auto br_to_end = std::make_shared<JumpInst>(while_end);
-          last_loop_block->insts().push_back(br_to_end);
+          last_loop_block->AppendInst(br_to_end);
 
           // insert phi nodes at while_end
           for (const auto &[k, v] : _phi_map) {
@@ -462,10 +462,10 @@ public:
             DBG_ASSERT(last_value != nullptr, "find user of phi failed");
             auto new_phi = std::make_shared<PhiNode>(while_end.get());
             new_phi->ReserveOperands();
-            (*new_phi)[0].set(phi);
-            (*new_phi)[1].set(last_value);
+            new_phi->setIncomingValue(check_rem_block.get(), phi);
+            new_phi->setIncomingValue(last_loop_block.get(), last_value);
             new_phi->set_type(phi->type());
-            while_end->insts().insert(while_end->insts().begin(), new_phi);
+            while_end->InsertInst(while_end->inst_begin(), new_phi);
             _should_not_replace.insert(dyn_cast<User>(new_phi).get());
 
             // rename phi node
@@ -609,7 +609,7 @@ public:
     }
 
     result->set_type(inst->type());
-    block->insts().insert(block->insts().end(), result);
+    block->AppendInst(result);
     _ssa_map.insert_or_assign(inst, result);
   }
 };

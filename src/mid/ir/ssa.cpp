@@ -47,6 +47,7 @@ void BasicBlock::AddInstBefore(const InstPtr &insertBefore,
 
 InstList::iterator BasicBlock::EraseInst(InstList::iterator pos) {
   DBG_ASSERT(pos != _insts.end(), "erase position is out of range");
+  (*pos)->setParent(nullptr);
   return _insts.erase(pos);
 }
 
@@ -123,13 +124,22 @@ void Function::AppendBlock(const BlockPtr &block) {
 
 void Function::RemoveBlock(const BasicBlock *block) {
   std::erase_if(_blocks, [block](const BlockPtr &candidate) {
-    return candidate && candidate.get() == block;
+    if (!candidate || candidate.get() != block)
+      return false;
+    candidate->setParent(nullptr);
+    return true;
   });
 }
 
 void Function::RemoveNullBlocks() { std::erase(_blocks, nullptr); }
 
-void Function::ClearBlocks() { _blocks.clear(); }
+void Function::ClearBlocks() {
+  for (auto &block : _blocks) {
+    if (block)
+      block->setParent(nullptr);
+  }
+  _blocks.clear();
+}
 
 const BlockPtr &Function::entry() const {
   DBG_ASSERT(!_blocks.empty(), "function has no entry block");
@@ -145,7 +155,7 @@ InstList::iterator Instruction::RemoveFromParent() {
   auto BB = getParent();
   for (auto it = BB->inst_begin(); it != BB->inst_end(); it++) {
     if (it->get() == this) {
-      return BB->insts().erase(it);
+      return BB->EraseInst(it);
     }
   }
   return BB->inst_end();
@@ -183,6 +193,26 @@ void Instruction::MoveBefore(const InstPtr &insertBefore) {
   setParent(dstBB);
 }
 
+void Instruction::MoveBeforeTerminator(BasicBlock *bb) {
+  DBG_ASSERT(bb != nullptr, "target block is nullptr");
+  auto terminator = dyn_cast<Instruction>(bb->terminator());
+  if (terminator != nullptr) {
+    if (terminator.get() == this)
+      return;
+    MoveBefore(terminator);
+    return;
+  }
+
+  auto *srcBB  = getParent();
+  auto  srcPos = GetPosition();
+  DBG_ASSERT(srcPos != srcBB->inst_end(),
+             "source instruction is not in parent block");
+  if ((srcBB == bb) && (std::next(srcPos) == srcBB->inst_end()))
+    return;
+  bb->insts().splice(bb->inst_end(), srcBB->insts(), srcPos);
+  setParent(bb);
+}
+
 Instruction::Instruction(unsigned opcode, unsigned operand_nums,
                          ClassId classId)
     : User(classId, operand_nums), _opcode(opcode), _bb(nullptr) {}
@@ -201,10 +231,7 @@ const BasicBlock *Instruction::getParent() const {
   return _bb;
 }
 
-void Instruction::setParent(lava::mid::BasicBlock *bb) {
-  DBG_ASSERT(bb != nullptr, "The getParent basic block shouldn't be nullptr");
-  _bb = bb;
-}
+void Instruction::setParent(lava::mid::BasicBlock *bb) { _bb = bb; }
 
 bool Instruction::classof(Value *value) {
   switch (value->classId()) {
@@ -677,7 +704,9 @@ JumpInst::JumpInst(const BlockPtr &target)
 void BasicBlock::ClearInst() {
   for (const auto &i : _insts) {
     // remove all of its uses
-    dyn_cast<Instruction>(i)->ClearOperands();
+    auto inst = dyn_cast<Instruction>(i);
+    inst->ClearOperands();
+    inst->setParent(nullptr);
   }
 
   // clear instruction list
@@ -685,6 +714,7 @@ void BasicBlock::ClearInst() {
 }
 
 void BasicBlock::DeleteSelf() {
+  _parent = nullptr;
   _predecessors.clear();
   this->ClearInst();
 }
