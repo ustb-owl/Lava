@@ -5,8 +5,8 @@ Lava can compile extended SysY languate to ARM assembly and LLVM IR.
 
 ## Building
 Lava requires:
-- `cmake` 3.16 or later.
-- C++ compiler supporting C++17 standard.
+- `cmake` 3.20 or later.
+- C++ compiler supporting C++23 standard.
 
 
 ```shell script
@@ -69,4 +69,3 @@ CFG genereated by Lava:
 ## Automated Testing Tools
 
 See [lava-test](https://github.com/ustb-owl/lava-test)
-

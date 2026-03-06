@@ -9,5 +9,5 @@ add_library(mid
         walker/irbuilder/irbuilder.cpp
         )
 
-target_compile_features(mid PUBLIC cxx_std_17)
+target_compile_features(mid PUBLIC cxx_std_23)
 add_library(lava::mid ALIAS mid)
