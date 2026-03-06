@@ -24,7 +24,7 @@ public:
     DBG_ASSERT(_operands.size() <= _operands_num,
                "User() operands out of range");
     for (const auto &it : operands) {
-      AddValue(it.value());
+      AppendOperand(it.value());
     }
   }
 
@@ -44,19 +44,23 @@ public:
     _operands[i].set(V);
   }
 
-  void AddValue(const SSAPtr &V) {
+  void AppendOperand(const SSAPtr &V) {
     //    DBG_ASSERT((_operands.size() < _operands_num) || ( _operands_num ==
     //    0), " out of range");
     _operands.push_back(Use(V, this));
     _operands_num = _operands.size();
   }
 
-  void RemoveValue(const SSAPtr &V) {
-    RemoveValue(V.get());
+  void AddValue(const SSAPtr &V) { AppendOperand(V); }
+
+  void RemoveOperand(const SSAPtr &V) {
+    RemoveOperand(V.get());
     _operands_num = _operands.size();
   }
 
-  void RemoveValue(Value *V) {
+  void RemoveValue(const SSAPtr &V) { RemoveOperand(V); }
+
+  void RemoveOperand(Value *V) {
     Operands filtered;
     filtered.reserve(_operands.size());
     for (const auto &use : _operands) {
@@ -68,7 +72,9 @@ public:
     _operands_num = _operands.size();
   }
 
-  void RemoveValue(unsigned idx) {
+  void RemoveValue(Value *V) { RemoveOperand(V); }
+
+  void RemoveOperand(unsigned idx) {
     DBG_ASSERT(idx < size(), "idx out of bound");
     Operands filtered;
     filtered.reserve(_operands.size() - 1);
@@ -81,14 +87,23 @@ public:
     _operands_num = _operands.size();
   }
 
-  void Reserve() {
+  void RemoveValue(unsigned idx) { RemoveOperand(idx); }
+
+  void ReserveOperands() {
     for (unsigned int i = 0; i < _operands_num; i++) {
       _operands.push_back(Use(nullptr, this));
     }
   }
 
+  void Reserve() { ReserveOperands(); }
+
   // clear all uses
-  void Clear() { _operands.clear(); }
+  void ClearOperands() {
+    _operands.clear();
+    _operands_num = 0;
+  }
+
+  void Clear() { ClearOperands(); }
 
   // access value in current user
   Use &operator[](std::size_t pos) {

@@ -2,6 +2,7 @@
 
 #include "common/casting.h"
 #include "lib/debug.h"
+#include "opt/analysis/funcanalysis.h"
 #include "opt/pass.h"
 #include "opt/pass_manager.h"
 #include "opt/register.h"
@@ -16,7 +17,18 @@ namespace lava::opt {
  * 2. delete unused internal/inline functions and global variables
  */
 class DeadGlobalCodeElimination : public ModulePass {
+private:
+  FuncInfoMap _func_infos;
+
 public:
+  void initialize() final {
+    auto func_info =
+        PassManager::GetAnalysis<FunctionInfoPass>("FunctionInfoPass");
+    _func_infos = func_info->GetFunctionInfo();
+  }
+
+  void finalize() final { _func_infos.clear(); }
+
   bool runOnModule(Module &M) final {
     bool changed = false;
 
@@ -36,15 +48,14 @@ public:
     // handle functions
     auto &funcs = M.Functions();
     for (auto it = funcs.begin(); it != funcs.end();) {
-      (*it)->logger()->LogWarning("unused function");
+      // do not remove main function
+      if ((*it)->GetFunctionName() == "main") {
+        it++;
+        continue;
+      }
 
-      if ((*it)->uses().empty()) {
-        // do not remove main function
-        if ((*it)->GetFunctionName() == "main") {
-          it++;
-          continue;
-        }
-
+      if (!_func_infos.contains(it->get())) {
+        (*it)->logger()->LogWarning("unused function");
         for (const auto &BB : *it->get()) {
           BB->DeleteSelf();
         }
@@ -71,6 +82,7 @@ public:
     auto passinfo =
         std::make_shared<PassInfo>(pass, "DeadGlobalCodeElimination", false, 0,
                                    DEAD_GLOBAL_CODE_ELIMINATION);
+    passinfo->Requires("FunctionInfoPass");
     return passinfo;
   }
 };

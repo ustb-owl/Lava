@@ -78,6 +78,14 @@ BlockPtr Module::CreateBlock(const FuncPtr &parent) {
 }
 
 BlockPtr Module::CreateBlock(const FuncPtr &parent, const std::string &name) {
+  return CreateBlock(parent.get(), name);
+}
+
+BlockPtr Module::CreateBlock(Function *parent) {
+  return CreateBlock(parent, "block");
+}
+
+BlockPtr Module::CreateBlock(Function *parent, const std::string &name) {
   DBG_ASSERT((parent != nullptr) && parent->type()->IsFunction(),
              "block's getParent should be function type");
   auto block = MakeSSA<BasicBlock>(parent, name);
@@ -146,16 +154,18 @@ SSAPtr Module::CreateStore(const SSAPtr &V, const SSAPtr &P) {
 
 SSAPtr Module::CreateArgRef(const SSAPtr &func, std::size_t index,
                             const std::string &arg_name) {
+  auto function = dyn_cast<Function>(func);
+  DBG_ASSERT(function != nullptr, "function argument owner is null");
   // checking
-  auto args_type = *func->type()->GetArgsType();
+  auto args_type = *function->type()->GetArgsType();
   DBG_ASSERT(index < args_type.size(), "index out of range");
 
   // set arg type
-  auto arg_ref = MakeSSA<ArgRefSSA>(func, index, arg_name);
+  auto arg_ref = MakeSSA<ArgRefSSA>(function, index, arg_name);
   arg_ref->set_type(args_type[index]);
 
   // update function
-  dyn_cast<Function>(func)->set_arg(index, arg_ref);
+  function->set_arg(index, arg_ref);
   return arg_ref;
 }
 
@@ -399,9 +409,11 @@ SSAPtr Module::CreateConstInt(unsigned int value, Type type) {
 
 SSAPtr Module::CreateCallInst(const SSAPtr              &callee,
                               const std::vector<SSAPtr> &args) {
+  auto callee_func = dyn_cast<Function>(callee);
+  DBG_ASSERT(callee_func != nullptr, "callee is not a direct function");
   // assertion for type checking
-  DBG_ASSERT(callee->type()->IsFunction(), "callee is not function type");
-  auto args_type = *callee->type()->GetArgsType();
+  DBG_ASSERT(callee_func->type()->IsFunction(), "callee is not function type");
+  auto args_type = *callee_func->type()->GetArgsType();
   DBG_ASSERT(args_type.size() == args.size(), "arguments size not fit");
 
   auto                arg_it = args_type.begin();
@@ -438,9 +450,9 @@ SSAPtr Module::CreateCallInst(const SSAPtr              &callee,
     }
   }
 
-  auto call_inst = AddInst<CallInst>(callee, new_args);
+  auto call_inst = AddInst<CallInst>(callee_func, new_args);
   DBG_ASSERT(call_inst != nullptr, "emit call inst failed");
-  auto callee_type = callee->type();
+  auto callee_type = callee_func->type();
   call_inst->set_type(
       callee_type->GetReturnType(callee_type->GetArgsType().value()));
   return call_inst;

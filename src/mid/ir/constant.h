@@ -85,7 +85,7 @@ public:
   explicit ConstantArray(const SSAPtrList &elems, std::string name)
       : ConstantValue(ClassId::ConstantArrayId), _name(std::move(name)) {
     for (const auto &it : elems)
-      AddValue(it);
+      AppendOperand(it);
   }
 
   SSAPtr Copy() const final {

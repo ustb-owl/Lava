@@ -108,7 +108,7 @@ public:
             visited.insert(dom_frontier);
             // create a phi node
             auto phi_node = std::make_shared<PhiNode>(dom_frontier);
-            phi_node->Reserve();
+            phi_node->ReserveOperands();
 
             // insert this phi node to the head of dom_frontier
             dom_frontier->InsertInst(dom_frontier->inst_begin(), phi_node);
@@ -171,7 +171,7 @@ public:
             auto alloc_it = _alloca_ids.find(store_inst->pointer().get());
             if (alloc_it != _alloca_ids.end()) {
               values[alloc_it->second] = store_inst->data();
-              store_inst->RemoveValue(store_inst->data());
+              store_inst->RemoveOperand(store_inst->data());
               BB->insts().erase(it);
             }
           } else if (auto phi_node = dyn_cast<PhiNode>(*it)) {

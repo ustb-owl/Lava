@@ -191,7 +191,7 @@ void FunctionInlining::Rename() {
   for (const auto &orig_phi : phi_list) {
     auto phi = dyn_cast<PhiNode>(ssa_map[orig_phi]);
     phi->ResetIncomingBlocks(phi->getParent()->predecessors());
-    phi->Reserve();
+    phi->ReserveOperands();
 
     auto     orig_preds = orig_phi->blocks();
     auto     preds      = phi->blocks();
@@ -497,7 +497,7 @@ void FunctionInlining::ConnectUD(const CallInstPtr &call_inst) {
   jump_inst->setParent(BB);
   insts.insert(call_pos, jump_inst);
   callee_entry->AddPredecessor(*callee_shared);
-  call_inst->Clear();
+  call_inst->ClearOperands();
   auto pos = call_inst->RemoveFromParent();
 
   // move the rest instructions to the exit block of the callee
@@ -522,7 +522,7 @@ void FunctionInlining::ConnectUD(const CallInstPtr &call_inst) {
   }
 
   // remove the CallInst and ReturnInst
-  ret_inst->Clear();
+  ret_inst->ClearOperands();
   ret_inst->RemoveFromParent();
 
   for (auto &block : *callee) {

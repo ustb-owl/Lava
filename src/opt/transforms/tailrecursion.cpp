@@ -38,7 +38,7 @@ public:
           if (auto phi_node = dyn_cast<PhiNode>(ret_value)) {
             for (std::size_t i = 0; i < phi_node->size(); i++) {
               if (auto call_inst = dyn_cast<CallInst>((*phi_node)[i].value())) {
-                if (dyn_cast<Function>(call_inst->Callee()) == F) {
+                if (call_inst->Callee() == F) {
                   // check if the call instruction is the last inst of its block
                   auto pred = phi_node->getIncomingBlock(i);
                   DBG_ASSERT(pred != nullptr,
@@ -54,7 +54,7 @@ public:
           } else if (auto call_inst = dyn_cast<CallInst>(ret_value)) {
             // return F();
             // %1 = call F; ret %1
-            if (dyn_cast<Function>(call_inst->Callee()) == F) {
+            if (call_inst->Callee() == F) {
               for (const auto &bb : *F) {
                 for (auto inst_it = bb->insts().begin();
                      inst_it != bb->insts().end(); inst_it++) {

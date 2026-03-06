@@ -18,12 +18,11 @@ private:
   InstList              _insts;
   std::vector<BlockPtr> _predecessors;
   std::string           _name;   // block name
-  FuncPtr               _parent; // block's getParent(function)
+  Function             *_parent; // block's getParent(function)
 
 public:
-  BasicBlock(FuncPtr parent, std::string name)
-      : Value(ClassId::BasicBlockId), _name(std::move(name)),
-        _parent(std::move(parent)) {}
+  BasicBlock(Function *parent, std::string name)
+      : Value(ClassId::BasicBlockId), _name(std::move(name)), _parent(parent) {}
 
   bool isInstruction() const final { return false; }
   bool isBlock() const final { return true; }
@@ -35,7 +34,7 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr,
             const std::string &separator) const;
 
-  void setParent(const FuncPtr &parent) { _parent = parent; }
+  void setParent(Function *parent) { _parent = parent; }
 
   InstList::iterator AppendInst(const InstPtr &inst);
 
@@ -80,7 +79,7 @@ public:
   InstList          &insts() { return _insts; }
   InstList::iterator inst_begin() { return _insts.begin(); }
   InstList::iterator inst_end() { return _insts.end(); }
-  const FuncPtr     &getParent() const { return _parent; }
+  Function          *getParent() const { return _parent; }
   const std::string &name() const { return _name; }
   bool               empty() const { return _insts.empty(); }
   InstPtr            terminator() const {
@@ -457,7 +456,7 @@ class ReturnInst : public TerminatorInst {
 public:
   explicit ReturnInst(const SSAPtr &value)
       : TerminatorInst(Instruction::TermOps::Ret, 1) {
-    AddValue(value);
+    AppendOperand(value);
   }
 
   bool isInstruction() const override { return true; }
@@ -576,8 +575,8 @@ class StoreInst : public Instruction {
 public:
   StoreInst(const SSAPtr &V, const SSAPtr &P)
       : Instruction(Instruction::MemoryOps::Store, 2, ClassId::StoreInstId) {
-    AddValue(V);
-    AddValue(P);
+    AppendOperand(V);
+    AppendOperand(P);
   }
 
   bool isInstruction() const override { return true; }
@@ -654,7 +653,7 @@ public:
   LoadInst(const SSAPtr &ptr)
       : Instruction(Instruction::MemoryOps::Load, 1, ClassId::LoadInstId),
         _pointer(ptr) {
-    AddValue(ptr);
+    AppendOperand(ptr);
   }
 
   bool isInstruction() const override { return true; }
@@ -689,12 +688,12 @@ public:
 // argument reference
 class ArgRefSSA : public Value {
 private:
-  SSAPtr      _func;
+  FuncPtr     _func;
   std::size_t _index;
   std::string _arg_name;
 
 public:
-  ArgRefSSA(SSAPtr func, std::size_t index, std::string name)
+  ArgRefSSA(FuncPtr func, std::size_t index, std::string name)
       : Value(ClassId::ArgRefSSAId), _func(std::move(func)), _index(index),
         _arg_name(std::move(name)) {}
 
@@ -706,9 +705,9 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getter
-  const SSAPtr &func() const { return _func; }
-  std::size_t   index() const { return _index; }
-  std::string   arg_name() const { return _arg_name; }
+  const FuncPtr &func() const { return _func; }
+  std::size_t    index() const { return _index; }
+  std::string    arg_name() const { return _arg_name; }
 
   // methods for dyn_cast
   static inline bool classof(ArgRefSSA *) { return true; }
@@ -726,13 +725,14 @@ public:
 };
 
 // function call
-// operands: callee, parameters
+// operands: parameters
 class CallInst : public Instruction {
 private:
-  bool _is_tail_call;
+  FuncPtr _callee;
+  bool    _is_tail_call;
 
 public:
-  CallInst(const SSAPtr &callee, const std::vector<SSAPtr> &args);
+  CallInst(const FuncPtr &callee, const std::vector<SSAPtr> &args);
 
   bool isInstruction() const override { return true; }
 
@@ -740,9 +740,9 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getter/setter
-  const SSAPtr &Callee() const { return (*this)[0].value(); }
-  const SSAPtr &Param(int i) const { return (*this)[i + 1].value(); }
-  int           param_size() const { return size() - 1; }
+  const FuncPtr &Callee() const { return _callee; }
+  const SSAPtr  &Param(int i) const { return (*this)[i].value(); }
+  int            param_size() const { return size(); }
 
   void AddParam(const SSAPtr &param);
 
@@ -809,7 +809,7 @@ class CastInst : public Instruction {
 public:
   explicit CastInst(CastOps op, const SSAPtr &opr)
       : Instruction(op, 1, ClassId::CastInstId) {
-    AddValue(opr);
+    AppendOperand(opr);
   }
 
   bool isInstruction() const override { return true; }
@@ -848,7 +848,7 @@ public:
                  Module *module = nullptr)
       : User(ClassId::GlobalVariableId), _is_var(is_var), _name(name),
         _module(module) {
-    AddValue(init);
+    AppendOperand(init);
   }
 
   // dump ir

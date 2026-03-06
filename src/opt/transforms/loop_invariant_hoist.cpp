@@ -21,13 +21,12 @@ namespace lava::opt {
 
 bool LoopInvariantHoist::IsPureCall(const SSAPtr &value) const {
   if (auto call_inst = dyn_cast<CallInst>(value)) {
-    if (auto func = dyn_cast<Function>(call_inst->Callee())) {
-      if (_func_infos.at(func.get()).IsPure()) {
-        auto none_array_arg = std::none_of(
-            call_inst->begin(), call_inst->end(),
-            [](const Use &use) { return IsSSA<AccessInst>(use.value()); });
-        return none_array_arg;
-      }
+    auto func = call_inst->Callee();
+    if (_func_infos.at(func.get()).IsPure()) {
+      auto none_array_arg = std::none_of(
+          call_inst->begin(), call_inst->end(),
+          [](const Use &use) { return IsSSA<AccessInst>(use.value()); });
+      return none_array_arg;
     }
   }
   return false;

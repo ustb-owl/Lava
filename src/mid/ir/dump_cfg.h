@@ -84,7 +84,7 @@ Agnode_t *MakeGraphNode(graph_t *g, const BlockPtr &block, IdManager &id_mgr,
   auto dom = lava::opt::PassManager::GetAnalysis<lava::opt::DominanceInfo>(
                  "DominanceInfo")
                  ->GetDomInfo();
-  auto DF  = dom[block->getParent().get()].DF[block.get()];
+  auto DF  = dom[block->getParent()].DF[block.get()];
   std::string df;
   if (!DF.empty()) {
     df = "<tr><td>Dominance Frontier</td><td>";

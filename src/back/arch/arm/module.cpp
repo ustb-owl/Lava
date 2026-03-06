@@ -479,9 +479,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block,
           auto st_inst = AddInst<LLStore>(data, addr, offset);
           DBG_ASSERT(st_inst != nullptr,
                      "store parameter(%lu) failed in calling %s", i,
-                     dyn_cast<mid::Function>(callInst->Callee())
-                         ->GetFunctionName()
-                         .c_str());
+                     callInst->Callee()->GetFunctionName().c_str());
         }
       }
 
@@ -497,7 +495,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block,
       }
 
       // create call instruction
-      auto callee  = dyn_cast<mid::Function>(callInst->Callee());
+      auto callee  = callInst->Callee();
       auto ll_call = AddInst<LLCall>(callee);
       ll_call->SetIsTailCall(callInst->IsTailCall());
       DBG_ASSERT(ll_call != nullptr, "create call instruction failed");

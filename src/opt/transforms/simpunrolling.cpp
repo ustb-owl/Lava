@@ -176,8 +176,8 @@ public:
             // replace phi-node's value with latest value
             for (auto &[k, v] : _phi_map) {
               auto phi = dyn_cast<PhiNode>(k);
-              phi->RemoveValue((*phi)[1].value());
-              phi->AddValue(v);
+              phi->RemoveOperand((*phi)[1].value());
+              phi->AppendOperand(v);
             }
 
             loop_body->insts().push_back(br);
@@ -333,8 +333,9 @@ public:
           auto loop_body = loop->blocks()[1];
 
           /* handle last loop */
-          auto check_rem_block = std::make_shared<BasicBlock>(F, "if.cond");
-          auto last_loop_block = std::make_shared<BasicBlock>(F, "block");
+          auto check_rem_block =
+              std::make_shared<BasicBlock>(F.get(), "if.cond");
+          auto last_loop_block = std::make_shared<BasicBlock>(F.get(), "block");
           F->AppendBlock(check_rem_block);
           F->AppendBlock(last_loop_block);
 
@@ -397,8 +398,8 @@ public:
           // replace phi-node's value with latest value
           for (auto &[k, v] : _phi_map) {
             auto phi = dyn_cast<PhiNode>(k);
-            phi->RemoveValue((*phi)[1].value());
-            phi->AddValue(v);
+            phi->RemoveOperand((*phi)[1].value());
+            phi->AppendOperand(v);
           }
 
           // copy instruction in last block
@@ -460,7 +461,7 @@ public:
             }
             DBG_ASSERT(last_value != nullptr, "find user of phi failed");
             auto new_phi = std::make_shared<PhiNode>(while_end.get());
-            new_phi->Reserve();
+            new_phi->ReserveOperands();
             (*new_phi)[0].set(phi);
             (*new_phi)[1].set(last_value);
             new_phi->set_type(phi->type());

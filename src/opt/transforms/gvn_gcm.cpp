@@ -137,7 +137,7 @@ SSAPtr GlobalValueNumberingGlobalCodeMotion::FindValue(
 
 SSAPtr GlobalValueNumberingGlobalCodeMotion::FindValue(
     const std::shared_ptr<CallInst> &call_inst) {
-  auto callee = dyn_cast<Function>(call_inst->Callee());
+  auto callee = call_inst->Callee();
   if (!_func_infos[callee.get()].IsPure())
     return call_inst;
 
@@ -282,7 +282,7 @@ int GlobalValueNumberingGlobalCodeMotion::GlobalValueNumbering(
           }
         }
       } else if (auto call_inst = dyn_cast<CallInst>(*it)) {
-        auto callee = dyn_cast<Function>(call_inst->Callee());
+        auto callee = call_inst->Callee();
         if (enable_value_numbering && _func_infos[callee.get()].IsPure()) {
           Replace(call_inst, ValueOf(call_inst), BB, it);
         }

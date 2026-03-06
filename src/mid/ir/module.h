@@ -76,6 +76,8 @@ public:
 
   BlockPtr CreateBlock(const FuncPtr &parent);
   BlockPtr CreateBlock(const FuncPtr &parent, const std::string &name);
+  BlockPtr CreateBlock(Function *parent);
+  BlockPtr CreateBlock(Function *parent, const std::string &name);
   SSAPtr   CreateJump(const BlockPtr &target);
   SSAPtr   CreateStore(const SSAPtr &V, const SSAPtr &P);
   SSAPtr   CreateArgRef(const SSAPtr &func, std::size_t index,

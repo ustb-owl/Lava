@@ -34,11 +34,10 @@ public:
       for (const auto &BB : *F) {
         for (auto it = BB->inst_begin(); it != BB->insts().end(); it++) {
           if (auto call_inst = dyn_cast<CallInst>(*it)) {
-            auto callee = dyn_cast<Function>(call_inst->Callee());
-            DBG_ASSERT(callee != nullptr, "callee is not function");
-            auto name = callee->GetFunctionName();
+            auto callee = call_inst->Callee();
+            auto name   = callee->GetFunctionName();
             if (name == "_sysy_starttime" || name == "_sysy_stoptime") {
-              if (call_inst->size() == 2)
+              if (call_inst->param_size() == 1)
                 continue;
               auto zero = std::make_shared<ConstantInt>(0);
               zero->set_type(MakePrimType(Type::Int32, true));

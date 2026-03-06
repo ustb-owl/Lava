@@ -85,7 +85,7 @@ void FunctionInfoPass::CalculateCallGraph(Function *F) {
   for (const auto &BB : *F) {
     for (const auto &inst : BB->insts()) {
       if (auto call_inst = dyn_cast<CallInst>(inst)) {
-        auto callee = dyn_cast<Function>(call_inst->Callee());
+        auto callee = call_inst->Callee();
         // get callee
         FuncNodePtr callee_node = nullptr;
         auto        res         = _func_map.find(callee.get());

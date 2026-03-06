@@ -35,12 +35,12 @@ class Value {
 private:
   define::TypePtr  _type;
   front::LoggerPtr _logger;
-  BlockPtr         _parent; // block
+  BasicBlock      *_parent; // block
   UseList          _use_list;
   ClassId          _class_id;
 
 public:
-  explicit Value(ClassId classId) : _class_id(classId) {};
+  explicit Value(ClassId classId) : _parent(nullptr), _class_id(classId) {};
   virtual ~Value() = default;
 
   void addUse(Use *U) { _use_list.emplace_back(U); }
@@ -51,8 +51,8 @@ public:
 
   void set_type(const define::TypePtr &type) { _type = type; }
 
-  virtual const BlockPtr &GetParent() const { return _parent; }
-  virtual void            SetParent(const BlockPtr &BB) { _parent = BB; }
+  virtual BasicBlock *GetParent() const { return _parent; }
+  virtual void        SetParent(BasicBlock *BB) { _parent = BB; }
 
   void ReplaceBy(const SSAPtr &value) {
     if (value.get() == this)

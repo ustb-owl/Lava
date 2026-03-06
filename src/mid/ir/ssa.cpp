@@ -117,6 +117,7 @@ void Function::RemoveFromParent() {
 
 void Function::AppendBlock(const BlockPtr &block) {
   DBG_ASSERT(block != nullptr, "appended block is nullptr");
+  block->setParent(this);
   _blocks.push_back(block);
 }
 
@@ -378,8 +379,8 @@ BinaryOperator::BinaryOperator(Instruction::BinaryOps opcode, const SSAPtr &S1,
                                const SSAPtr &S2, const define::TypePtr &type)
     : Instruction(opcode, 2, ClassId::BinaryOperatorId) {
   set_type(type);
-  AddValue(S1);
-  AddValue(S2);
+  AppendOperand(S1);
+  AppendOperand(S2);
 }
 
 bool BinaryOperator::swapOperand() {
@@ -466,8 +467,8 @@ int BinaryOperator::TryToFold() {
       neg_rhs->set_type(rhs->type());
 
       // replace rhs with negitive value
-      RemoveValue(RHS());
-      AddValue(neg_rhs);
+      RemoveOperand(RHS());
+      AppendOperand(neg_rhs);
       // change sub to add
       set_opcode(BinaryOps::Add);
     }
@@ -481,8 +482,8 @@ int BinaryOperator::TryToFold() {
           auto neg_rhs = std::make_shared<ConstantInt>(-lhs_bin_rhs->value());
           neg_rhs->set_type(lhs_bin_rhs->type());
 
-          lhs_bin_inst->RemoveValue(lhs_bin_inst->RHS());
-          lhs_bin_inst->AddValue(neg_rhs);
+          lhs_bin_inst->RemoveOperand(lhs_bin_inst->RHS());
+          lhs_bin_inst->AppendOperand(neg_rhs);
           set_opcode(BinaryOps::Add);
         }
 
@@ -676,7 +677,7 @@ JumpInst::JumpInst(const BlockPtr &target)
 void BasicBlock::ClearInst() {
   for (const auto &i : _insts) {
     // remove all of its uses
-    dyn_cast<Instruction>(i)->Clear();
+    dyn_cast<Instruction>(i)->ClearOperands();
   }
 
   // clear instruction list
@@ -691,7 +692,7 @@ void BasicBlock::DeleteSelf() {
 BranchInst::BranchInst(const SSAPtr &cond, const BlockPtr &true_block,
                        const BlockPtr &false_block)
     : TerminatorInst(Instruction::TermOps::Br, 1) {
-  AddValue(cond);
+  AppendOperand(cond);
   SetStoredSuccessor(0, true_block);
   SetStoredSuccessor(1, false_block);
 }
@@ -706,25 +707,24 @@ void BranchInst::SetFalseBlock(const BlockPtr &value) {
   SetStoredSuccessor(1, value);
 }
 
-CallInst::CallInst(const SSAPtr &callee, const std::vector<SSAPtr> &args)
-    : Instruction(Instruction::OtherOps::Call, args.size() + 1,
+CallInst::CallInst(const FuncPtr &callee, const std::vector<SSAPtr> &args)
+    : Instruction(Instruction::OtherOps::Call, args.size(),
                   ClassId::CallInstId),
-      _is_tail_call(false) {
-  AddValue(callee);
+      _callee(callee), _is_tail_call(false) {
   for (const auto &it : args)
-    AddValue(it);
+    AppendOperand(it);
 }
 
 void CallInst::AddParam(const SSAPtr &param) {
   this->SetOperandNum(size() + 1);
-  this->AddValue(param);
+  this->AppendOperand(param);
 }
 
 ICmpInst::ICmpInst(Operator op, const SSAPtr &lhs, const SSAPtr &rhs)
     : Instruction(Instruction::OtherOps::ICmp, 2, ClassId::ICmpInstId),
       _op(op) {
-  AddValue(lhs);
-  AddValue(rhs);
+  AppendOperand(lhs);
+  AppendOperand(rhs);
 }
 
 SSAPtr ICmpInst::EvalArithOnConst() {
@@ -763,10 +763,10 @@ AccessInst::AccessInst(AccessType acc_type, const SSAPtr &ptr,
                        const SSAPtrList &indexs)
     : Instruction(Instruction::MemoryOps::Access, 0, ClassId::AccessInstId),
       _acc_type(acc_type) {
-  AddValue(ptr);
+  AppendOperand(ptr);
   DBG_ASSERT(indexs.size() <= 2, "index and multiplier out of range");
   for (const auto &it : indexs) {
-    AddValue(it);
+    AppendOperand(it);
   }
 }
 
@@ -928,7 +928,7 @@ void PhiNode::ResetIncomingBlocks(const std::vector<BlockPtr> &blocks) {
 
 void PhiNode::addIncoming(const BlockPtr &pred, const SSAPtr &value) {
   _incoming_blocks.push_back(pred);
-  AddValue(value);
+  AppendOperand(value);
 }
 
 BlockPtr PhiNode::getIncomingBlock(const Use &val) const {
@@ -977,7 +977,7 @@ void PhiNode::removeIncoming(const BasicBlock *pred) {
   if (idx < 0)
     return;
   _incoming_blocks.erase(_incoming_blocks.begin() + idx);
-  RemoveValue(static_cast<unsigned>(idx));
+  RemoveOperand(static_cast<unsigned>(idx));
 }
 
 /* ---------------------------- Methods of dumping IR
@@ -1383,11 +1383,10 @@ void CallInst::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << " @";
 
   // dump callee name
-  auto callee = Callee();
-  auto name   = std::static_pointer_cast<Function>(callee)->GetFunctionName();
+  auto name = Callee()->GetFunctionName();
   os << name << "(";
 
-  for (std::size_t i = 1; i < size(); i++) {
+  for (std::size_t i = 0; i < size(); i++) {
     auto arg = (*this)[i].value();
     DumpWithType(os, id_mgr, arg);
     if (i != size() - 1)
