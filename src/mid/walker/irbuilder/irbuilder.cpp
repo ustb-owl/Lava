@@ -88,6 +88,62 @@ void IRBuilder::SetInsertPoint(const BlockPtr &BB) {
   _module.SetInsertPoint(BB);
 }
 
+SSAPtr IRBuilder::EmitRValue(const SSAPtr &value) {
+  if (value == nullptr)
+    return nullptr;
+  return NeedLoad(value) ? _module.CreateLoad(value) : value;
+}
+
+SSAPtr IRBuilder::EmitConditionValue(const SSAPtr &value) {
+  auto cond = EmitRValue(value);
+  DBG_ASSERT(cond != nullptr, "condition value is nullptr");
+  DBG_ASSERT(cond->type()->IsInteger(),
+             "branch condition must be an integer value");
+  if (IsCmp(cond) || cond->type()->GetType() == Type::Bool)
+    return cond;
+  auto zero = _module.GetZeroValue(cond->type()->GetType());
+  return _module.CreateICmpInst(front::Operator::NotEqual, zero, cond);
+}
+
+SSAPtr IRBuilder::EmitCallArg(const SSAPtr &arg, const TypePtr &param_type) {
+  DBG_ASSERT(arg != nullptr, "call argument is nullptr");
+
+  auto value = arg;
+  if (value->type()->IsArray()) {
+    auto zero = _module.CreateConstInt(0);
+    value     = _module.CreateElemAccess(value, SSAPtrList{zero, zero});
+  } else {
+    auto deref = value->type()->GetDerefedType();
+    if (NeedLoad(value) && deref != nullptr &&
+        (deref->IsIdentical(param_type) ||
+         (deref->IsInteger() && param_type->IsInteger()))) {
+      value = _module.CreateLoad(value);
+    }
+  }
+
+  if (value->type()->IsInteger() && param_type->IsInteger()) {
+    value = _module.CreateCastInst(value, param_type);
+  }
+  return value;
+}
+
+std::pair<SSAPtr, SSAPtr>
+IRBuilder::EmitCommonBinaryOperands(const SSAPtr &lhs, const SSAPtr &rhs) {
+  auto lhs_value = EmitRValue(lhs);
+  auto rhs_value = EmitRValue(rhs);
+  DBG_ASSERT(lhs_value != nullptr, "lhs rvalue is nullptr");
+  DBG_ASSERT(rhs_value != nullptr, "rhs rvalue is nullptr");
+
+  const auto &lty = lhs_value->type();
+  const auto &rty = rhs_value->type();
+  if (lty->IsInteger() && rty->IsInteger()) {
+    const auto &ty = GetCommonType(lty, rty);
+    lhs_value      = _module.CreateCastInst(lhs_value, ty);
+    rhs_value      = _module.CreateCastInst(rhs_value, ty);
+  }
+  return {lhs_value, rhs_value};
+}
+
 SSAPtr IRBuilder::visit(IntAST *node) {
   return _module.CreateConstInt(node->value());
 }
@@ -252,7 +308,7 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
       DBG_ASSERT(init_ssa != nullptr, "emit init value failed");
 
       if (node->arr_lens().empty()) {
-        _module.CreateAssign(variable, init_ssa);
+        _module.CreateAssign(variable, EmitRValue(init_ssa));
       } else {
         variable = init_ssa;
       }
@@ -416,7 +472,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
       if (!(*it)->IsConst() || !dyn_cast<ConstantInt>(*it)->IsZero()) {
         auto ptr = _module.CreateElemAccess(
             val, SSAPtrList{_module.CreateConstInt(i)});
-        _module.CreateAssign(ptr, *it);
+        _module.CreateAssign(ptr, EmitRValue(*it));
       }
       it++;
     }
@@ -459,7 +515,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
       if (!(*it)->IsConst() || !dyn_cast<ConstantInt>(*it)->IsZero()) {
         auto ptr = _module.CreateElemAccess(
             val, SSAPtrList{_module.CreateConstInt(i)});
-        _module.CreateAssign(ptr, *it);
+        _module.CreateAssign(ptr, EmitRValue(*it));
       }
       it++;
     }
@@ -468,7 +524,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
       auto elem = node->exprs()[i]->CodeGeneAction(this);
       auto ptr =
           _module.CreateElemAccess(val, SSAPtrList{_module.CreateConstInt(i)});
-      _module.CreateAssign(ptr, elem);
+      _module.CreateAssign(ptr, EmitRValue(elem));
     }
 
     return val;
@@ -481,57 +537,24 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
   SSAPtr rhs      = nullptr;
   SSAPtr bin_inst = nullptr;
 
-  TypePtr type = nullptr;
-  if (lhs->type()->IsPointer()) {
-    type = lhs->type()->GetDerefedType();
-  } else {
-    type = lhs->type();
-  }
-
   const auto &func = _module.InsertPoint()->getParent();
-  auto        zero = _module.GetZeroValue(type->GetType());
   if (node->op() == front::Operator::LAnd) {
     bin_inst       = _module.CreateAlloca(MakePrimType(Type::Bool, false));
     auto lhs_true  = _module.CreateBlock(func, "lhs.true");
     auto lhs_false = _module.CreateBlock(func, "lhs.false");
     auto land_end  = _module.CreateBlock(func, "land.end");
-    auto cond =
-        _module.CreateICmpInst(BinaryStmt::Operator::NotEqual, zero, lhs);
-    _module.CreateBranch(cond, lhs_true, lhs_false);
+    auto lhs_cond  = EmitConditionValue(lhs);
+    _module.CreateBranch(lhs_cond, lhs_true, lhs_false);
 
     /* LHS true */
     // generate rhs in lhs_true block
     _module.SetInsertPoint(lhs_true);
     rhs = node->rhs()->CodeGeneAction(this);
     DBG_ASSERT(rhs != nullptr, "rhs generate failed");
-
-    SSAPtr RHS = rhs;
-    if (NeedLoad(rhs))
-      RHS = _module.CreateLoad(rhs);
-
-    // convert to bool if necessary
-    if (RHS->type()->GetSize() > 1) {
-      zero = _module.GetZeroValue(type->GetType());
-      RHS  = _module.CreateICmpInst(front::Operator::NotEqual, zero, RHS);
-    }
-
-#if 0
-    const auto &lty = lhs->type();
-    const auto &rty = rhs->type();
-    SSAPtr LHS = lhs, RHS = rhs;
-    if (lty->IsInteger() && rty->IsInteger()) {
-      const auto &ty = GetCommonType(lty, rty);
-      LHS = _module.CreateCastInst(lhs, ty);
-      RHS = _module.CreateCastInst(rhs, ty);
-    }
-
-    // create land statement
-    auto landInst = _module.CreateBinaryOperator(node->op(), LHS, RHS);
-    DBG_ASSERT(landInst != nullptr, "logic-and statement generate failed");
-#endif
+    auto rhs_cond = EmitConditionValue(rhs);
 
     // save result
-    _module.CreateStore(RHS, bin_inst);
+    _module.CreateStore(rhs_cond, bin_inst);
 
     // jump to land end
     _module.CreateJump(land_end);
@@ -539,10 +562,7 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     /* LHS false */
     // save rhs value
     _module.SetInsertPoint(lhs_false);
-    if (lhs->type()->IsPointer()) {
-      lhs = _module.CreateLoad(lhs);
-    }
-    _module.CreateStore(lhs, bin_inst);
+    _module.CreateStore(lhs_cond, bin_inst);
     // jump to land end
     _module.CreateJump(land_end);
 
@@ -556,42 +576,17 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     auto lhs_true  = _module.CreateBlock(func, "lhs.true");
     auto lhs_false = _module.CreateBlock(func, "lhs.false");
     auto lor_end   = _module.CreateBlock(func, "lor.end");
-    auto cond =
-        _module.CreateICmpInst(BinaryStmt::Operator::NotEqual, zero, lhs);
-    _module.CreateBranch(cond, lhs_true, lhs_false);
+    auto lhs_cond  = EmitConditionValue(lhs);
+    _module.CreateBranch(lhs_cond, lhs_true, lhs_false);
 
     /* LHS false */
     _module.SetInsertPoint(lhs_false);
     rhs = node->rhs()->CodeGeneAction(this);
     DBG_ASSERT(rhs != nullptr, "rhs generate failed");
-
-    SSAPtr RHS = rhs;
-    if (NeedLoad(rhs))
-      RHS = _module.CreateLoad(rhs);
-
-    // convert to bool if necessary
-    if (RHS->type()->GetSize() > 1) {
-      zero = _module.GetZeroValue(type->GetType());
-      RHS  = _module.CreateICmpInst(front::Operator::NotEqual, zero, RHS);
-    }
-
-#if 0
-    const auto &lty = lhs->type();
-    const auto &rty = rhs->type();
-    SSAPtr LHS = lhs, RHS = rhs;
-    if (lty->IsInteger() && rty->IsInteger()) {
-      const auto &ty = GetCommonType(lty, rty);
-      LHS = _module.CreateCastInst(lhs, ty);
-      RHS = _module.CreateCastInst(rhs, ty);
-    }
-
-    // create lor statement
-    auto lorInst = _module.CreateBinaryOperator(node->op(), LHS, RHS);
-    DBG_ASSERT(lorInst != nullptr, "logic-or statement generate failed");
-#endif
+    auto rhs_cond = EmitConditionValue(rhs);
 
     // save result
-    _module.CreateStore(RHS, bin_inst);
+    _module.CreateStore(rhs_cond, bin_inst);
 
     // jump to land end
     _module.CreateJump(lor_end);
@@ -600,10 +595,7 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     // computer will not execute rhs if lhs is true
     _module.SetInsertPoint(lhs_true);
     // save rhs value
-    if (lhs->type()->IsPointer()) {
-      lhs = _module.CreateLoad(lhs);
-    }
-    _module.CreateStore(lhs, bin_inst);
+    _module.CreateStore(lhs_cond, bin_inst);
     // jump to lor end
     _module.CreateJump(lor_end);
 
@@ -614,18 +606,22 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
   } else {
     rhs = node->rhs()->CodeGeneAction(this);
     DBG_ASSERT(rhs != nullptr, "rhs generate failed");
-
-    const auto &lty = lhs->type();
-    const auto &rty = rhs->type();
-    SSAPtr      LHS = lhs, RHS = rhs;
-    if (lty->IsInteger() && rty->IsInteger()) {
-      const auto &ty = GetCommonType(lty, rty);
-      LHS            = _module.CreateCastInst(lhs, ty);
-      RHS            = _module.CreateCastInst(rhs, ty);
+    if (BinaryStmt::IsOperatorAssign(node->op())) {
+      if (node->op() == front::Operator::Assign) {
+        auto rhs_value = EmitRValue(rhs);
+        bin_inst       = _module.CreateAssign(lhs, rhs_value);
+      } else {
+        auto [lhs_value, rhs_value] = EmitCommonBinaryOperands(lhs, rhs);
+        auto value                  = _module.CreateBinaryOperator(
+            BinaryStmt::GetDeAssignedOp(node->op()), lhs_value, rhs_value);
+        DBG_ASSERT(value != nullptr, "compound assignment generate failed");
+        bin_inst = _module.CreateAssign(lhs, value);
+      }
+    } else {
+      auto [lhs_value, rhs_value] = EmitCommonBinaryOperands(lhs, rhs);
+      bin_inst = _module.CreateBinaryOperator(node->op(), lhs_value, rhs_value);
+      DBG_ASSERT(bin_inst != nullptr, "binary statement generate failed");
     }
-
-    bin_inst = _module.CreateBinaryOperator(node->op(), LHS, RHS);
-    DBG_ASSERT(bin_inst != nullptr, "binary statement generate failed");
   }
 
   return bin_inst;
@@ -636,17 +632,11 @@ SSAPtr IRBuilder::visit(UnaryStmt *node) {
   auto context = _module.SetContext(node->logger());
   auto opr     = node->opr()->CodeGeneAction(this);
 
-  TypePtr type = nullptr;
-  if (opr->type()->IsPointer()) {
-    type = opr->type()->GetDerefedType();
-  } else {
-    type = opr->type();
-  }
   switch (node->op()) {
   case Op::Pos:
-    return opr;
+    return EmitRValue(opr);
   case Op::Neg: {
-    auto operand = opr;
+    auto operand = EmitRValue(opr);
     if (operand->type()->GetSize() == 1) {
       operand = _module.CreateCastInst(
           operand,
@@ -657,21 +647,14 @@ SSAPtr IRBuilder::visit(UnaryStmt *node) {
     return res;
   }
   case Op::Not: {
-    auto allBitsOne = GetAllOneValue(type->GetType());
-    auto res        = _module.CreateBinaryOperator(Op::Xor, opr, allBitsOne);
+    auto value      = EmitRValue(opr);
+    auto value_type = value->type();
+    auto allBitsOne = GetAllOneValue(value_type->GetType());
+    auto res        = _module.CreateBinaryOperator(Op::Xor, value, allBitsOne);
     return res;
   }
   case Op::LNot: {
-    // convert value to bool type if necessary
-    SSAPtr tobool = opr;
-    if (opr->type()->IsInteger() ||
-        (opr->type()->GetDerefedType() &&
-         opr->type()->GetDerefedType()->IsInteger())) {
-      auto zero = _module.GetZeroValue(type->GetType());
-      tobool    = _module.CreateICmpInst(Op::NotEqual, zero, opr);
-    }
-
-    // logic not
+    auto tobool    = EmitConditionValue(opr);
     auto trueConst = _module.CreateConstInt(1, Type::Bool);
     auto lnot      = _module.CreateBinaryOperator(Op::Xor, trueConst, tobool);
     return lnot;
@@ -709,7 +692,8 @@ SSAPtr IRBuilder::visit(ControlAST *node) {
       DBG_ASSERT(retval != nullptr, "emit return value failed");
 
       // copy return value
-      auto store_inst = _module.CreateAssign(_module.ReturnValue(), retval);
+      auto store_inst =
+          _module.CreateAssign(_module.ReturnValue(), EmitRValue(retval));
       DBG_ASSERT(store_inst != nullptr, "copy return value failed");
     }
 
@@ -766,7 +750,7 @@ SSAPtr IRBuilder::visit(IfElseStmt *node) {
 
   auto cond_block = cond->CodeGeneAction(this);
   DBG_ASSERT(cond_block != nullptr, "emit condition statement failed");
-  _module.CreateBranch(cond_block, then_block, else_block);
+  _module.CreateBranch(EmitConditionValue(cond_block), then_block, else_block);
 
   // create then block
   auto &then_ast = node->then();
@@ -795,13 +779,18 @@ SSAPtr IRBuilder::visit(CallStmt *node) {
   // TODO: callee not sure
   auto callee = node->expr()->CodeGeneAction(this);
   DBG_ASSERT(callee != nullptr, "can't generate callee here");
+  auto callee_func = dyn_cast<Function>(callee);
+  DBG_ASSERT(callee_func != nullptr, "callee is not a direct function");
 
   // emit args
   std::vector<SSAPtr> args;
+  auto                params = *callee_func->type()->GetArgsType();
+  DBG_ASSERT(params.size() == node->args().size(), "emit arg failed");
+  auto param_it = params.begin();
   for (const auto &it : node->args()) {
     auto arg = it->CodeGeneAction(this);
     DBG_ASSERT(arg != nullptr, "emit arg failed");
-    args.push_back(arg);
+    args.push_back(EmitCallArg(arg, *param_it++));
   }
 
   auto call_inst = _module.CreateCallInst(callee, args);
@@ -946,7 +935,7 @@ SSAPtr IRBuilder::visit(WhileStmt *node) {
   auto cond = node->cond()->CodeGeneAction(this);
   DBG_ASSERT(cond != nullptr, "while condition SSA is nullptr");
 
-  _module.CreateBranch(cond, loop_body, while_end);
+  _module.CreateBranch(EmitConditionValue(cond), loop_body, while_end);
 
   // emit loop body
   _module.SetInsertPoint(loop_body);
@@ -969,13 +958,8 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
   auto expr = node->expr()->CodeGeneAction(this);
   DBG_ASSERT(expr != nullptr, "emit expr for accessing failed");
 
-  auto index = node->index()->CodeGeneAction(this);
+  auto index = EmitRValue(node->index()->CodeGeneAction(this));
   DBG_ASSERT(index != nullptr, "emit index for accessing failed");
-  if (!index->type()->IsConst() && !IsBinaryOperator(index) &&
-      !IsCallInst(index)) {
-    index = _module.CreateLoad(index);
-    DBG_ASSERT(index != nullptr, "emit load index failed");
-  }
 
   // get type
   auto expr_ty = node->expr()->ast_type();
@@ -985,18 +969,12 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
 
   if (expr_ty->GetDerefedType()->IsArray()) {
     // get rest length of the array
-    auto   derefType   = expr_ty->GetDerefedType();
-    int    dim_len     = GetLinearArrayLength(derefType);
-    SSAPtr dim_len_ssa = _module.CreateConstInt(dim_len);
-
-    index = _module.CreateBinaryOperator(BinaryStmt::Operator::Mul, dim_len_ssa,
-                                         index);
-  }
-
-  if (index->isInstruction()) {
-    if (index->type()->IsPointer()) {
-      index = _module.CreateLoad(index);
-    }
+    auto   derefType            = expr_ty->GetDerefedType();
+    int    dim_len              = GetLinearArrayLength(derefType);
+    SSAPtr dim_len_ssa          = _module.CreateConstInt(dim_len);
+    auto [lhs_value, rhs_value] = EmitCommonBinaryOperands(dim_len_ssa, index);
+    index = _module.CreateBinaryOperator(BinaryStmt::Operator::Mul, lhs_value,
+                                         rhs_value);
   }
 
   // update array's type

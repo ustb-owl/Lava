@@ -15,6 +15,12 @@ private:
   IRBuilderContext _module;
   ASTPtr          &_translation_decl_unit;
 
+  SSAPtr EmitRValue(const SSAPtr &value);
+  SSAPtr EmitConditionValue(const SSAPtr &value);
+  SSAPtr EmitCallArg(const SSAPtr &arg, const define::TypePtr &param_type);
+  std::pair<SSAPtr, SSAPtr> EmitCommonBinaryOperands(const SSAPtr &lhs,
+                                                     const SSAPtr &rhs);
+
 public:
   explicit IRBuilder(ASTPtr &ast)
       : _in_func(false), _ir(), _module(_ir), _translation_decl_unit(ast) {

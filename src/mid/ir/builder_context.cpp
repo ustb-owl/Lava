@@ -86,7 +86,9 @@ SSAPtr IRBuilderContext::CreateArgRef(const SSAPtr &func, std::size_t index,
 SSAPtr IRBuilderContext::CreateAlloca(const TypePtr &type) {
   auto insert_point = _insert_point;
   auto last_pos     = _func_entry->inst_end();
-  SetInsertPoint(_func_entry, --last_pos);
+  if (!_func_entry->empty())
+    --last_pos;
+  SetInsertPoint(_func_entry, last_pos);
 
   DBG_ASSERT(!type->IsVoid(), "alloc type can't be void");
   auto alloca   = AddInst<AllocaInst>();
@@ -117,19 +119,9 @@ SSAPtr IRBuilderContext::CreateLoad(const SSAPtr &ptr) {
 SSAPtr IRBuilderContext::CreateBranch(const SSAPtr   &cond,
                                       const BlockPtr &true_block,
                                       const BlockPtr &false_block) {
-  SSAPtr condition = cond;
-  if (condition->type()->IsPointer()) {
-    condition = CreateLoad(cond);
-  }
-
-  DBG_ASSERT(condition->type()->IsInteger(), "cond type should be integer");
-  if (!IsCmp(condition)) {
-    auto type = condition->type()->GetType();
-    condition =
-        CreateICmpInst(front::Operator::NotEqual, GetZeroValue(type), cond);
-  }
-
-  auto br = AddInst<BranchInst>(condition, true_block, false_block);
+  DBG_ASSERT(cond != nullptr, "branch condition is nullptr");
+  DBG_ASSERT(cond->type()->IsInteger(), "cond type should be integer");
+  auto br = AddInst<BranchInst>(cond, true_block, false_block);
   br->set_type(nullptr);
   true_block->AddPredecessor(_insert_point);
   false_block->AddPredecessor(_insert_point);
@@ -232,14 +224,7 @@ static unsigned OpToOpcode(front::Operator op) {
 }
 
 SSAPtr IRBuilderContext::CreateAssign(const SSAPtr &S1, const SSAPtr &S2) {
-  if (!NeedLoad(S2)) {
-    auto store_inst = CreateStore(S2, S1);
-    DBG_ASSERT(store_inst != nullptr, "emit store inst failed");
-    return store_inst;
-  }
-
-  auto load_inst  = CreateLoad(S2);
-  auto store_inst = CreateStore(load_inst, S1);
+  auto store_inst = CreateStore(S2, S1);
   DBG_ASSERT(store_inst != nullptr, "emit store inst failed");
   return store_inst;
 }
@@ -249,43 +234,9 @@ SSAPtr IRBuilderContext::CreatePureBinaryInst(Instruction::BinaryOps opcode,
                                               const SSAPtr          &S2) {
   DBG_ASSERT(opcode >= Instruction::BinaryOps::Add,
              "opcode is not pure binary operator");
-  SSAPtr load_s1 = nullptr;
-  SSAPtr load_s2 = nullptr;
-  if (NeedLoad(S1)) {
-    load_s1 = CreateLoad(S1);
-    DBG_ASSERT(load_s1 != nullptr, "emit load S1 failed");
-  }
-
-  if (NeedLoad(S2)) {
-    load_s2 = CreateLoad(S2);
-    DBG_ASSERT(load_s2 != nullptr, "emit load S2 failed");
-  }
-
-  auto lhs = (load_s1 != nullptr) ? load_s1 : S1;
-  auto rhs = (load_s2 != nullptr) ? load_s2 : S2;
-
-  const auto &lty = lhs->type();
-  const auto &rty = rhs->type();
-  SSAPtr      LHS = lhs, RHS = rhs;
-  if (lty->IsInteger() && rty->IsInteger()) {
-    const auto &ty = GetCommonType(lty, rty);
-    LHS            = CreateCastInst(lhs, ty);
-    RHS            = CreateCastInst(rhs, ty);
-  }
-
-  auto bin_inst = BinaryOperator::Create(opcode, LHS, RHS);
+  auto bin_inst = AddInst<BinaryOperator>(opcode, S1, S2, S1->type());
   DBG_ASSERT(bin_inst != nullptr, "emit binary instruction failed");
-  ApplyLogger(bin_inst);
-
-  auto s1_type = S1->type();
-  if (s1_type->IsPointer()) {
-    bin_inst->set_type(s1_type->GetDerefedType());
-  } else {
-    bin_inst->set_type(S1->type());
-  }
-
-  _insert_point->AddInstToEnd(bin_inst);
-  bin_inst->setParent(_insert_point.get());
+  bin_inst->set_type(S1->type());
   return bin_inst;
 }
 
@@ -328,34 +279,7 @@ SSAPtr IRBuilderContext::CreateCallInst(const SSAPtr              &callee,
   DBG_ASSERT(callee_func->type()->IsFunction(), "callee is not function type");
   auto args_type = *callee_func->type()->GetArgsType();
   DBG_ASSERT(args_type.size() == args.size(), "arguments size not fit");
-
-  auto                arg_it = args_type.begin();
-  std::vector<SSAPtr> new_args;
-  for (const auto &it : args) {
-    auto arg      = *arg_it++;
-    auto it_deref = it->type()->GetDerefedType();
-    auto it_type  = it->type();
-    if (it_type->IsConst() || IsBinaryOperator(it) || IsCallInst(it)) {
-      new_args.push_back(it);
-    } else if (it_deref && it_deref->IsIdentical(arg)) {
-      auto load_inst = CreateLoad(it);
-      DBG_ASSERT(load_inst != nullptr,
-                 "emit load inst before call inst failed");
-      new_args.push_back(load_inst);
-    } else {
-      SSAPtr tmp = it;
-      if (it_type->IsArray()) {
-        SSAPtrList index;
-        auto       zero = GetZeroValue(Type::Int32);
-        index.push_back(zero);
-        index.push_back(zero);
-        tmp = CreateElemAccess(it, index);
-      }
-      new_args.push_back(tmp);
-    }
-  }
-
-  auto call_inst = AddInst<CallInst>(callee_func, new_args);
+  auto call_inst = AddInst<CallInst>(callee_func, args);
   DBG_ASSERT(call_inst != nullptr, "emit call inst failed");
   auto callee_type = callee_func->type();
   call_inst->set_type(
@@ -368,20 +292,7 @@ SSAPtr IRBuilderContext::CreateICmpInst(BinaryStmt::Operator opcode,
   DBG_ASSERT(lhs != nullptr, "lhs SSA is null ptr");
   DBG_ASSERT(rhs != nullptr, "rhs SSA is null ptr");
 
-  SSAPtr icmp_inst, lhs_ssa, rhs_ssa;
-  lhs_ssa = NeedLoad(lhs) ? CreateLoad(lhs) : lhs;
-  rhs_ssa = NeedLoad(rhs) ? CreateLoad(rhs) : rhs;
-
-  const auto &lty = lhs_ssa->type();
-  const auto &rty = rhs_ssa->type();
-  SSAPtr      LHS = lhs_ssa, RHS = rhs_ssa;
-  if (lty->IsInteger() && rty->IsInteger()) {
-    const auto &ty = GetCommonType(lty, rty);
-    LHS            = CreateCastInst(lhs_ssa, ty);
-    RHS            = CreateCastInst(rhs_ssa, ty);
-  }
-
-  icmp_inst = AddInst<ICmpInst>(opcode, LHS, RHS);
+  auto icmp_inst = AddInst<ICmpInst>(opcode, lhs, rhs);
   DBG_ASSERT(icmp_inst != nullptr, "emit ICmp instruction failed");
   icmp_inst->set_type(MakePrimType(Type::Bool, true));
   return icmp_inst;
