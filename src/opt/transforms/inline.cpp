@@ -191,7 +191,6 @@ void FunctionInlining::Rename() {
   for (const auto &orig_phi : phi_list) {
     auto phi = dyn_cast<PhiNode>(ssa_map[orig_phi]);
     phi->ResetIncomingBlocks(phi->getParent()->predecessors());
-    phi->ReserveOperands();
 
     auto     orig_preds = orig_phi->blocks();
     auto     preds      = phi->blocks();
@@ -203,7 +202,7 @@ void FunctionInlining::Rename() {
         if (blk_map[pred] == preds[i])
           break;
       }
-      phi->SetOperand(i, GetOperand(it.value()));
+      phi->setIncomingValueAt(i, GetOperand(it.value()));
       idx++;
     }
     DBG_ASSERT(phi->size() == orig_phi->size(),

@@ -302,6 +302,8 @@ public:
   const SSAPtr &LHS() const { return (*this)[0].value(); }
   const SSAPtr &RHS() const { return (*this)[1].value(); }
   BinaryOps     opcode() const { return BinaryOps(Instruction::opcode()); }
+  void          SetLHS(const SSAPtr &value) { SetOperand(0, value); }
+  void          SetRHS(const SSAPtr &value) { SetOperand(1, value); }
 
   // methods for dyn_cast
   static inline bool classof(BinaryOperator *) { return true; }
@@ -491,7 +493,7 @@ public:
 
   // getter/setter
   const SSAPtr &RetVal() const { return (*this)[0].value(); }
-  void          SetRetVal(const SSAPtr &value) { (*this)[0].set(value); }
+  void          SetRetVal(const SSAPtr &value) { SetOperand(0, value); }
 
   // methods for dyn_cast
   static inline bool classof(ReturnInst *) { return true; }
@@ -553,7 +555,7 @@ public:
   const SSAPtr &cond() const { return (*this)[0].value(); }
   BlockPtr      true_block() const { return GetSuccessors()[0]; }
   BlockPtr      false_block() const { return GetSuccessors()[1]; }
-  void          SetCond(const SSAPtr &value) { (*this)[0].set(value); }
+  void          SetCond(const SSAPtr &value) { SetOperand(0, value); }
   void          SetTrueBlock(const BlockPtr &value);
   void          SetFalseBlock(const BlockPtr &value);
 
@@ -591,6 +593,8 @@ public:
   const SSAPtr &data() const { return (*this)[0].value(); }
 
   const SSAPtr &pointer() const { return (*this)[1].value(); }
+  void          SetData(const SSAPtr &value) { SetOperand(0, value); }
+  void          SetPointer(const SSAPtr &value) { SetOperand(1, value); }
 
   // methods for dyn_cast
   static inline bool classof(StoreInst *) { return true; }
@@ -667,7 +671,7 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // getter/setter
-  void          SetPointer(const SSAPtr &ptr) { (*this)[0].set(ptr); }
+  void          SetPointer(const SSAPtr &ptr) { SetOperand(0, ptr); }
   const SSAPtr &Pointer() const { return (*this)[0].value(); }
 
   const std::string &name() const { return _name; }
@@ -790,6 +794,8 @@ public:
   const SSAPtr &RHS() const { return (*this)[1].value(); }
   std::string   opStr() const;
   void          SetOp(Operator op) { _op = op; }
+  void          SetLHS(const SSAPtr &value) { SetOperand(0, value); }
+  void          SetRHS(const SSAPtr &value) { SetOperand(1, value); }
 
   // methods for dyn_cast
   static inline bool classof(ICmpInst *) { return true; }
@@ -863,7 +869,7 @@ public:
   const std::string &name() const { return _name; }
 
   void set_is_var(bool is_var) { _is_var = is_var; }
-  void set_init(const SSAPtr &init) { (*this)[0].set(init); }
+  void set_init(const SSAPtr &init) { SetOperand(0, init); }
 
   Module *getParent() { return _module; }
 
@@ -913,8 +919,8 @@ public:
   const SSAPtr &index() const { return (*this)[1].value(); }
   const SSAPtr &index(int n) const { return (*this)[n].value(); }
   const SSAPtr &multiplier() const { return (*this)[2].value(); }
-  void          set_ptr(const SSAPtr &ptr) { (*this)[0].set(ptr); }
-  void          set_index(const SSAPtr &idx, int n) { (*this)[n].set(idx); }
+  void          set_ptr(const SSAPtr &ptr) { SetOperand(0, ptr); }
+  void          set_index(const SSAPtr &idx, int n) { SetOperand(n, idx); }
 
   bool has_multiplier() const { return this->size() == 3; }
 
@@ -967,6 +973,7 @@ public:
                     ClassId::PHINodeId),
         _incoming_blocks(BB->predecessors()) {
     setParent(BB);
+    ReserveOperands();
   }
 
   std::vector<BlockPtr> blocks() const;
@@ -988,7 +995,11 @@ public:
 
   int incomingIndexOf(const BasicBlock *pred) const;
 
+  SSAPtr getIncomingValueAt(unsigned int i) const;
+
   SSAPtr getIncomingValue(const BasicBlock *pred) const;
+
+  void setIncomingValueAt(unsigned int i, const SSAPtr &value);
 
   void setIncomingValue(const BasicBlock *pred, const SSAPtr &value);
 

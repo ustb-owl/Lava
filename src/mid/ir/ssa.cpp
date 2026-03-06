@@ -494,8 +494,7 @@ int BinaryOperator::TryToFold() {
       neg_rhs->set_type(rhs->type());
 
       // replace rhs with negitive value
-      RemoveOperand(RHS());
-      AppendOperand(neg_rhs);
+      SetRHS(neg_rhs);
       // change sub to add
       set_opcode(BinaryOps::Add);
     }
@@ -509,28 +508,27 @@ int BinaryOperator::TryToFold() {
           auto neg_rhs = std::make_shared<ConstantInt>(-lhs_bin_rhs->value());
           neg_rhs->set_type(lhs_bin_rhs->type());
 
-          lhs_bin_inst->RemoveOperand(lhs_bin_inst->RHS());
-          lhs_bin_inst->AppendOperand(neg_rhs);
+          lhs_bin_inst->SetRHS(neg_rhs);
           set_opcode(BinaryOps::Add);
         }
 
         if ((opcode() == BinaryOps::Add) &&
             (lhs_bin_inst->opcode() == BinaryOps::Add)) {
-          (*this)[0].set(lhs_bin_inst->LHS());
+          SetLHS(lhs_bin_inst->LHS());
           int value =
               lhs_bin_rhs->value() + dyn_cast<ConstantInt>(RHS())->value();
           auto new_rhs = std::make_shared<ConstantInt>(value);
           new_rhs->set_type(RHS()->type());
-          (*this)[1].set(new_rhs);
+          SetRHS(new_rhs);
           res = true;
         } else if ((opcode() == BinaryOps::Mul) &&
                    (lhs_bin_inst->opcode() == BinaryOps::Mul)) {
-          (*this)[0].set(lhs_bin_inst->LHS());
+          SetLHS(lhs_bin_inst->LHS());
           int value =
               lhs_bin_rhs->value() * dyn_cast<ConstantInt>(RHS())->value();
           auto new_rhs = std::make_shared<ConstantInt>(value);
           new_rhs->set_type(RHS()->type());
-          (*this)[1].set(new_rhs);
+          SetRHS(new_rhs);
           res = true;
         }
       } else if (auto lhs_bin_lhs =
@@ -542,8 +540,8 @@ int BinaryOperator::TryToFold() {
                 lhs_bin_lhs->value() + dyn_cast<ConstantInt>(RHS())->value();
             auto new_lhs = std::make_shared<ConstantInt>(value);
             new_lhs->set_type(LHS()->type());
-            (*this)[0].set(new_lhs);
-            (*this)[1].set(lhs_bin_inst->RHS());
+            SetLHS(new_lhs);
+            SetRHS(lhs_bin_inst->RHS());
             set_opcode(BinaryOps::Sub);
             res = true;
           }
@@ -556,11 +554,11 @@ int BinaryOperator::TryToFold() {
       if (auto rhs_bin_lhs = dyn_cast<ConstantInt>(rhs_bin_inst->LHS())) {
         if ((opcode() == BinaryOps::Sub) &&
             (rhs_bin_inst->opcode() == BinaryOps::Sub)) {
-          (*this)[0].set(rhs_bin_inst->RHS());
+          SetLHS(rhs_bin_inst->RHS());
           auto new_lhs = std::make_shared<ConstantInt>(lhs->value() -
                                                        rhs_bin_lhs->value());
           new_lhs->set_type(lhs->type());
-          (*this)[1].set(new_lhs);
+          SetRHS(new_lhs);
           set_opcode(BinaryOps::Add);
           res = true;
         }
@@ -953,7 +951,9 @@ std::vector<BlockPtr> PhiNode::blocks() const { return _incoming_blocks; }
 
 void PhiNode::ResetIncomingBlocks(const std::vector<BlockPtr> &blocks) {
   _incoming_blocks = blocks;
+  ClearOperands();
   SetOperandNum(_incoming_blocks.size());
+  ReserveOperands();
 }
 
 void PhiNode::addIncoming(const BlockPtr &pred, const SSAPtr &value) {
@@ -982,16 +982,26 @@ int PhiNode::incomingIndexOf(const BasicBlock *pred) const {
   return -1;
 }
 
+SSAPtr PhiNode::getIncomingValueAt(unsigned int i) const {
+  DBG_ASSERT(i < size(), "PHI index out of bound");
+  return GetOperand(i);
+}
+
 SSAPtr PhiNode::getIncomingValue(const BasicBlock *pred) const {
   auto idx = incomingIndexOf(pred);
   DBG_ASSERT(idx >= 0, "incoming predecessor not found");
-  return GetOperand(static_cast<unsigned>(idx));
+  return getIncomingValueAt(static_cast<unsigned>(idx));
+}
+
+void PhiNode::setIncomingValueAt(unsigned int i, const SSAPtr &value) {
+  DBG_ASSERT(i < size(), "PHI index out of bound");
+  SetOperand(i, value);
 }
 
 void PhiNode::setIncomingValue(const BasicBlock *pred, const SSAPtr &value) {
   auto idx = incomingIndexOf(pred);
   DBG_ASSERT(idx >= 0, "incoming predecessor not found");
-  SetOperand(static_cast<unsigned>(idx), value);
+  setIncomingValueAt(static_cast<unsigned>(idx), value);
 }
 
 void PhiNode::replaceIncomingBlock(const BasicBlock *oldPred,

@@ -129,9 +129,9 @@ public:
             // collect phi nodes
             for (const auto &inst : header->insts()) {
               if (auto phi_node = dyn_cast<PhiNode>(inst)) {
-                _phi_map.insert({phi_node, (*phi_node)[1].value()});
+                _phi_map.insert({phi_node, phi_node->getIncomingValueAt(1)});
                 _phi_tmp_map.insert({phi_node, nullptr});
-                _phi_update.insert((*phi_node)[1].value());
+                _phi_update.insert(phi_node->getIncomingValueAt(1));
               }
             }
 
@@ -166,7 +166,7 @@ public:
                 auto res   = _phi_map.find(value);
                 if (res != _phi_map.end()) {
                   auto phi = dyn_cast<PhiNode>(res->first);
-                  use.set((*phi)[0].value());
+                  use.set(phi->getIncomingValueAt(0));
                 }
               }
               if (*it == last_inst)
@@ -216,8 +216,9 @@ public:
 
       if (auto phi_node = dyn_cast<PhiNode>(induct_var)) {
         if (phi_node->size() == 2) {
-          if (auto init = dyn_cast<ConstantInt>((*phi_node)[0].value())) {
-            auto new_i = (*phi_node)[1].value();
+          if (auto init =
+                  dyn_cast<ConstantInt>(phi_node->getIncomingValueAt(0))) {
+            auto new_i = phi_node->getIncomingValueAt(1);
             if (auto binary_inst = dyn_cast<BinaryOperator>(new_i)) {
               if (binary_inst->LHS() == phi_node &&
                   IsSSA<ConstantInt>(binary_inst->RHS())) {
@@ -328,7 +329,7 @@ public:
           cmp_pos = header->InsertInst(cmp_pos, tmp);
 
           // replace compare condition
-          cmp_inst->SetOperand(1, new_loop_end);
+          cmp_inst->SetRHS(new_loop_end);
 
           auto loop_body = loop->blocks()[1];
 
@@ -368,10 +369,11 @@ public:
           // collect phi nodes
           for (const auto &inst : header->insts()) {
             if (auto phi_node = dyn_cast<PhiNode>(inst)) {
-              _phi_map.insert({phi_node, (*phi_node)[1].value()});
+              _phi_map.insert({phi_node, phi_node->getIncomingValueAt(1)});
               _phi_tmp_map.insert({phi_node, nullptr});
-              _phi_origin_map.insert({phi_node, (*phi_node)[1].value()});
-              _phi_update.insert((*phi_node)[1].value());
+              _phi_origin_map.insert(
+                  {phi_node, phi_node->getIncomingValueAt(1)});
+              _phi_update.insert(phi_node->getIncomingValueAt(1));
             }
           }
 
@@ -461,7 +463,6 @@ public:
             }
             DBG_ASSERT(last_value != nullptr, "find user of phi failed");
             auto new_phi = std::make_shared<PhiNode>(while_end.get());
-            new_phi->ReserveOperands();
             new_phi->setIncomingValue(check_rem_block.get(), phi);
             new_phi->setIncomingValue(last_loop_block.get(), last_value);
             new_phi->set_type(phi->type());
@@ -523,8 +524,9 @@ public:
 
       if (auto phi_node = dyn_cast<PhiNode>(induct_var)) {
         if (phi_node->size() == 2) {
-          if (auto init = dyn_cast<ConstantInt>((*phi_node)[0].value())) {
-            auto new_i = (*phi_node)[1].value();
+          if (auto init =
+                  dyn_cast<ConstantInt>(phi_node->getIncomingValueAt(0))) {
+            auto new_i = phi_node->getIncomingValueAt(1);
             if (auto binary_inst = dyn_cast<BinaryOperator>(new_i)) {
               if (binary_inst->LHS() == phi_node &&
                   IsSSA<ConstantInt>(binary_inst->RHS())) {
@@ -601,7 +603,7 @@ public:
     if (_phi_update.find(inst) != _phi_update.end()) {
       for (auto &it : _phi_map) {
         auto phi = dyn_cast<PhiNode>(it.first);
-        if ((*phi)[1].value() == inst) {
+        if (phi->getIncomingValueAt(1) == inst) {
           _phi_tmp_map[phi] = result;
           break;
         }

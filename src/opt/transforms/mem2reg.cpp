@@ -108,7 +108,6 @@ public:
             visited.insert(dom_frontier);
             // create a phi node
             auto phi_node = std::make_shared<PhiNode>(dom_frontier);
-            phi_node->ReserveOperands();
 
             // insert this phi node to the head of dom_frontier
             dom_frontier->InsertInst(dom_frontier->inst_begin(), phi_node);

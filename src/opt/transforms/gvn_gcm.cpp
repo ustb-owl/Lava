@@ -299,11 +299,11 @@ int GlobalValueNumberingGlobalCodeMotion::GlobalValueNumbering(
           return false;
         };
 
-        auto first    = (*phi_node)[0].value();
+        auto first    = phi_node->getIncomingValueAt(0);
         bool all_same = true;
         auto size     = phi_node->size();
         for (std::size_t i = 1; (i < size) && all_same; i++) {
-          all_same &= incoming_same(first, (*phi_node)[i].value());
+          all_same &= incoming_same(first, phi_node->getIncomingValueAt(i));
         }
         if (all_same)
           Replace(phi_node, first, BB, it);
