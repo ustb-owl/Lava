@@ -37,7 +37,7 @@ TypePtr GetArrayLinearBaseType(const TypePtr &type) {
 
 SSAPtrList GetArrayInitElement(InitListAST *node, IRBuilder *irbuiler) {
   SSAPtrList elems;
-  auto      &module = irbuiler->module();
+  auto      &module = irbuiler->context();
 
   /* Get current dimension size */
   auto       &array_lens = module.array_lens();
@@ -815,12 +815,10 @@ SSAPtr IRBuilder::visit(ProtoTypeAST *node) {
 
   // generate function prototype
   FuncPtr     func;
-  auto        functions = _module.Functions();
   const auto &func_name = node->id();
   const auto &func_type = node->ast_type();
   if (!_module.GetFunction(func_name)) {
     func = _module.CreateFunction(func_name, func_type, !_in_func);
-    functions.push_back(func);
 
     // add to environment
     auto        symbols   = _module.ValueSymTab();

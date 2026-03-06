@@ -1,8 +1,10 @@
 #include <algorithm>
+#include <optional>
 #include <set>
 
 #include "common/casting.h"
 #include "lib/debug.h"
+#include "mid/ir/builder_context.h"
 #include "opt/analysis/funcanalysis.h"
 #include "opt/analysis/loopinfo.h"
 #include "opt/pass.h"
@@ -28,7 +30,7 @@ public:
   using CallInstPtr = std::shared_ptr<CallInst>;
 
 private:
-  Module                                *module;
+  std::optional<IRBuilderContext>        module;
   FuncPtr                                callee;
   LoopInfo                               loop_info;
   FuncInfoMap                            func_infos;
@@ -54,7 +56,7 @@ public:
     if (func_info.is_leaf)
       return changed;
 
-    module = F->getParent();
+    module.emplace(*F->getParent());
     // get loop info
     auto loop_analysis = PassManager::GetAnalysis<LoopInfoPass>("LoopInfoPass");
     loop_analysis->initialize();

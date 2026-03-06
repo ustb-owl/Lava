@@ -1,6 +1,7 @@
 add_library(mid
         ir/ssa.cpp
         ir/module.cpp
+        ir/builder_context.cpp
         ../common/idmanager.cpp
         ir/usedef/use.cpp
         ir/usedef/value.cpp
