@@ -11,8 +11,6 @@ namespace lava::mid {
 
 class Module;
 
-bool NeedLoad(const SSAPtr &ptr);
-
 class BasicBlock : public Value {
 private:
   InstList              _insts;
@@ -160,8 +158,6 @@ public:
   inline bool isCast() const { return isCast(opcode()); }
 
   bool isInstruction() const override { return true; }
-
-  bool NeedLoad() const;
 
   BasicBlock       *getParent();
   const BasicBlock *getParent() const;

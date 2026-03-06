@@ -838,26 +838,6 @@ std::string ICmpInst::opStr() const {
   return op;
 }
 
-bool Instruction::NeedLoad() const {
-  bool res = true;
-  if (this->isBinaryOp()) {
-    res &= false;
-  }
-  if (this->isCast()) {
-    res &= false;
-  }
-  if (this->opcode() == Instruction::Call) {
-    res &= false;
-  }
-  if (this->opcode() == Instruction::ICmp) {
-    res &= false;
-  }
-  if (!this->type()->IsPointer()) {
-    res &= false;
-  }
-  return res;
-}
-
 /* ---------------------------- Methods of Constant Value
  * ------------------------------- */
 
@@ -933,18 +913,6 @@ bool IsCmp(const SSAPtr &ptr) {
     return true;
   }
   return false;
-}
-
-bool NeedLoad(const SSAPtr &ptr) {
-  if (auto inst = dyn_cast<Instruction>(ptr)) {
-    return inst->NeedLoad();
-  } else {
-    if (ptr->type()->IsConst())
-      return false;
-    if (!ptr->type()->IsPointer())
-      return false;
-  }
-  return true;
 }
 
 std::vector<BlockPtr> PhiNode::blocks() const { return _incoming_blocks; }

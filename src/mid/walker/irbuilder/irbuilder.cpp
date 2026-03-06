@@ -88,10 +88,26 @@ void IRBuilder::SetInsertPoint(const BlockPtr &BB) {
   _module.SetInsertPoint(BB);
 }
 
+bool IRBuilder::ShouldLoadForRValue(const SSAPtr &value) const {
+  if (value == nullptr || value->type()->IsConst() ||
+      !value->type()->IsPointer()) {
+    return false;
+  }
+
+  auto inst = dyn_cast<Instruction>(value);
+  if (inst == nullptr)
+    return true;
+
+  if (inst->isBinaryOp() || inst->isCast())
+    return false;
+  return inst->opcode() != Instruction::Call &&
+         inst->opcode() != Instruction::ICmp;
+}
+
 SSAPtr IRBuilder::EmitRValue(const SSAPtr &value) {
   if (value == nullptr)
     return nullptr;
-  return NeedLoad(value) ? _module.CreateLoad(value) : value;
+  return ShouldLoadForRValue(value) ? _module.CreateLoad(value) : value;
 }
 
 SSAPtr IRBuilder::EmitConditionValue(const SSAPtr &value) {
@@ -114,7 +130,7 @@ SSAPtr IRBuilder::EmitCallArg(const SSAPtr &arg, const TypePtr &param_type) {
     value     = _module.CreateElemAccess(value, SSAPtrList{zero, zero});
   } else {
     auto deref = value->type()->GetDerefedType();
-    if (NeedLoad(value) && deref != nullptr &&
+    if (ShouldLoadForRValue(value) && deref != nullptr &&
         (deref->IsIdentical(param_type) ||
          (deref->IsInteger() && param_type->IsInteger()))) {
       value = _module.CreateLoad(value);

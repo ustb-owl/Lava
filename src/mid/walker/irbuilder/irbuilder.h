@@ -15,6 +15,7 @@ private:
   IRBuilderContext _module;
   ASTPtr          &_translation_decl_unit;
 
+  bool   ShouldLoadForRValue(const SSAPtr &value) const;
   SSAPtr EmitRValue(const SSAPtr &value);
   SSAPtr EmitConditionValue(const SSAPtr &value);
   SSAPtr EmitCallArg(const SSAPtr &arg, const define::TypePtr &param_type);
