@@ -3,6 +3,7 @@
 #include <bit>
 
 #include "common/casting.h"
+#include "opt/register.h"
 
 int StrengthReductionPass;
 
@@ -71,6 +72,12 @@ bool StrengthReduction::runOnFunction(const FuncPtr &F) {
 }
 
 void RegisterStrengthReductionPass() {
+  RegisterPassCliMetadata({
+      "StrengthReduction",
+      "strength-reduction",
+      {},
+      "rewrite expensive arithmetic patterns",
+  });
   static PassRegisterFactory<StrengthReductionFactory> registry;
 }
 

@@ -56,7 +56,7 @@ class BlockSimplificationFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<BlockSimplification>();
-    auto passinfo = std::make_shared<PassInfo>(pass, "BlockSimplification", false, 2, BLOCK_SIMPLIFICATION);
+    auto passinfo = std::make_shared<PassInfo>(pass, "BlockSimplification", false, 1, BLOCK_SIMPLIFICATION);
     return passinfo;
   }
 };

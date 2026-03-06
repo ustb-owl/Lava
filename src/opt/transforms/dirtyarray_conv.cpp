@@ -4,6 +4,7 @@
 #include "lib/debug.h"
 #include "common/casting.h"
 #include "opt/pass_manager.h"
+#include "opt/register.h"
 
 int DirtyArrayConvert;
 
@@ -101,6 +102,12 @@ public:
 };
 
 void RegisterDirtyArrayConvertPass() {
+  RegisterPassCliMetadata({
+      "DirtyArrayConvert",
+      "dirty-array-convert",
+      {},
+      "normalize array naming before optimization",
+  });
   static PassRegisterFactory<DirtyArrayConvertFactory> registry;
 }
 

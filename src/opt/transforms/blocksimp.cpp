@@ -1,5 +1,6 @@
 
 #include "blocksimp.h"
+#include "opt/register.h"
 
 int BlockMerge;
 
@@ -373,6 +374,12 @@ void BlockSimplification::RebuildPredecessors(const FuncPtr &F) {
 
 
 void RegisterBlockSimplificationPass() {
+  RegisterPassCliMetadata({
+      "BlockSimplification",
+      "block-simplification",
+      {"blocksimp"},
+      "simplify CFG and remove unreachable blocks",
+  });
   static PassRegisterFactory<BlockSimplificationFactory> registry;
 }
 

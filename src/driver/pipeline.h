@@ -8,15 +8,11 @@
 #include "driver/compiler.h"
 #include "driver/options.h"
 #include "opt/pass_manager.h"
+#include "opt/register.h"
 
 namespace lava::driver {
 
-struct PassCliMetadata {
-  std::string internal_name;
-  std::string cli_name;
-  std::vector<std::string> aliases;
-  std::string description;
-};
+using PassCliMetadata = opt::PassCliMetadata;
 
 std::vector<PassCliMetadata> GetMiddleEndPassMetadata();
 

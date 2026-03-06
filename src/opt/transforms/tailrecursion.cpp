@@ -1,6 +1,7 @@
 #include "opt/pass.h"
 #include "common/casting.h"
 #include "opt/pass_manager.h"
+#include "opt/register.h"
 
 #include <iostream>
 
@@ -86,6 +87,12 @@ public:
 };
 
 void RegisterTailRecursionPass() {
+  RegisterPassCliMetadata({
+      "TailRecursion",
+      "tail-recursion",
+      {},
+      "eliminate tail recursion in IR",
+  });
   static PassRegisterFactory<TailRecursionFactory> registry;
 }
 

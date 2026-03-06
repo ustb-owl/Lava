@@ -1,4 +1,5 @@
 #include "identiy.h"
+#include "opt/register.h"
 
 int NeedGcm;
 
@@ -141,6 +142,12 @@ void NeedGcm::IsCrypto(Module &M) {
 }
 
 void RegisterNeedGcmPass() {
+  RegisterPassCliMetadata({
+      "NeedGcm",
+      "need-gcm",
+      {},
+      "identify modules that need legacy gcm handling",
+  });
   static PassRegisterFactory<NeedGcmFactory> registry;
 }
 

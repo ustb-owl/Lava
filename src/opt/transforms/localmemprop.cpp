@@ -1,6 +1,7 @@
 #include "opt/pass.h"
 #include "common/casting.h"
 #include "opt/pass_manager.h"
+#include "opt/register.h"
 
 int LocalMemoryProp;
 
@@ -36,6 +37,12 @@ public:
 };
 
 void RegisterLocalMemoryPropagationPass() {
+  RegisterPassCliMetadata({
+      "LocalMemoryPropagation",
+      "local-mem-prop",
+      {"local-memory-propagation"},
+      "propagate local memory values",
+  });
   static PassRegisterFactory<LocalMemoryPropagationFactory> registry;
 }
 

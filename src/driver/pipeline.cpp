@@ -52,31 +52,8 @@ std::string KebabCase(std::string_view value) {
   return result;
 }
 
-const std::vector<lava::driver::PassCliMetadata> &MetadataTable() {
-  using lava::driver::PassCliMetadata;
-  static const std::vector<PassCliMetadata> table = {
-      {"DirtyArrayConvert", "dirty-array-convert", {}, "normalize array naming before optimization"},
-      {"DirtyFunctionNameConvert", "dirty-function-name-convert", {}, "normalize function naming before optimization"},
-      {"BlockSimplification", "block-simplification", {"blocksimp"}, "simplify CFG and remove unreachable blocks"},
-      {"SimpleUnrolling", "simple-unrolling", {"loop-unrolling"}, "perform simple loop unrolling"},
-      {"Mem2Reg", "mem2reg", {}, "promote stack slots to SSA values"},
-      {"GlobalConstPropagation", "global-const-prop", {"global-const-propagation"}, "fold immutable global loads"},
-      {"TailRecursion", "tail-recursion", {}, "eliminate tail recursion in IR"},
-      {"StrengthReduction", "strength-reduction", {}, "rewrite expensive arithmetic patterns"},
-      {"GlobalValueNumberingGlobalCodeMotion", "local-gvn", {"gvn-gcm", "global-value-numbering-global-code-motion"}, "local value numbering and CSE"},
-      {"LoopInvariantHoist", "loop-invariant-hoist", {"licm-lite"}, "hoist pure loop-invariant instructions"},
-      {"LocalMemoryPropagation", "local-mem-prop", {"local-memory-propagation"}, "propagate local memory values"},
-      {"DeadCodeElimination", "dce", {"dead-code-elimination"}, "remove dead instructions"},
-      {"FunctionInlining", "function-inlining", {"inline"}, "inline selected functions"},
-      {"FunctionCleanUp", "function-cleanup", {}, "cleanup after inlining"},
-      {"DeadGlobalCodeElimination", "dead-global-code-elimination", {"dge"}, "remove unused functions and globals"},
-      {"SanitizeIR", "sanitize-ir", {}, "repair CFG and phi edges after transforms"},
-  };
-  return table;
-}
-
 const lava::driver::PassCliMetadata *FindMetadataByInternalName(std::string_view internal_name) {
-  const auto &table = MetadataTable();
+  const auto &table = lava::opt::GetPassCliMetadata();
   auto it = std::find_if(table.begin(), table.end(), [&](const lava::driver::PassCliMetadata &entry) {
     return entry.internal_name == internal_name;
   });
@@ -86,7 +63,7 @@ const lava::driver::PassCliMetadata *FindMetadataByInternalName(std::string_view
 std::optional<std::string> ResolveTransformPassInternalName(std::string_view token) {
   auto lowered = LowerCase(std::string(token));
 
-  for (const auto &entry : MetadataTable()) {
+  for (const auto &entry : lava::opt::GetPassCliMetadata()) {
     if (lowered == entry.cli_name || lowered == LowerCase(entry.internal_name)) {
       return entry.internal_name;
     }

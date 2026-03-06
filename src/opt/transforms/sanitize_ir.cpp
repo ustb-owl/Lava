@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "common/casting.h"
+#include "opt/register.h"
 
 int SanitizeIRPass;
 
@@ -107,6 +108,12 @@ bool SanitizeIR::runOnModule(Module &M) {
 }
 
 void RegisterSanitizeIRPass() {
+  RegisterPassCliMetadata({
+      "SanitizeIR",
+      "sanitize-ir",
+      {},
+      "repair CFG and phi edges after transforms",
+  });
   static PassRegisterFactory<SanitizeIRFactory> registry;
 }
 

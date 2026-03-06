@@ -1,6 +1,40 @@
 #include "opt/register.h"
 
+#include <unordered_map>
+#include <utility>
+
+namespace {
+
+std::vector<lava::opt::PassCliMetadata> &PassCliMetadataTable() {
+  static std::vector<lava::opt::PassCliMetadata> table;
+  return table;
+}
+
+std::unordered_map<std::string, std::size_t> &PassCliMetadataIndex() {
+  static std::unordered_map<std::string, std::size_t> index;
+  return index;
+}
+
+}
+
 namespace lava::opt {
+
+void RegisterPassCliMetadata(PassCliMetadata metadata) {
+  auto &table = PassCliMetadataTable();
+  auto &index = PassCliMetadataIndex();
+
+  auto [it, inserted] = index.emplace(metadata.internal_name, table.size());
+  if (inserted) {
+    table.push_back(std::move(metadata));
+    return;
+  }
+
+  table[it->second] = std::move(metadata);
+}
+
+const std::vector<PassCliMetadata> &GetPassCliMetadata() {
+  return PassCliMetadataTable();
+}
 
 void RegisterNeedGcmPass();
 void RegisterLoopInfoPass();

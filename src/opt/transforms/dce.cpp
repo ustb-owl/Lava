@@ -1,4 +1,5 @@
 #include "dce.h"
+#include "opt/register.h"
 
 int DeadCodeElimination;
 
@@ -107,6 +108,12 @@ void DeadCodeElimination::Sweep(const FuncPtr &F) {
 
 
 void RegisterDeadCodeEliminationPass() {
+  RegisterPassCliMetadata({
+      "DeadCodeElimination",
+      "dce",
+      {"dead-code-elimination"},
+      "remove dead instructions",
+  });
   static PassRegisterFactory<DeadCodeEliminationFactory> registry;
 }
 

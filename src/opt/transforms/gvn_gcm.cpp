@@ -1,5 +1,6 @@
 #include "gvn_gcm.h"
 #include "opt/transforms/blocksimp.h"
+#include "opt/register.h"
 
 int GlobalValueNumbering;
 
@@ -465,6 +466,12 @@ void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
 }
 
 void RegisterGlobalValueNumberingPass() {
+  RegisterPassCliMetadata({
+      "GlobalValueNumberingGlobalCodeMotion",
+      "local-gvn",
+      {"gvn-gcm", "global-value-numbering-global-code-motion"},
+      "local value numbering and CSE",
+  });
   static PassRegisterFactory<GlobalValueNumberingGlobalCodeMotionFactory> registry;
 }
 

@@ -1,4 +1,5 @@
 #include "dominance.h"
+#include "opt/register.h"
 
 int Dominance;
 
@@ -154,6 +155,12 @@ void DominanceInfo::SolveDepth(BasicBlock *BB, uint32_t depth) {
 
 
 void RegisterDominanceInfoPass() {
+  RegisterPassCliMetadata({
+      "DominanceInfo",
+      "dominance-info",
+      {},
+      "compute dominator tree and frontier information",
+  });
   static PassRegisterFactory<DominanceInfoPassFactory> registry;
 }
 

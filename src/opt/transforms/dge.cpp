@@ -4,6 +4,7 @@
 #include "lib/debug.h"
 #include "common/casting.h"
 #include "opt/pass_manager.h"
+#include "opt/register.h"
 
 int DeadGlobalCodeElimination;
 
@@ -77,6 +78,12 @@ public:
 };
 
 void RegisterDeadGlobalCodeEliminationPass() {
+  RegisterPassCliMetadata({
+      "DeadGlobalCodeElimination",
+      "dead-global-code-elimination",
+      {"dge"},
+      "remove unused functions and globals",
+  });
   static PassRegisterFactory<DeadGlobalCodeEliminationFactory> registry;
 }
 

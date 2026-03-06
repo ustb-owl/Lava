@@ -4,6 +4,7 @@
 #include "lib/debug.h"
 #include "common/casting.h"
 #include "opt/pass_manager.h"
+#include "opt/register.h"
 
 int DirtyFunctionConvert;
 
@@ -88,6 +89,12 @@ public:
 };
 
 void RegisterDirtyFunctionNameConvertPass() {
+  RegisterPassCliMetadata({
+      "DirtyFunctionNameConvert",
+      "dirty-function-name-convert",
+      {},
+      "normalize function naming before optimization",
+  });
   static PassRegisterFactory<DirtyFunctionNameConvertFactory> registry;
 }
 }

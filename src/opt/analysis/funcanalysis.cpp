@@ -1,5 +1,6 @@
 #include <iostream>
 #include "funcanalysis.h"
+#include "opt/register.h"
 
 int FunctionInfo;
 
@@ -167,6 +168,12 @@ void FunctionNode::dump() const {
 }
 
 void RegisterFunctionInfoPass() {
+  RegisterPassCliMetadata({
+      "FunctionInfoPass",
+      "function-info",
+      {},
+      "compute call graph and function side effects",
+  });
   static PassRegisterFactory<FunctionInfoPassFactory> registry;
 }
 }

@@ -4,6 +4,7 @@
 #include "lib/debug.h"
 #include "common/casting.h"
 #include "opt/pass_manager.h"
+#include "opt/register.h"
 
 int GlobalConstPropagation;
 
@@ -90,6 +91,12 @@ public:
 };
 
 void RegisterGlobalConstPropagationPass() {
+  RegisterPassCliMetadata({
+      "GlobalConstPropagation",
+      "global-const-prop",
+      {"global-const-propagation"},
+      "fold immutable global loads",
+  });
   static PassRegisterFactory<GlobalConstPropagationFactory> registry;
 }
 

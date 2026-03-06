@@ -5,6 +5,7 @@
 #include "lib/debug.h"
 #include "common/casting.h"
 #include "opt/pass_manager.h"
+#include "opt/register.h"
 #include "opt/analysis/loopinfo.h"
 #include "opt/analysis/funcanalysis.h"
 #include "opt/transforms/gvn_gcm.h"
@@ -570,6 +571,18 @@ public:
 };
 
 void RegisterFunctionInliningPasses() {
+  RegisterPassCliMetadata({
+      "FunctionInlining",
+      "function-inlining",
+      {"inline"},
+      "inline selected functions",
+  });
+  RegisterPassCliMetadata({
+      "FunctionCleanUp",
+      "function-cleanup",
+      {},
+      "cleanup after inlining",
+  });
   static PassRegisterFactory<FunctionInliningFactory> registry1;
   static PassRegisterFactory<FunctionCleanUpFactory> registry2;
 }

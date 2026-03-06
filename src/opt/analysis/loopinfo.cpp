@@ -1,4 +1,5 @@
 #include "loopinfo.h"
+#include "opt/register.h"
 
 int LoopInfo;
 
@@ -82,6 +83,12 @@ void LoopInfoPass::Populate(BasicBlock *header) {
 }
 
 void RegisterLoopInfoPass() {
+  RegisterPassCliMetadata({
+      "LoopInfoPass",
+      "loop-info",
+      {},
+      "compute natural loop information",
+  });
   static PassRegisterFactory<LoopInfoPassFactory> registry;
 }
 }

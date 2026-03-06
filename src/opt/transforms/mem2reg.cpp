@@ -1,6 +1,7 @@
 #include "opt/pass.h"
 #include "common/casting.h"
 #include "opt/pass_manager.h"
+#include "opt/register.h"
 
 #include "opt/analysis/dominance.h"
 
@@ -232,7 +233,7 @@ class Mem2RegFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<Mem2Reg>();
-    auto passinfo = std::make_shared<PassInfo>(pass, "Mem2Reg", false, 2, MEMORY_TO_REGISTER);
+    auto passinfo = std::make_shared<PassInfo>(pass, "Mem2Reg", false, 1, MEMORY_TO_REGISTER);
 
     passinfo->Requires("DominanceInfo");
 
@@ -241,6 +242,12 @@ public:
 };
 
 void RegisterMem2RegPass() {
+  RegisterPassCliMetadata({
+      "Mem2Reg",
+      "mem2reg",
+      {},
+      "promote stack slots to SSA values",
+  });
   static PassRegisterFactory<Mem2RegFactory> registry;
 }
 

@@ -1,4 +1,5 @@
 #include "postdominance.h"
+#include "opt/register.h"
 
 int PostDominance;
 
@@ -144,6 +145,12 @@ void PostDominanceInfo::SolveDominanceFrontier() {
 }
 
 void RegisterPostDominanceInfoPass() {
+  RegisterPassCliMetadata({
+      "PostDominanceInfo",
+      "post-dominance-info",
+      {},
+      "compute post-dominator information",
+  });
   static PassRegisterFactory<PostDominanceInfoPassFactory> registry;
 }
 

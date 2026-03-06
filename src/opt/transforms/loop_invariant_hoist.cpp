@@ -1,6 +1,7 @@
 #include "opt/transforms/loop_invariant_hoist.h"
 
 #include "common/casting.h"
+#include "opt/register.h"
 
 int LoopInvariantHoistPass;
 
@@ -147,6 +148,12 @@ void LoopInvariantHoist::finalize() {
 }
 
 void RegisterLoopInvariantHoistPass() {
+  RegisterPassCliMetadata({
+      "LoopInvariantHoist",
+      "loop-invariant-hoist",
+      {"licm-lite"},
+      "hoist pure loop-invariant instructions",
+  });
   static PassRegisterFactory<LoopInvariantHoistFactory> registry;
 }
 
