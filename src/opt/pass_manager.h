@@ -6,8 +6,8 @@
 #include <unordered_set>
 #include <utility>
 
-#include "opt/pass.h"
 #include "mid/ir/module.h"
+#include "opt/pass.h"
 
 namespace lava::opt {
 class PassInfo;
@@ -26,27 +26,27 @@ using RequirementMap  = std::unordered_map<std::string, PassNameSet>;
 // pass factory
 class PassFactory {
 public:
-  virtual ~PassFactory() = default;
+  virtual ~PassFactory()                        = default;
   virtual PassInfoPtr CreatePass(PassManager *) = 0;
 };
-
 
 // pass information
 class PassInfo {
 private:
-  PassPtr       _pass;
-  std::string   _pass_name;
-  bool          _is_analysis;
-  std::size_t   _min_opt_level;
-  std::size_t   _pass_order;
-  PassNameList  _required_passes;
-  PassNameList  _invalidated_passes;
+  PassPtr      _pass;
+  std::string  _pass_name;
+  bool         _is_analysis;
+  std::size_t  _min_opt_level;
+  std::size_t  _pass_order;
+  PassNameList _required_passes;
+  PassNameList _invalidated_passes;
 
 public:
   PassInfo(PassPtr pass, std::string name, bool is_analysis,
            std::size_t min_opt_level, std::size_t order)
-      : _pass(std::move(pass)), _pass_name(std::move(name)), _is_analysis(is_analysis),
-        _min_opt_level(min_opt_level), _pass_order(order) {}
+      : _pass(std::move(pass)), _pass_name(std::move(name)),
+        _is_analysis(is_analysis), _min_opt_level(min_opt_level),
+        _pass_order(order) {}
 
   // add required pass by name for current pass
   // all required passes should be run before running current pass
@@ -75,13 +75,13 @@ public:
   }
 
   // getter/setter
-  const PassPtr &pass()          const { return _pass;          }
-  std::string    name()          const { return _pass_name;     }
-  bool           is_analysis()   const { return _is_analysis;   }
-  std::size_t    pass_order()    const { return _pass_order;    };
+  const PassPtr &pass() const { return _pass; }
+  std::string    name() const { return _pass_name; }
+  bool           is_analysis() const { return _is_analysis; }
+  std::size_t    pass_order() const { return _pass_order; };
   std::size_t    min_opt_level() const { return _min_opt_level; }
 
-  const PassNameList &required_passes()    const { return _required_passes;    }
+  const PassNameList &required_passes() const { return _required_passes; }
   const PassNameList &invalidated_passes() const { return _invalidated_passes; }
 };
 
@@ -110,18 +110,21 @@ public:
   PassManager() : _opt_level(0), _module(nullptr), _initialized_factories(0) {}
 
   explicit PassManager(mid::Module &module)
-    : _opt_level(0), _module(&module), _initialized_factories(0) {}
+      : _opt_level(0), _module(&module), _initialized_factories(0) {}
 
   static void Initialize() { GetPassManager()->init(); }
 
   static PassManager *GetPassManager() {
-    if (_instance == nullptr) _instance = new PassManager();
+    if (_instance == nullptr)
+      _instance = new PassManager();
     return _instance;
   }
 
   static PassInfoMap &GetPasses() { return GetPassManager()->_pass_infos; }
 
-  static RequirementMap &GetRequiredBy() { return GetPassManager()->_requirements; }
+  static RequirementMap &GetRequiredBy() {
+    return GetPassManager()->_requirements;
+  }
 
   static PassPtrList &Candidates() { return GetPassManager()->_candidates; }
 
@@ -136,7 +139,7 @@ public:
   static void InvalidatePass(PassNameSet &valid, const std::string &name);
 
   /* methods related with analysis result */
-  template<typename AnalysisType>
+  template <typename AnalysisType>
   static std::shared_ptr<AnalysisType> GetAnalysis(const std::string &name) {
     auto pass = _instance->_pass_infos.find(name);
     // found pass by name
@@ -153,11 +156,11 @@ public:
   }
 
   /* run pass in another pass */
-  template<typename PassType>
+  template <typename PassType>
   static std::shared_ptr<PassType> GetTransformPass(const std::string &name) {
     auto pass = _instance->_pass_infos.find(name);
     // found pass by name
-    if (pass == _instance->_pass_infos.end()){
+    if (pass == _instance->_pass_infos.end()) {
       ERROR("transform pass %s not found", name.c_str());
     }
 
@@ -185,25 +188,27 @@ public:
   static void RunPasses();
 
   // getter/setter
-  static std::size_t  opt_level()      { return GetPassManager()->_opt_level;  }
-  static mid::Module &module()         { return *GetPassManager()->_module;    }
+  static std::size_t  opt_level() { return GetPassManager()->_opt_level; }
+  static mid::Module &module() { return *GetPassManager()->_module; }
   static void set_opt_level(int value) { GetPassManager()->_opt_level = value; }
 
-  static void SetModule(mid::Module &module) { GetPassManager()->_module = &module; }
+  static void SetModule(mid::Module &module) {
+    GetPassManager()->_module = &module;
+  }
 };
 
-template <typename PassClassFactory>
-class PassRegisterFactory {
+template <typename PassClassFactory> class PassRegisterFactory {
 public:
   PassRegisterFactory() {
     auto pass_factory = std::make_shared<PassClassFactory>();
     // make sure PassManager has been created
     PassManager::GetPassManager();
-    DBG_ASSERT(PassManager::GetPassManager() != nullptr, "PassManager hasn't been created");
+    DBG_ASSERT(PassManager::GetPassManager() != nullptr,
+               "PassManager hasn't been created");
     PassManager::RegisterPassFactory(pass_factory);
   }
 };
 
-}
+} // namespace lava::opt
 
-#endif //XY_LANG_PASS_MANAGER_H
+#endif // XY_LANG_PASS_MANAGER_H

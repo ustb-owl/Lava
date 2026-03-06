@@ -14,14 +14,13 @@ private:
 
 public:
   explicit PeepHole(LLModule &module, bool is_final = false)
-    : PassBase(module), _is_final(is_final) {}
+      : PassBase(module), _is_final(is_final) {}
 
   void Reset() final {}
 
   void runOn(const LLFunctionPtr &func) final;
-
 };
 
-}
+} // namespace lava::back
 
-#endif //LAVA_PEEPHOLE_H
+#endif // LAVA_PEEPHOLE_H

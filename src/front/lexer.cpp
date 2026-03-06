@@ -1,26 +1,29 @@
 #include "front/lexer.h"
 
-#include <cstddef>
-#include <cstring>
-#include <cstdlib>
 #include <cctype>
+#include <cstddef>
+#include <cstdlib>
+#include <cstring>
 
 using namespace lava::front;
 
 namespace {
 
 enum class NumberType {
-  Normal, Hex, Oct,
+  Normal,
+  Hex,
+  Oct,
 };
 
-const char *kKeywords[] = {LAVA_KEYWORDS(LAVA_EXPAND_SECOND)};
+const char *kKeywords[]  = {LAVA_KEYWORDS(LAVA_EXPAND_SECOND)};
 const char *kOperators[] = {LAVA_OPERATORS(LAVA_EXPAND_SECOND)};
 
 // get index of a string in string array
 template <typename T, std::size_t N>
 int GetIndex(const char *str, T (&str_array)[N]) {
   for (std::size_t i = 0; i < N; ++i) {
-    if (!std::strcmp(str, str_array[i])) return i;
+    if (!std::strcmp(str, str_array[i]))
+      return i;
   }
   return -1;
 }
@@ -28,7 +31,8 @@ int GetIndex(const char *str, T (&str_array)[N]) {
 bool IsOperatorHeadChar(char c) {
   const char op_head_chars[] = "+-*/%=!<>&|~^.";
   for (const auto &i : op_head_chars) {
-    if (i == c) return true;
+    if (i == c)
+      return true;
   }
   return false;
 }
@@ -36,12 +40,13 @@ bool IsOperatorHeadChar(char c) {
 bool IsOperatorChar(char c) {
   const char op_chars[] = "=&|<>";
   for (const auto &i : op_chars) {
-    if (i == c) return true;
+    if (i == c)
+      return true;
   }
   return false;
 }
 
-}  // namespace
+} // namespace
 
 Token Lexer::LogError(std::string_view message) {
   logger_.LogError(message);
@@ -51,38 +56,53 @@ Token Lexer::LogError(std::string_view message) {
 int Lexer::ReadEscape() {
   // eat '\'
   NextChar();
-  if (IsEOL()) return -1;
+  if (IsEOL())
+    return -1;
   switch (last_char_) {
-    case 'a': return '\a';
-    case 'b': return '\b';
-    case 'f': return '\f';
-    case 'n': return '\n';
-    case 'r': return '\r';
-    case 't': return '\t';
-    case 'v': return '\v';
-    case '\\': return '\\';
-    case '\'': return '\'';
-    case '"': return '"';
-    case '0': return '\0';
-    case 'x': {
-      char hex[3] = {0};
-      char *end_pos;
-      // read 2 hex digits
-      for (int i = 0; i < 2; ++i) {
-        NextChar();
-        if (IsEOL()) return -1;
-        hex[i] = last_char_;
-      }
-      // convert to character
-      auto ret = std::strtol(hex, &end_pos, 16);
-      return *end_pos ? -1 : ret;
+  case 'a':
+    return '\a';
+  case 'b':
+    return '\b';
+  case 'f':
+    return '\f';
+  case 'n':
+    return '\n';
+  case 'r':
+    return '\r';
+  case 't':
+    return '\t';
+  case 'v':
+    return '\v';
+  case '\\':
+    return '\\';
+  case '\'':
+    return '\'';
+  case '"':
+    return '"';
+  case '0':
+    return '\0';
+  case 'x': {
+    char  hex[3] = {0};
+    char *end_pos;
+    // read 2 hex digits
+    for (int i = 0; i < 2; ++i) {
+      NextChar();
+      if (IsEOL())
+        return -1;
+      hex[i] = last_char_;
     }
-    default: return -1;
+    // convert to character
+    auto ret = std::strtol(hex, &end_pos, 16);
+    return *end_pos ? -1 : ret;
+  }
+  default:
+    return -1;
   }
 }
 
 void Lexer::SkipSpaces() {
-  while (!IsEOL() && std::isspace(last_char_)) NextChar();
+  while (!IsEOL() && std::isspace(last_char_))
+    NextChar();
 }
 
 Token Lexer::HandleId() {
@@ -97,8 +117,7 @@ Token Lexer::HandleId() {
   if (index < 0) {
     id_val_ = id;
     return Token::Id;
-  }
-  else {
+  } else {
     key_val_ = static_cast<Keyword>(index);
     return Token::Keyword;
   }
@@ -106,7 +125,7 @@ Token Lexer::HandleId() {
 
 Token Lexer::HandleNum() {
   std::string num;
-  NumberType num_type = NumberType::Normal;
+  NumberType  num_type = NumberType::Normal;
   // check if is hexadecimal/octal number
   if (last_char_ == '0') {
     NextChar();
@@ -114,8 +133,7 @@ Token Lexer::HandleNum() {
       // hexadecimal
       num_type = NumberType::Hex;
       NextChar();
-    }
-    else {
+    } else {
       // octal (also treat zero as octal)
       num_type = NumberType::Oct;
     }
@@ -128,19 +146,19 @@ Token Lexer::HandleNum() {
   // convert to number
   char *end_pos;
   switch (num_type) {
-    case NumberType::Hex: {
-      int_val_ = std::strtoul(num.c_str(), &end_pos, 16);
-      break;
-    }
-    case NumberType::Oct: {
-      int_val_ = std::strtoul(num.c_str(), &end_pos, 8);
-      break;
-    }
-    case NumberType::Normal: {
-      int_val_ = std::strtoul(num.c_str(), &end_pos, 10);
-      break;
-    }
-    default:;
+  case NumberType::Hex: {
+    int_val_ = std::strtoul(num.c_str(), &end_pos, 16);
+    break;
+  }
+  case NumberType::Oct: {
+    int_val_ = std::strtoul(num.c_str(), &end_pos, 8);
+    break;
+  }
+  case NumberType::Normal: {
+    int_val_ = std::strtoul(num.c_str(), &end_pos, 10);
+    break;
+  }
+  default:;
   }
   // check if conversion is valid
   return *end_pos ? LogError("invalid number literal") : Token::Int;
@@ -154,14 +172,15 @@ Token Lexer::HandleString() {
     if (last_char_ == '\\') {
       // read escape char
       int ret = ReadEscape();
-      if (ret < 0) return LogError("invalid escape character");
+      if (ret < 0)
+        return LogError("invalid escape character");
       str += ret;
-    }
-    else {
+    } else {
       str += last_char_;
     }
     NextChar();
-    if (IsEOL()) return LogError("expected '\"'");
+    if (IsEOL())
+      return LogError("expected '\"'");
   }
   // eat right quotation mark
   NextChar();
@@ -175,15 +194,16 @@ Token Lexer::HandleChar() {
   if (last_char_ == '\\') {
     // read escape char
     int ret = ReadEscape();
-    if (ret < 0) return LogError("invalid escape character");
+    if (ret < 0)
+      return LogError("invalid escape character");
     char_val_ = ret;
-  }
-  else {
+  } else {
     char_val_ = last_char_;
   }
   NextChar();
   // check & eat right quotation mark
-  if (last_char_ != '\'') return LogError("expected \"'\"");
+  if (last_char_ != '\'')
+    return LogError("expected \"'\"");
   NextChar();
   return Token::Char;
 }
@@ -196,8 +216,10 @@ Token Lexer::HandleOperator() {
   // check if is comment
   if (op[0] == '/' && !IsEOL()) {
     switch (last_char_) {
-      case '/': return HandleComment();
-      case '*': return HandleBlockComment();
+    case '/':
+      return HandleComment();
+    case '*':
+      return HandleBlockComment();
     }
   }
   // read rest chars
@@ -209,8 +231,7 @@ Token Lexer::HandleOperator() {
   int index = GetIndex(op.c_str(), kOperators);
   if (index < 0) {
     return LogError("unknown operator");
-  }
-  else {
+  } else {
     op_val_ = static_cast<Operator>(index);
     return Token::Operator;
   }
@@ -219,7 +240,8 @@ Token Lexer::HandleOperator() {
 Token Lexer::HandleComment() {
   // eat '/'
   NextChar();
-  while (!IsEOL()) NextChar();
+  while (!IsEOL())
+    NextChar();
   return NextToken();
 }
 
@@ -230,11 +252,13 @@ Token Lexer::HandleBlockComment() {
   bool star = false;
   while (!IsEOF() && !(star && last_char_ == '/')) {
     star = last_char_ == '*';
-    if (IsEOL() && !IsEOF()) logger_.IncreaseLinePos();
+    if (IsEOL() && !IsEOF())
+      logger_.IncreaseLinePos();
     NextChar();
   }
   // check unclosed block comment
-  if (IsEOF()) return LogError("comment unclosed at EOF");
+  if (IsEOF())
+    return LogError("comment unclosed at EOF");
   // eat '/'
   NextChar();
   return NextToken();
@@ -251,7 +275,8 @@ Token Lexer::HandleEOL() {
 void Lexer::Reset() {
   logger_.Reset();
   last_char_ = ' ';
-  if (!in_) return;
+  if (!in_)
+    return;
   // reset status of file stream
   in_->clear();
   in_->seekg(0, std::ios::beg);
@@ -265,21 +290,28 @@ void Lexer::Reset(std::istream *in) {
 
 Token Lexer::NextToken() {
   // end of file
-  if (IsEOF()) return Token::End;
+  if (IsEOF())
+    return Token::End;
   // skip spaces
   SkipSpaces();
   // id or keyword
-  if (std::isalpha(last_char_) || last_char_ == '_') return HandleId();
+  if (std::isalpha(last_char_) || last_char_ == '_')
+    return HandleId();
   // number
-  if (std::isdigit(last_char_)) return HandleNum();
+  if (std::isdigit(last_char_))
+    return HandleNum();
   // string
-  if (last_char_ == '"') return HandleString();
+  if (last_char_ == '"')
+    return HandleString();
   // character
-  if (last_char_ == '\'') return HandleChar();
+  if (last_char_ == '\'')
+    return HandleChar();
   // operator or id
-  if (IsOperatorHeadChar(last_char_)) return HandleOperator();
+  if (IsOperatorHeadChar(last_char_))
+    return HandleOperator();
   // end of line (line break or delimiter)
-  if (IsEOL()) return HandleEOL();
+  if (IsEOL())
+    return HandleEOL();
   // other characters
   other_val_ = last_char_;
   NextChar();

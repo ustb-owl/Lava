@@ -1,8 +1,8 @@
 #ifndef LAVA_FUNCANALYSIS_H
 #define LAVA_FUNCANALYSIS_H
 
-#include "opt/pass.h"
 #include "common/casting.h"
+#include "opt/pass.h"
 #include "opt/pass_manager.h"
 
 namespace lava::opt {
@@ -18,7 +18,7 @@ public:
 
 private:
   FuncNodePtr F;
-  RetInstPtr ret_inst;
+  RetInstPtr  ret_inst;
 
 public:
   bool is_leaf;
@@ -28,36 +28,30 @@ public:
   bool has_size_effect;
 
   FunctionInfo()
-    : F(nullptr), is_leaf(false),
-      load_global(false), store_global(false),
-      load_global_array(false), has_size_effect(false) {}
+      : F(nullptr), is_leaf(false), load_global(false), store_global(false),
+        load_global_array(false), has_size_effect(false) {}
 
   bool IsPure() const { return !(load_global || has_size_effect); }
 
   bool IsRecursive() const;
 
-  const FuncNodePtr &FuncNode() const {
-    return F;
-  }
+  const FuncNodePtr &FuncNode() const { return F; }
 
   void SetFuncNode(const FuncNodePtr &f) {
     DBG_ASSERT(F == nullptr, "FunctionInfo already has a function pointer");
     F = f;
   }
 
-  void SetRetInst(const RetInstPtr &ret) {
-    ret_inst = ret;
-  }
+  void SetRetInst(const RetInstPtr &ret) { ret_inst = ret; }
 
-  const RetInstPtr RetInst() const {
-    return ret_inst;
-  }
+  const RetInstPtr RetInst() const { return ret_inst; }
 };
 
 class FunctionNode {
-  Function *_func;
+  Function                       *_func;
   std::unordered_set<FuncNodePtr> caller;
   std::unordered_set<FuncNodePtr> callee;
+
 public:
   explicit FunctionNode(Function *F) : _func(F) {}
 
@@ -69,24 +63,23 @@ public:
 
   void AddCallee(const FuncNodePtr &F) { callee.insert(F); }
 
-  std::unordered_set<FuncNodePtr> &Callers() { return caller; }
-  std::unordered_set<FuncNodePtr> &Callees() { return callee; }
+  std::unordered_set<FuncNodePtr>       &Callers() { return caller; }
+  std::unordered_set<FuncNodePtr>       &Callees() { return callee; }
   const std::unordered_set<FuncNodePtr> &Callers() const { return caller; }
   const std::unordered_set<FuncNodePtr> &Callees() const { return callee; }
 
   void dump() const;
 };
 
-
 /*
  Calculate function information
  */
 class FunctionInfoPass : public ModulePass {
 private:
-  FuncNodePtr                                  _main;
-  FuncInfoMap                                  _func_infos;
-  std::unordered_set<Function *>               _visited;
-  std::unordered_map<Function *, FuncNodePtr>  _func_map;
+  FuncNodePtr                                 _main;
+  FuncInfoMap                                 _func_infos;
+  std::unordered_set<Function *>              _visited;
+  std::unordered_map<Function *, FuncNodePtr> _func_map;
 
 public:
   void initialize() final {
@@ -96,9 +89,7 @@ public:
     _func_map.clear();
   }
 
-  void finalize() final {
-    _visited.clear();
-  }
+  void finalize() final { _visited.clear(); }
 
   void CalculateCallGraph(Function *F);
 
@@ -116,12 +107,13 @@ public:
 class FunctionInfoPassFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
-    auto pass = std::make_shared<FunctionInfoPass>();
-    auto passinfo =  std::make_shared<PassInfo>(pass, "FunctionInfoPass", true, 0, FUNCTION_INFO);
+    auto pass     = std::make_shared<FunctionInfoPass>();
+    auto passinfo = std::make_shared<PassInfo>(pass, "FunctionInfoPass", true,
+                                               0, FUNCTION_INFO);
     return passinfo;
   }
 };
 
-}
+} // namespace lava::opt
 
-#endif //LAVA_FUNCANALYSIS_H
+#endif // LAVA_FUNCANALYSIS_H

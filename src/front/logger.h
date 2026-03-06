@@ -1,20 +1,20 @@
 #ifndef LAVA_FRONT_LOGGER_H_
 #define LAVA_FRONT_LOGGER_H_
 
-#include <string_view>
-#include <memory>
 #include <cstddef>
+#include <memory>
+#include <string_view>
 
 namespace lava::front {
 
 class Logger {
- public:
+public:
   Logger() : line_pos_(1), col_pos_(1) {}
   Logger(std::size_t line_pos, std::size_t col_pos)
       : line_pos_(line_pos), col_pos_(col_pos) {}
 
   static void ResetErrorNum(bool enable_warn, bool warn_as_err) {
-    error_num_ = 0;
+    error_num_   = 0;
     warning_num_ = 0;
     enable_warn_ = enable_warn;
     warn_as_err_ = warn_as_err;
@@ -33,7 +33,7 @@ class Logger {
   // reset line & column position
   void Reset() {
     line_pos_ = 1;
-    col_pos_ = 1;
+    col_pos_  = 1;
   }
   // increase line position
   void IncreaseLinePos() {
@@ -47,23 +47,23 @@ class Logger {
   static void set_file(std::string_view file) { file_ = file; }
 
   // getters
-  std::size_t line_pos() const { return line_pos_; }
-  std::size_t col_pos() const { return col_pos_; }
+  std::size_t        line_pos() const { return line_pos_; }
+  std::size_t        col_pos() const { return col_pos_; }
   static std::size_t error_num() { return error_num_; }
   static std::size_t warning_num() { return warning_num_; }
 
- private:
+private:
   void LogFileInfo() const;
 
   static std::string_view file_;
-  static std::size_t error_num_, warning_num_;
-  static bool enable_warn_, warn_as_err_;
-  std::size_t line_pos_, col_pos_;
+  static std::size_t      error_num_, warning_num_;
+  static bool             enable_warn_, warn_as_err_;
+  std::size_t             line_pos_, col_pos_;
 };
 
 // pointer of logger
 using LoggerPtr = std::shared_ptr<Logger>;
 
-}  // namespace lava::front
+} // namespace lava::front
 
-#endif  // LAVA_FRONT_LOGGER_H_
+#endif // LAVA_FRONT_LOGGER_H_

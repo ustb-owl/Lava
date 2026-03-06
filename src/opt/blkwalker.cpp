@@ -1,22 +1,22 @@
 #include "blkwalker.h"
+
 #include "lib/debug.h"
 
 namespace lava::opt {
 
 void BlockWalker::TraverseRPO(BasicBlock *BB) {
   // return if visited
-  if (!_visited.insert(BB).second) return;
+  if (!_visited.insert(BB).second)
+    return;
 
   auto termInst = BB->insts().back();
   if (auto jumpInst = dyn_cast<JumpInst>(termInst)) {
-
     // visit its successor
-    TraverseRPO(dyn_cast<BasicBlock>(jumpInst->target()).get());
+    TraverseRPO(jumpInst->target().get());
   } else if (auto branchInst = dyn_cast<BranchInst>(termInst)) {
-
     // visit true_block and false_block
-    TraverseRPO(dyn_cast<BasicBlock>(branchInst->true_block()).get());
-    TraverseRPO(dyn_cast<BasicBlock>(branchInst->false_block()).get());
+    TraverseRPO(branchInst->true_block().get());
+    TraverseRPO(branchInst->false_block().get());
   } else if (auto retInst = dyn_cast<ReturnInst>(termInst)) {
     // do nothing, because this is the end of the function
   } else {
@@ -28,18 +28,17 @@ void BlockWalker::TraverseRPO(BasicBlock *BB) {
 
 void BlockWalker::TraversePO(BasicBlock *BB) {
   // return if visited
-  if (!_visited.insert(BB).second) return;
+  if (!_visited.insert(BB).second)
+    return;
 
   auto termInst = BB->insts().back();
   if (auto jumpInst = dyn_cast<JumpInst>(termInst)) {
-
     // visit its successor
-    TraversePO(dyn_cast<BasicBlock>(jumpInst->target()).get());
+    TraversePO(jumpInst->target().get());
   } else if (auto branchInst = dyn_cast<BranchInst>(termInst)) {
-
     // visit true_block and false_block
-    TraversePO(dyn_cast<BasicBlock>(branchInst->true_block()).get());
-    TraversePO(dyn_cast<BasicBlock>(branchInst->false_block()).get());
+    TraversePO(branchInst->true_block().get());
+    TraversePO(branchInst->false_block().get());
   } else if (auto retInst = dyn_cast<ReturnInst>(termInst)) {
     // do nothing, because this is the end of the function
   } else {
@@ -52,11 +51,12 @@ void BlockWalker::TraversePO(BasicBlock *BB) {
 BasicBlock *BlockWalker::GetExitBlock(const std::list<BasicBlock *> &bb_list) {
   for (const auto &BB : bb_list) {
     for (const auto &it : BB->insts()) {
-      if (it->classId() == ClassId::ReturnInstId) return BB;
-   }
+      if (it->classId() == ClassId::ReturnInstId)
+        return BB;
+    }
   }
   ERROR("should not reach here");
   return nullptr;
 }
 
-}
+} // namespace lava::opt

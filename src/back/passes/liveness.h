@@ -10,8 +10,9 @@ typedef std::unordered_set<LLOperandPtr> OprSet;
 class BlockInfo {
 public:
   BlockInfo() = default;
-  BlockInfo(OprSet ue, OprSet kill, OprSet live) :
-             ue_var(std::move(ue)), var_kill(std::move(kill)), live_out(std::move(live)) {}
+  BlockInfo(OprSet ue, OprSet kill, OprSet live)
+      : ue_var(std::move(ue)), var_kill(std::move(kill)),
+        live_out(std::move(live)) {}
   OprSet ue_var;
   OprSet var_kill;
   OprSet live_out;
@@ -23,19 +24,21 @@ private:
   std::size_t _end_pos;
   std::size_t _id;
   bool        _can_alloc_to_tmp;
+
 public:
-  LiveInterval() : _start_pos(0), _end_pos(0), _id(0), _can_alloc_to_tmp(true) {}
+  LiveInterval()
+      : _start_pos(0), _end_pos(0), _id(0), _can_alloc_to_tmp(true) {}
   LiveInterval(std::size_t start, std::size_t end, std::size_t id, bool value)
-    : _start_pos(start), _end_pos(end), _id(id), _can_alloc_to_tmp(value) {}
+      : _start_pos(start), _end_pos(end), _id(id), _can_alloc_to_tmp(value) {}
 
-  std::size_t start_pos() const { return _start_pos;        }
-  std::size_t end_pos()   const { return _end_pos;          }
-  std::size_t id()        const { return _id;               }
-  bool can_alloc_to_tmp() const { return _can_alloc_to_tmp; }
+  std::size_t start_pos() const { return _start_pos; }
+  std::size_t end_pos() const { return _end_pos; }
+  std::size_t id() const { return _id; }
+  bool        can_alloc_to_tmp() const { return _can_alloc_to_tmp; }
 
-  void SetStartPos(std::size_t pos) { _start_pos = pos;          }
-  void SetEndPos(std::size_t pos)   { _end_pos = pos;            }
-  void SetCanAllocTmp(bool value)   { _can_alloc_to_tmp = value; }
+  void SetStartPos(std::size_t pos) { _start_pos = pos; }
+  void SetEndPos(std::size_t pos) { _end_pos = pos; }
+  void SetCanAllocTmp(bool value) { _can_alloc_to_tmp = value; }
 };
 
 // methods for sort
@@ -45,25 +48,25 @@ bool __CmpStart(const LiveInterval &S1, const LiveInterval &S2);
 bool __CmpEnd(const LiveInterval &S1, const LiveInterval &S2);
 
 struct CmpStart {
-  bool operator()(const LiveInterval& S1, const LiveInterval &S2) const {
+  bool operator()(const LiveInterval &S1, const LiveInterval &S2) const {
     return __CmpStart(S1, S2);
   }
 };
 
 struct CmpEnd {
-  bool operator()(const LiveInterval& S1, const LiveInterval &S2) const {
+  bool operator()(const LiveInterval &S1, const LiveInterval &S2) const {
     return __CmpEnd(S1, S2);
   }
 };
 
 class LivenessAnalysis : public PassBase {
 private:
-  std::size_t                                     _id;
-  std::list<LLBlockPtr>                           _rpo_blocks;
-  std::unordered_set<LLBlockPtr>                  _visited;
-  std::unordered_map<LLBlockPtr, BlockInfo>       _blk_info;
-  std::unordered_map<std::size_t, LLBlockPtr>     _blk_map;
-  std::unordered_map<LLOperandPtr, LiveInterval>  _live_intervals;
+  std::size_t                                    _id;
+  std::list<LLBlockPtr>                          _rpo_blocks;
+  std::unordered_set<LLBlockPtr>                 _visited;
+  std::unordered_map<LLBlockPtr, BlockInfo>      _blk_info;
+  std::unordered_map<std::size_t, LLBlockPtr>    _blk_map;
+  std::unordered_map<LLOperandPtr, LiveInterval> _live_intervals;
 
 public:
   explicit LivenessAnalysis(LLModule &module) : PassBase(module), _id(1) {}
@@ -105,7 +108,8 @@ public:
   }
 
   // record live interval for each operands
-  void RecordLiveInterval(const LLOperandPtr &opr, std::size_t end_pos, std::size_t last_tmp_pos);
+  void RecordLiveInterval(const LLOperandPtr &opr, std::size_t end_pos,
+                          std::size_t last_tmp_pos);
 
   void runOn(const LLFunctionPtr &func) final;
 };
@@ -113,6 +117,6 @@ public:
 // check if it is temp reg
 bool IsTempReg(const LLOperandPtr &opr);
 
-}
+} // namespace lava::back
 
-#endif //LAVA_LIVENESS_H
+#endif // LAVA_LIVENESS_H

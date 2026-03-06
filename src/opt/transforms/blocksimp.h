@@ -3,9 +3,9 @@
 
 #include <algorithm>
 
-#include "opt/pass.h"
-#include "opt/blkwalker.h"
 #include "common/casting.h"
+#include "opt/blkwalker.h"
+#include "opt/pass.h"
 #include "opt/pass_manager.h"
 
 namespace lava::opt {
@@ -16,7 +16,7 @@ namespace lava::opt {
 class BlockSimplification : public FunctionPass {
 private:
   bool        _changed;
-  SSAPtr      _entry;
+  BlockPtr    _entry;
   unsigned    _count;
   BlockWalker _blkWalker;
 
@@ -36,14 +36,16 @@ public:
 
   void UnreachableBlockElimination(const FuncPtr &F);
 
-  void ReplaceSuccessor(BlockPtr &predecessor, BlockPtr &successor, BasicBlock *cur);
+  void ReplaceSuccessor(BlockPtr &predecessor, BlockPtr &successor,
+                        BasicBlock *cur);
 
   void MergeBlocks(BasicBlock *pred, BasicBlock *succ);
 
   /* Remove value from phi-node in the successors */
   void RemovePhiNode(BasicBlock *block, std::vector<BasicBlock *> successors);
 
-  std::vector<BlockPtr> CollectPredecessors(const FuncPtr &F, BasicBlock *target);
+  std::vector<BlockPtr> CollectPredecessors(const FuncPtr &F,
+                                            BasicBlock    *target);
 
   void CleanUp(const FuncPtr &F);
 
@@ -55,11 +57,12 @@ public:
 class BlockSimplificationFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
-    auto pass = std::make_shared<BlockSimplification>();
-    auto passinfo = std::make_shared<PassInfo>(pass, "BlockSimplification", false, 1, BLOCK_SIMPLIFICATION);
+    auto pass     = std::make_shared<BlockSimplification>();
+    auto passinfo = std::make_shared<PassInfo>(pass, "BlockSimplification",
+                                               false, 1, BLOCK_SIMPLIFICATION);
     return passinfo;
   }
 };
-}
+} // namespace lava::opt
 
-#endif //LAVA_BLOCKSIMP_H
+#endif // LAVA_BLOCKSIMP_H

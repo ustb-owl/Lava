@@ -34,9 +34,8 @@ int LoopUnrollingLinked  = LoopUnrolling;
 int GlbConstPropLinked   = GlobalConstPropagation;
 int InliningLinked       = Inlining;
 
-int DominanceLinked      = Dominance;
-int PostDominanceLinked  = PostDominance;
-int FunctionInfoLinked   = FunctionInfo;
-int LoopINfoLinked       = LoopInfo;
-int NeedGcmLinked        = NeedGcm;
-
+int DominanceLinked     = Dominance;
+int PostDominanceLinked = PostDominance;
+int FunctionInfoLinked  = FunctionInfo;
+int LoopINfoLinked      = LoopInfo;
+int NeedGcmLinked       = NeedGcm;

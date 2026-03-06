@@ -18,11 +18,11 @@ private:
   // solve the dominance frontier of each block
   void SolveDominanceFrontier() final;
 
-
 public:
   bool runOnFunction(const FuncPtr &F) final {
     _changed = false;
-    if (F->is_decl()) return _changed;
+    if (F->is_decl())
+      return _changed;
 
     SolveDominance(F);
 
@@ -33,18 +33,18 @@ public:
     _cur_func = nullptr;
     _dom_info.clear();
   }
-
 };
 
 class PostDominanceInfoPassFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
-    auto pass = std::make_shared<PostDominanceInfo>();
-    auto passinfo =  std::make_shared<PassInfo>(pass, "PostDominanceInfo", true, false, POST_DOMINANCE_INFO);
+    auto pass     = std::make_shared<PostDominanceInfo>();
+    auto passinfo = std::make_shared<PassInfo>(pass, "PostDominanceInfo", true,
+                                               false, POST_DOMINANCE_INFO);
     return passinfo;
   }
 };
 
-}
+} // namespace lava::opt
 
-#endif //LAVA_POSTDOMINANCE_H
+#endif // LAVA_POSTDOMINANCE_H

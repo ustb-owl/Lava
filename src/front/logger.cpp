@@ -8,8 +8,8 @@ using namespace lava::front;
 
 // definition of static member variables in logger
 std::string_view Logger::file_;
-std::size_t Logger::error_num_, Logger::warning_num_;
-bool Logger::enable_warn_, Logger::warn_as_err_;
+std::size_t      Logger::error_num_, Logger::warning_num_;
+bool             Logger::enable_warn_, Logger::warn_as_err_;
 
 void Logger::LogFileInfo() const {
   using namespace xstl;
@@ -31,8 +31,7 @@ void Logger::LogError(std::string_view message) const {
   LogRawError(message);
 }
 
-void Logger::LogError(std::string_view message,
-                      std::string_view id) const {
+void Logger::LogError(std::string_view message, std::string_view id) const {
   using namespace xstl;
   LogFileInfo();
   // print error message
@@ -45,7 +44,8 @@ void Logger::LogError(std::string_view message,
 // print warning message to stderr
 void Logger::LogWarning(std::string_view message) const {
   using namespace xstl;
-  if (!enable_warn_) return;
+  if (!enable_warn_)
+    return;
   // log all warnings as errors
   if (warn_as_err_) {
     LogError(message);

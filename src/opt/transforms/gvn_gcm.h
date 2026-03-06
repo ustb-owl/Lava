@@ -2,18 +2,19 @@
 #define LAVA_GVN_GCM_H
 
 #include <algorithm>
-#include "opt/pass.h"
-#include "opt/blkwalker.h"
+
 #include "common/casting.h"
-#include "opt/pass_manager.h"
-#include "opt/transforms/dce.h"
-#include "opt/analysis/identiy.h"
-#include "opt/analysis/loopinfo.h"
 #include "opt/analysis/dominance.h"
 #include "opt/analysis/funcanalysis.h"
+#include "opt/analysis/identiy.h"
+#include "opt/analysis/loopinfo.h"
+#include "opt/blkwalker.h"
+#include "opt/pass.h"
+#include "opt/pass_manager.h"
+#include "opt/transforms/dce.h"
 
 namespace lava::opt {
-//using ValueNumber = std::vector<std::pair<SSAPtr, SSAPtr>>;
+// using ValueNumber = std::vector<std::pair<SSAPtr, SSAPtr>>;
 using ValueNumber = std::unordered_map<SSAPtr, SSAPtr>;
 
 /*
@@ -22,26 +23,26 @@ using ValueNumber = std::unordered_map<SSAPtr, SSAPtr>;
  */
 class GlobalValueNumberingGlobalCodeMotion : public FunctionPass {
 private:
-//  int                 _cnt = 0;
-  bool               _changed;
-  BlockWalker        _blkWalker;
-  ValueNumber        _value_number;
-  FuncInfoMap        _func_infos;
-  DomInfo            _dom_info;
-  LoopInfo           _loop_info;
-  Function          *_cur_func;
-  BasicBlock        *_cur_block = nullptr;
+  //  int                 _cnt = 0;
+  bool        _changed;
+  BlockWalker _blkWalker;
+  ValueNumber _value_number;
+  FuncInfoMap _func_infos;
+  DomInfo     _dom_info;
+  LoopInfo    _loop_info;
+  Function   *_cur_func;
+  BasicBlock *_cur_block = nullptr;
 
-  std::unordered_set<Instruction *> _visited;
+  std::unordered_set<Instruction *>          _visited;
   std::unordered_map<Instruction *, InstPtr> _user_map;
 
   inline bool IsPureCall(const SSAPtr &value) {
     if (auto call_inst = dyn_cast<CallInst>(value)) {
       if (auto func = dyn_cast<Function>(call_inst->Callee())) {
         if (_func_infos[func.get()].IsPure()) {
-          auto none_array_arg = std::none_of(call_inst->begin(), call_inst->end(),[](const Use &use) {
-            return IsSSA<AccessInst>(use.value());
-          });
+          auto none_array_arg = std::none_of(
+              call_inst->begin(), call_inst->end(),
+              [](const Use &use) { return IsSSA<AccessInst>(use.value()); });
           return none_array_arg;
         }
       }
@@ -50,14 +51,14 @@ private:
   }
 
 public:
-
   bool runOnFunction(const FuncPtr &F) final;
 
   void initialize() final;
 
   void finalize() final;
 
-  void Replace(const InstPtr &inst, const SSAPtr &value, BasicBlock *block, InstList::iterator it);
+  void Replace(const InstPtr &inst, const SSAPtr &value, BasicBlock *block,
+               InstList::iterator it);
 
   SSAPtr FindValue(const std::shared_ptr<BinaryOperator> &binary_inst);
 
@@ -82,18 +83,18 @@ public:
   BasicBlock *FindLCA(BasicBlock *a, BasicBlock *b);
 
   void ScheduleLate(const InstPtr &inst);
-
 };
 
 class GlobalValueNumberingGlobalCodeMotionFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
-    auto pass = std::make_shared<GlobalValueNumberingGlobalCodeMotion>();
-    auto passinfo = std::make_shared<PassInfo>(pass, "GlobalValueNumberingGlobalCodeMotion", false, 2, GVN_GCM);
+    auto pass     = std::make_shared<GlobalValueNumberingGlobalCodeMotion>();
+    auto passinfo = std::make_shared<PassInfo>(
+        pass, "GlobalValueNumberingGlobalCodeMotion", false, 2, GVN_GCM);
     passinfo->Requires("FunctionInfoPass");
     return passinfo;
   }
 };
-}
+} // namespace lava::opt
 
-#endif //LAVA_GVN_GCM_H
+#endif // LAVA_GVN_GCM_H

@@ -1,10 +1,10 @@
 #ifndef LAVA_LOOPINFO_H
 #define LAVA_LOOPINFO_H
 
-#include "opt/pass.h"
 #include "common/casting.h"
-#include "opt/pass_manager.h"
 #include "opt/analysis/dominance.h"
+#include "opt/pass.h"
+#include "opt/pass_manager.h"
 
 namespace lava::opt {
 
@@ -14,9 +14,10 @@ using LoopPtr = std::shared_ptr<Loop>;
 
 class Loop {
 private:
-  LoopPtr _parent;
-  std::vector<LoopPtr> _sub_loops;
+  LoopPtr                   _parent;
+  std::vector<LoopPtr>      _sub_loops;
   std::vector<BasicBlock *> _bbs;
+
 public:
   explicit Loop(BasicBlock *head) : _parent(nullptr), _bbs{head} {}
 
@@ -24,18 +25,18 @@ public:
 
   LoopPtr getParent() { return _parent; }
 
-  void setParent(const LoopPtr &p) {
-    _parent = p;
-  }
+  void setParent(const LoopPtr &p) { _parent = p; }
 
   int depth() const {
     int ret = 0;
-    for (const Loop *x = this; x; x = x->_parent.get()) ++ret;
+    for (const Loop *x = this; x; x = x->_parent.get())
+      ++ret;
     return ret;
   }
 
   void get_deepest_loops(std::vector<Loop *> &deepest) {
-    if (_sub_loops.empty()) deepest.push_back(this);
+    if (_sub_loops.empty())
+      deepest.push_back(this);
     else {
       for (const auto &loop : _sub_loops) {
         loop->get_deepest_loops(deepest);
@@ -48,14 +49,13 @@ public:
   const std::vector<BasicBlock *> &blocks() const { return _bbs; }
 
   std::vector<LoopPtr> &sub_loops() { return _sub_loops; }
-
 };
 
 class LoopInfo {
 private:
   // deepest loop which this block located in
   std::unordered_map<BasicBlock *, LoopPtr> _loop_of_bb;
-  std::vector<LoopPtr> _top_level;
+  std::vector<LoopPtr>                      _top_level;
 
 public:
   // get depth of basic block
@@ -86,9 +86,9 @@ public:
 
 class LoopInfoPass : public FunctionPass {
 private:
-  DomInfo _dom_info;
-  LoopInfo _loop_info;
-  Function *_cur_func;
+  DomInfo                          _dom_info;
+  LoopInfo                         _loop_info;
+  Function                        *_cur_func;
   std::unordered_set<BasicBlock *> _visited;
 
 public:
@@ -96,12 +96,12 @@ public:
     _cur_func = nullptr;
     _loop_info.Clear();
     _visited.clear();
-    auto A = PassManager::GetAnalysis<DominanceInfo>("DominanceInfo");
+    auto A    = PassManager::GetAnalysis<DominanceInfo>("DominanceInfo");
     _dom_info = A->GetDomInfo();
   }
 
   void finalize() final {
-//    _dom_info.clear();
+    //    _dom_info.clear();
     _visited.clear();
   }
 
@@ -118,12 +118,13 @@ class LoopInfoPassFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<LoopInfoPass>();
-    auto passinfo = std::make_shared<PassInfo>(pass, "LoopInfoPass", true, 0, LOOP_INFO);
+    auto passinfo =
+        std::make_shared<PassInfo>(pass, "LoopInfoPass", true, 0, LOOP_INFO);
     passinfo->Requires("DominanceInfo");
     return passinfo;
   }
 };
 
-}
+} // namespace lava::opt
 
-#endif //LAVA_LOOPINFO_H
+#endif // LAVA_LOOPINFO_H

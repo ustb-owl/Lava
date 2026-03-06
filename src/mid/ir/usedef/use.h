@@ -2,10 +2,10 @@
 #define LAVA_USE_H
 
 #include <list>
-#include <vector>
 #include <memory>
-#include "lib/debug.h"
+#include <vector>
 
+#include "lib/debug.h"
 
 namespace lava::mid {
 
@@ -28,28 +28,35 @@ private:
   User  *_user;
 
 public:
-  Use(const SSAPtr& V, User *U) : _value(V), _user(U) {
-    if (V) addToList(V);
+  Use(const SSAPtr &V, User *U) : _value(V), _user(U) {
+    if (V)
+      addToList(V);
   }
 
   // copy constructor
   Use(const Use &use) : _value(use._value), _user(use._user) {
-    if (_value) addToList(_value);
+    if (_value)
+      addToList(_value);
   }
 
   // move constructor
   Use(Use &&use) noexcept;
 
-  ~Use() { if (_value) removeFromList(_value); }
+  ~Use() {
+    if (_value)
+      removeFromList(_value);
+  }
 
   void removeFromList(const SSAPtr &V);
 
   void addToList(const SSAPtr &V);
 
-  void set(const SSAPtr& V) {
-    if (_value) removeFromList(_value);
+  void set(const SSAPtr &V) {
+    if (_value)
+      removeFromList(_value);
     _value = V;
-    if (V) addToList(V);
+    if (V)
+      addToList(V);
   }
 
   const SSAPtr &value() const { return _value; }
@@ -58,12 +65,13 @@ public:
 
   User *getUser() { return _user; }
 
-  SSAPtr operator->() { return _value; }
+  SSAPtr       operator->() { return _value; }
   const SSAPtr operator->() const { return _value; }
 
   Use &operator=(const Use &RHS) {
     if (this != &RHS) {
-      DBG_ASSERT(_user == RHS._user, "user of the two instructions are different");
+      DBG_ASSERT(_user == RHS._user,
+                 "user of the two instructions are different");
       set(RHS._value);
     }
     return *this;
@@ -73,8 +81,7 @@ public:
     set(RHS);
     return RHS;
   }
-
 };
-}
+} // namespace lava::mid
 
 #endif // LAVA_USE_H

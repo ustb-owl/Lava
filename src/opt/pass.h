@@ -3,9 +3,9 @@
 
 #include <string>
 
-#include "order.h"
-#include "mid/ir/ssa.h"
 #include "mid/ir/module.h"
+#include "mid/ir/ssa.h"
+#include "order.h"
 
 using namespace lava::mid;
 
@@ -44,13 +44,13 @@ public:
   // ignored.
   virtual void print(std::ostream &O, const Module *M) const;
 
-  void SetName(const std::string &name) { _pass_name = name; }
+  void               SetName(const std::string &name) { _pass_name = name; }
   const std::string &name() const { return _pass_name; }
 };
 
-//std::ostream &operator<<(std::ostream &OS, const Pass &P) {
-//  P.print(OS, nullptr); return OS;
-//}
+// std::ostream &operator<<(std::ostream &OS, const Pass &P) {
+//   P.print(OS, nullptr); return OS;
+// }
 
 //===----------------------------------------------------------------------===//
 // ModulePass class - This class is used to implement unstructured
@@ -58,8 +58,8 @@ public:
 // they want to the program.
 class ModulePass : public Pass {
 public:
-  bool IsBlockPass()    const final { return false; }
-  bool IsModulePass()   const final { return true;  }
+  bool IsBlockPass() const final { return false; }
+  bool IsModulePass() const final { return true; }
   bool IsFunctionPass() const final { return false; }
 
   bool runOnFunction(const FuncPtr &F) final { return false; };
@@ -85,12 +85,12 @@ public:
 //     functions in the module
 class FunctionPass : public Pass {
 public:
-  FunctionPass() = default;
+  FunctionPass()          = default;
   virtual ~FunctionPass() = default;
 
-  bool IsBlockPass()    const final { return false; }
-  bool IsModulePass()   const final { return false; }
-  bool IsFunctionPass() const final { return true;  }
+  bool IsBlockPass() const final { return false; }
+  bool IsModulePass() const final { return false; }
+  bool IsFunctionPass() const final { return true; }
 
   // doInitialization - Virtual method overridden by subclasses to do
   // any necessary per-module initialization.
@@ -108,6 +108,6 @@ public:
 
 using PassPtr = std::shared_ptr<Pass>;
 
-}
+} // namespace lava::opt
 
-#endif //XY_LANG_PASS_H
+#endif // XY_LANG_PASS_H

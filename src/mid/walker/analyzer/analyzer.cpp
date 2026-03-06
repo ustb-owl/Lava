@@ -37,7 +37,7 @@ inline bool CheckInit(const LoggerPtr &log, const TypePtr &type,
   return ret;
 }
 
-}  // namespace
+} // namespace
 
 ASTPtrList Analyzer::GetLinearInitList(ASTPtrList &initList) {
   ASTPtrList result;
@@ -48,14 +48,16 @@ ASTPtrList Analyzer::GetLinearInitList(ASTPtrList &initList) {
 
   // get current dim size
   std::size_t rest_size = 1;
-  for (const auto &it : array_lens_) rest_size *= it;
+  for (const auto &it : array_lens_)
+    rest_size *= it;
 
   // get current dim size
   std::size_t current_size = current_dim * rest_size;
 
   auto init = initList.begin();
   while (true) {
-    if (init == initList.end()) break;
+    if (init == initList.end())
+      break;
 
     if ((*init)->ast_type()->IsInteger()) {
       int loc = result.size();
@@ -69,20 +71,19 @@ ASTPtrList Analyzer::GetLinearInitList(ASTPtrList &initList) {
           result.push_back(std::move(zero));
         }
       }
-//      break;
+      //      break;
     }
 
-    if (init == initList.end()) break;
+    if (init == initList.end())
+      break;
     if ((*init)->ast_type()->IsArray()) {
-      auto res = GetLinearInitList(static_cast<InitListAST *>((*init).get())->exprs());
+      auto res =
+          GetLinearInitList(static_cast<InitListAST *>((*init).get())->exprs());
       DBG_ASSERT(res.size() == rest_size, "size of sub list is incorrect");
 
       // concat result
-      result.insert(
-          result.end(),
-          std::make_move_iterator(res.begin()),
-          std::make_move_iterator(res.end())
-      );
+      result.insert(result.end(), std::make_move_iterator(res.begin()),
+                    std::make_move_iterator(res.end()));
       init++;
     }
   }
@@ -99,14 +100,15 @@ ASTPtrList Analyzer::GetLinearInitList(ASTPtrList &initList) {
   return result;
 }
 
-ASTPtrList Analyzer::ListToMatrix(std::deque<std::size_t> dims, ASTPtrList &initList, bool is_top) {
+ASTPtrList Analyzer::ListToMatrix(std::deque<std::size_t> dims,
+                                  ASTPtrList &initList, bool is_top) {
   auto current_dim = dims.front();
   dims.pop_front();
 
   ASTPtrList result;
   if (dims.empty()) {
     std::size_t count = 0;
-    for (auto it = initList.begin(); it != initList.end(); ) {
+    for (auto it = initList.begin(); it != initList.end();) {
       ASTPtrList tmp;
       for (std::size_t i = 0; i < current_dim; i++, it++, count++) {
         tmp.push_back(std::move(*it));
@@ -114,7 +116,8 @@ ASTPtrList Analyzer::ListToMatrix(std::deque<std::size_t> dims, ASTPtrList &init
       DBG_ASSERT(tmp.size() == current_dim, "tmp list size is incorrect");
 
       auto initListNode = std::make_unique<InitListAST>(std::move(tmp));
-      auto type = std::make_shared<ArrayType>(MakePrimType(Type::Int32, true), current_dim , true);
+      auto type = std::make_shared<ArrayType>(MakePrimType(Type::Int32, true),
+                                              current_dim, true);
       initListNode->set_ast_type(type);
       result.push_back(std::move(initListNode));
     }
@@ -122,9 +125,10 @@ ASTPtrList Analyzer::ListToMatrix(std::deque<std::size_t> dims, ASTPtrList &init
     DBG_ASSERT(count == initList.size(), "didn't handle all initList elements");
   } else {
     std::size_t count = 0;
-    auto sub = ListToMatrix(dims, initList);
+    auto        sub   = ListToMatrix(dims, initList);
 
-    if (is_top) return sub;
+    if (is_top)
+      return sub;
 
     for (auto it = sub.begin(); it != sub.end();) {
       ASTPtrList tmp;
@@ -156,18 +160,17 @@ xstl::Guard Analyzer::NewEnv() {
   symbols_ = xstl::MakeNestedMap(symbols_);
   aliases_ = xstl::MakeNestedMap(aliases_);
   structs_ = xstl::MakeNestedMap(structs_);
-  enums_ = xstl::MakeNestedMap(enums_);
+  enums_   = xstl::MakeNestedMap(enums_);
   return xstl::Guard([this] {
     symbols_ = symbols_->outer();
     aliases_ = aliases_->outer();
     structs_ = structs_->outer();
-    enums_ = enums_->outer();
+    enums_   = enums_->outer();
   });
 }
 
 TypePtr Analyzer::HandleArray(TypePtr base, const ASTPtrList &arr_lens,
                               std::string_view id, bool is_param) {
-
   for (int i = arr_lens.size() - 1; i >= 0; --i) {
     const auto &expr = arr_lens[i];
     // analyze expression
@@ -206,20 +209,19 @@ TypePtr Analyzer::HandleArray(TypePtr base, const ASTPtrList &arr_lens,
       it = it->GetDerefedType();
     }
 
-    DBG_ASSERT(arr_lens.size() == array_lens_.size(), "get array length failed");
+    DBG_ASSERT(arr_lens.size() == array_lens_.size(),
+               "get array length failed");
   }
 
   return base;
 }
 
 void Analyzer::Reset() {
-  auto new_env = [] {
-    return xstl::MakeNestedMap<std::string, TypePtr>();
-  };
-  symbols_ = new_env();
-  aliases_ = new_env();
-  structs_ = new_env();
-  enums_ = new_env();
+  auto new_env = [] { return xstl::MakeNestedMap<std::string, TypePtr>(); };
+  symbols_     = new_env();
+  aliases_     = new_env();
+  structs_     = new_env();
+  enums_       = new_env();
   assert(final_types_.empty());
   in_func_ = false;
   funcs_.clear();
@@ -232,7 +234,8 @@ TypePtr Analyzer::visit(TranslationUnitDecl *ast) {
 
   // analyze declarations and definitions
   for (const auto &i : ast->decls()) {
-    if (!i->SemaAnalyze(*this)) return nullptr;
+    if (!i->SemaAnalyze(*this))
+      return nullptr;
   }
 
   return ast->set_ast_type(MakeVoid());
@@ -241,13 +244,15 @@ TypePtr Analyzer::visit(TranslationUnitDecl *ast) {
 TypePtr Analyzer::visit(VariableDecl *ast) {
   // get type & check
   var_type_ = ast->type()->SemaAnalyze(*this);
-  if (!var_type_) return nullptr;
+  if (!var_type_)
+    return nullptr;
   if (var_type_->IsVoid()) {
     return LogError(ast->type()->logger(), "variable can not be void type");
   }
   // handle definitions
   for (const auto &i : ast->defs()) {
-    if (!i->SemaAnalyze(*this)) return nullptr;
+    if (!i->SemaAnalyze(*this))
+      return nullptr;
   }
   // evaluate current AST
   ast->Eval(eval_);
@@ -257,16 +262,19 @@ TypePtr Analyzer::visit(VariableDecl *ast) {
 TypePtr Analyzer::visit(VariableDefAST *ast) {
   // handle array type
   auto type = HandleArray(var_type_, ast->arr_lens(), ast->id(), false);
-  if (!type) return nullptr;
+  if (!type)
+    return nullptr;
   // push to stack in order to handle initializer list
   final_types_.push(type);
   auto guard = xstl::Guard([this] { final_types_.pop(); });
   // check type of initializer
   if (ast->init()) {
-    const auto &log = ast->init()->logger();
-    auto init = ast->init()->SemaAnalyze(*this);
-    if (!init) return nullptr;
-    if (!CheckInit(log, type, init, ast->id())) return nullptr;
+    const auto &log  = ast->init()->logger();
+    auto        init = ast->init()->SemaAnalyze(*this);
+    if (!init)
+      return nullptr;
+    if (!CheckInit(log, type, init, ast->id()))
+      return nullptr;
   } else {
     is_top_dim_ = false;
   }
@@ -281,7 +289,6 @@ TypePtr Analyzer::visit(VariableDefAST *ast) {
 }
 
 TypePtr Analyzer::visit(InitListAST *ast) {
-
   auto getArrayLinearBaseType = [](const TypePtr &type) -> TypePtr {
     DBG_ASSERT(type->IsArray(), "not array type");
     TypePtr base_type = type->GetDerefedType();
@@ -291,24 +298,24 @@ TypePtr Analyzer::visit(InitListAST *ast) {
     return base_type;
   };
 
-  auto &exprs = ast->exprs();
-  const auto &type = final_types_.top();
-  auto base_type = getArrayLinearBaseType(type);
+  auto       &exprs     = ast->exprs();
+  const auto &type      = final_types_.top();
+  auto        base_type = getArrayLinearBaseType(type);
   DBG_ASSERT(!array_lens_.empty(), "arrary length list is empty");
 
   // get type
   bool is_top_dim = is_top_dim_;
-  is_top_dim_ = false;
+  is_top_dim_     = false;
   for (const auto &it : ast->exprs()) {
     it->SemaAnalyze(*this);
   }
-
 
   /* ---------- rebuild linear array ---------- */
   if (is_top_dim) {
     // get total size
     [[maybe_unused]] std::size_t total_size = 1;
-    for (const auto &it : array_lens_) total_size *= it;
+    for (const auto &it : array_lens_)
+      total_size *= it;
 
     // get linear array list
     auto result = GetLinearInitList(exprs);
@@ -316,7 +323,7 @@ TypePtr Analyzer::visit(InitListAST *ast) {
 
     ASTPtrList final_init_list = std::move(result);
     if (array_lens_.size() > 1) {
-      auto matrix = ListToMatrix(array_lens_, final_init_list, true);
+      auto matrix     = ListToMatrix(array_lens_, final_init_list, true);
       final_init_list = std::move(matrix);
     }
     ast->set_exprs(std::move(final_init_list));
@@ -325,7 +332,6 @@ TypePtr Analyzer::visit(InitListAST *ast) {
   }
 
   return ast->set_ast_type(type->GetValueType(true));
-
 
 #if 0
   // NOTE: this process will rebuild initializer list. what this process
@@ -377,18 +383,21 @@ TypePtr Analyzer::visit(InitListAST *ast) {
 TypePtr Analyzer::visit(ProtoTypeAST *ast) {
   // get return type
   auto ret = ast->type()->SemaAnalyze(*this);
-  if (!ret) return nullptr;
-  if (in_func_) cur_ret_ = ret;
+  if (!ret)
+    return nullptr;
+  if (in_func_)
+    cur_ret_ = ret;
   // get type of parameters
   TypePtrList params;
   for (const auto &i : ast->params()) {
     auto param = i->SemaAnalyze(*this);
-    if (!param) return nullptr;
+    if (!param)
+      return nullptr;
     params.push_back(std::move(param));
   }
   // make function type
-  auto type = std::make_shared<FuncType>(std::move(params),
-                                         std::move(ret), true);
+  auto type =
+      std::make_shared<FuncType>(std::move(params), std::move(ret), true);
   // add to environment
   const auto &sym = in_func_ ? symbols_->outer() : symbols_;
   if (sym->GetItem(ast->id(), false)) {
@@ -423,19 +432,23 @@ TypePtr Analyzer::visit(FunctionDefAST *ast) {
   in_func_ = true;
   // register function & parameters
   auto func = ast->header()->SemaAnalyze(*this);
-  if (!func) return nullptr;
+  if (!func)
+    return nullptr;
   // analyze body
-  if (!ast->body()->SemaAnalyze(*this)) return nullptr;
+  if (!ast->body()->SemaAnalyze(*this))
+    return nullptr;
   return ast->set_ast_type(MakeVoid());
 }
 
 TypePtr Analyzer::visit(FuncParamAST *ast) {
   // get type
   auto type = ast->type()->SemaAnalyze(*this);
-  if (!type) return nullptr;
+  if (!type)
+    return nullptr;
   // handle array type
   type = HandleArray(std::move(type), ast->arr_lens(), ast->ArgName(), true);
-  if (!type) return nullptr;
+  if (!type)
+    return nullptr;
   // add to environment
   if (in_func_) {
     // check if is conflicted
@@ -464,7 +477,8 @@ TypePtr Analyzer::visit(StructDefAST *ast) {
   structs_->AddItem(ast->id(), type);
   // get type of elements
   for (const auto &i : ast->elems()) {
-    if (!i->SemaAnalyze(*this)) return nullptr;
+    if (!i->SemaAnalyze(*this))
+      return nullptr;
   }
   // update struct type
   // TODO: circular reference!
@@ -475,7 +489,8 @@ TypePtr Analyzer::visit(StructDefAST *ast) {
 TypePtr Analyzer::visit(EnumDefAST *ast) {
   // analyze elements
   for (const auto &i : ast->elems()) {
-    if (!i->SemaAnalyze(*this)) return nullptr;
+    if (!i->SemaAnalyze(*this))
+      return nullptr;
   }
   // check if is conflicted
   if (enums_->GetItem(ast->id(), false)) {
@@ -492,7 +507,8 @@ TypePtr Analyzer::visit(EnumDefAST *ast) {
 TypePtr Analyzer::visit(TypeAliasAST *ast) {
   // get type
   auto type = ast->type()->SemaAnalyze(*this);
-  if (!type) return nullptr;
+  if (!type)
+    return nullptr;
   // check if is conflicted
   if (aliases_->GetItem(ast->id(), false)) {
     return LogError(ast->logger(), "user type has already been defined",
@@ -506,7 +522,8 @@ TypePtr Analyzer::visit(TypeAliasAST *ast) {
 TypePtr Analyzer::visit(StructElemAST *ast) {
   // get base type
   auto base = ast->type()->SemaAnalyze(*this);
-  if (!base) return nullptr;
+  if (!base)
+    return nullptr;
   // check if is recursive type
   if (base->IsStruct() && base->GetTypeId() == last_struct_name_) {
     return LogError(ast->logger(), "recursive type is not allowed");
@@ -514,7 +531,8 @@ TypePtr Analyzer::visit(StructElemAST *ast) {
   struct_elem_base_ = base;
   // analyze definitions
   for (const auto &i : ast->defs()) {
-    if (!i->SemaAnalyze(*this)) return nullptr;
+    if (!i->SemaAnalyze(*this))
+      return nullptr;
   }
   return ast->set_ast_type(MakeVoid());
 }
@@ -522,13 +540,12 @@ TypePtr Analyzer::visit(StructElemAST *ast) {
 TypePtr Analyzer::visit(StructElemDefAST *ast) {
   // check if name conflicted
   if (!struct_elem_names_.insert(ast->id()).second) {
-    return LogError(ast->logger(), "conflicted struct element name",
-                    ast->id());
+    return LogError(ast->logger(), "conflicted struct element name", ast->id());
   }
   // handle array type
-  auto type = HandleArray(struct_elem_base_, ast->arr_lens(),
-                          ast->id(), false);
-  if (!type) return nullptr;
+  auto type = HandleArray(struct_elem_base_, ast->arr_lens(), ast->id(), false);
+  if (!type)
+    return nullptr;
   // add to elements
   struct_elems_.push_back({std::string(ast->id()), type});
   return ast->set_ast_type(type);
@@ -556,10 +573,12 @@ TypePtr Analyzer::visit(EnumElemAST *ast) {
 TypePtr Analyzer::visit(CompoundStmt *ast) {
   // make new environment when not in function
   auto guard = !in_func_ ? NewEnv() : xstl::Guard(nullptr);
-  if (in_func_) in_func_ = false;
+  if (in_func_)
+    in_func_ = false;
   // ananlyze statements
   for (const auto &i : ast->stmts()) {
-    if (!i->SemaAnalyze(*this)) return nullptr;
+    if (!i->SemaAnalyze(*this))
+      return nullptr;
   }
   return ast->set_ast_type(MakeVoid());
 }
@@ -572,7 +591,8 @@ TypePtr Analyzer::visit(IfElseStmt *ast) {
                     "condition must be an integer or a pointer");
   }
   // analyze branches
-  if (!ast->then()->SemaAnalyze(*this)) return nullptr;
+  if (!ast->then()->SemaAnalyze(*this))
+    return nullptr;
   if (ast->else_then() && !ast->else_then()->SemaAnalyze(*this)) {
     return nullptr;
   }
@@ -588,7 +608,8 @@ TypePtr Analyzer::visit(WhileStmt *ast) {
   }
   // analyze body
   ++in_loop_;
-  if (!ast->body()->SemaAnalyze(*this)) return nullptr;
+  if (!ast->body()->SemaAnalyze(*this))
+    return nullptr;
   --in_loop_;
   return ast->set_ast_type(MakeVoid());
 }
@@ -596,28 +617,27 @@ TypePtr Analyzer::visit(WhileStmt *ast) {
 TypePtr Analyzer::visit(ControlAST *ast) {
   using Type = ControlAST::Type;
   switch (ast->type()) {
-    case Type::Break:
-    case Type::Continue: {
-      // check if is in a loop
-      if (!in_loop_) {
-        return LogError(ast->logger(),
-                        "using break/continue outside the loop");
-      }
-      break;
+  case Type::Break:
+  case Type::Continue: {
+    // check if is in a loop
+    if (!in_loop_) {
+      return LogError(ast->logger(), "using break/continue outside the loop");
     }
-    case Type::Return: {
-      assert(cur_ret_->IsVoid() || !cur_ret_->IsRightValue());
-      // check if is compatible
-      if (ast->expr()) {
-        auto ret = ast->expr()->SemaAnalyze(*this);
-        if (!ret || !CheckInit(ast->expr()->logger(), cur_ret_, ret, "")) {
-          return nullptr;
-        }
+    break;
+  }
+  case Type::Return: {
+    assert(cur_ret_->IsVoid() || !cur_ret_->IsRightValue());
+    // check if is compatible
+    if (ast->expr()) {
+      auto ret = ast->expr()->SemaAnalyze(*this);
+      if (!ret || !CheckInit(ast->expr()->logger(), cur_ret_, ret, "")) {
+        return nullptr;
       }
-      break;
     }
-    default:
-      assert(false);
+    break;
+  }
+  default:
+    assert(false);
   }
   return ast->set_ast_type(MakeVoid());
 }
@@ -627,7 +647,8 @@ TypePtr Analyzer::visit(BinaryStmt *ast) {
   // get lhs & rhs
   auto lhs = ast->lhs()->SemaAnalyze(*this);
   auto rhs = ast->rhs()->SemaAnalyze(*this);
-  if (!lhs || !rhs) return nullptr;
+  if (!lhs || !rhs)
+    return nullptr;
   // preprocess some types
   if (lhs->IsVoid() || rhs->IsVoid()) {
     return LogError(ast->logger(), "invalid operation between void types");
@@ -635,120 +656,141 @@ TypePtr Analyzer::visit(BinaryStmt *ast) {
   // handle by operator
   TypePtr type;
   switch (ast->op()) {
-    case Op::Add:
-    case Op::Sub:
-    case Op::SLess:
-    case Op::SLessEq:
-    case Op::SGreat:
-    case Op::SGreatEq: {
-      if (lhs->IsPointer() || rhs->IsPointer()) {
-        // pointer operation
-        if (lhs->IsPointer() && rhs->IsInteger()) {
-          type = lhs;
-        } else if (rhs->IsPointer() && lhs->IsInteger() &&
-                   ast->op() != Op::Sub) {
-          type = rhs;
-        } else {
-          return LogError(ast->logger(), "invalid pointer operation");
-        }
-        break;
-      }
-      // fall through
-    }
-    case Op::Mul:
-    case Op::SDiv:
-    case Op::SRem:
-    case Op::And:
-    case Op::Or:
-    case Op::Xor:
-    case Op::Shl:
-    case Op::LShr:
-    case Op::LAnd:
-    case Op::LOr: {
-      // int binary operation
-      if (lhs->IsInteger() && rhs->IsInteger()) {
-        type = GetCommonType(lhs, rhs);
-      }
-      break;
-    }
-    case Op::Equal:
-    case Op::NotEqual: {
-      // binary operation between all types except structures
-      if (!lhs->IsStruct() && lhs->IsIdentical(rhs)) {
-        if (lhs->IsArray()) {
-          ast->logger()->LogWarning(
-              "array comparison always evaluates to a constant value");
-        }
-        type = MakePrimType(Type::Int32, true);
-      }
-      break;
-    }
-    case Op::Assign: {
-      // binary operation between all types
-      if (lhs->CanAccept(rhs)) type = lhs;
-      break;
-    }
-    case Op::AssAdd:
-    case Op::AssSub: {
+  case Op::Add:
+  case Op::Sub:
+  case Op::SLess:
+  case Op::SLessEq:
+  case Op::SGreat:
+  case Op::SGreatEq: {
+    if (lhs->IsPointer() || rhs->IsPointer()) {
       // pointer operation
-      if (lhs->IsPointer() && !lhs->IsRightValue() && !lhs->IsConst() &&
-          rhs->IsInteger()) {
+      if (lhs->IsPointer() && rhs->IsInteger()) {
         type = lhs;
-        break;
+      } else if (rhs->IsPointer() && lhs->IsInteger() && ast->op() != Op::Sub) {
+        type = rhs;
+      } else {
+        return LogError(ast->logger(), "invalid pointer operation");
       }
-      // fall through
-    }
-    case Op::AssMul:
-    case Op::AssSDiv:
-    case Op::AssSRem:
-    case Op::AssAnd:
-    case Op::AssOr:
-    case Op::AssXor:
-    case Op::AssShl:
-    case Op::AssAShr: {
-      // int binary operation
-      if (lhs->IsInteger() && lhs->CanAccept(rhs)) type = lhs;
       break;
     }
-    default:
-      assert(false);
+    // fall through
+  }
+  case Op::Mul:
+  case Op::SDiv:
+  case Op::SRem:
+  case Op::And:
+  case Op::Or:
+  case Op::Xor:
+  case Op::Shl:
+  case Op::LShr:
+  case Op::LAnd:
+  case Op::LOr: {
+    // int binary operation
+    if (lhs->IsInteger() && rhs->IsInteger()) {
+      type = GetCommonType(lhs, rhs);
+    }
+    break;
+  }
+  case Op::Equal:
+  case Op::NotEqual: {
+    // binary operation between all types except structures
+    if (!lhs->IsStruct() && lhs->IsIdentical(rhs)) {
+      if (lhs->IsArray()) {
+        ast->logger()->LogWarning(
+            "array comparison always evaluates to a constant value");
+      }
+      type = MakePrimType(Type::Int32, true);
+    }
+    break;
+  }
+  case Op::Assign: {
+    // binary operation between all types
+    if (lhs->CanAccept(rhs))
+      type = lhs;
+    break;
+  }
+  case Op::AssAdd:
+  case Op::AssSub: {
+    // pointer operation
+    if (lhs->IsPointer() && !lhs->IsRightValue() && !lhs->IsConst() &&
+        rhs->IsInteger()) {
+      type = lhs;
+      break;
+    }
+    // fall through
+  }
+  case Op::AssMul:
+  case Op::AssSDiv:
+  case Op::AssSRem:
+  case Op::AssAnd:
+  case Op::AssOr:
+  case Op::AssXor:
+  case Op::AssShl:
+  case Op::AssAShr: {
+    // int binary operation
+    if (lhs->IsInteger() && lhs->CanAccept(rhs))
+      type = lhs;
+    break;
+  }
+  default:
+    assert(false);
   }
 
   // update operator type
   auto originOp = ast->op();
-  if (originOp == Operator::SDiv    || originOp == Operator::SRem    ||
-      originOp == Operator::AShr    || originOp == Operator::AssAShr ||
-      originOp == Operator::SLess   || originOp == Operator::SGreat  ||
+  if (originOp == Operator::SDiv || originOp == Operator::SRem ||
+      originOp == Operator::AShr || originOp == Operator::AssAShr ||
+      originOp == Operator::SLess || originOp == Operator::SGreat ||
       originOp == Operator::AssSDiv || originOp == Operator::AssSRem ||
       originOp == Operator::SLessEq || originOp == Operator::SGreatEq) {
     // TODO: here
     if (lhs->IsUnsigned() || rhs->IsUnsigned()) {
       Operator op = originOp;
       switch (originOp) {
-        case Operator::SDiv:     op = Operator::UDiv;     break;
-        case Operator::SRem:     op = Operator::URem;     break;
-        case Operator::SLess:    op = Operator::ULess;    break;
-        case Operator::SGreat:   op = Operator::UGreat;   break;
-        case Operator::AssSDiv:  op = Operator::AssUDiv;  break;
-        case Operator::AssSRem:  op = Operator::AssURem;  break;
-        case Operator::SLessEq:  op = Operator::ULessEq;  break;
-        case Operator::SGreatEq: op = Operator::UGreatEq; break;
-        case Operator::AShr: {
-          if (lhs->IsUnsigned()) op = Operator::LShr;
-          break;
-        }
-        case Operator::AssAShr: {
-          if (lhs->IsUnsigned()) op = Operator::AssLShr;
-          break;
-        }
-        default: break;
+      case Operator::SDiv:
+        op = Operator::UDiv;
+        break;
+      case Operator::SRem:
+        op = Operator::URem;
+        break;
+      case Operator::SLess:
+        op = Operator::ULess;
+        break;
+      case Operator::SGreat:
+        op = Operator::UGreat;
+        break;
+      case Operator::AssSDiv:
+        op = Operator::AssUDiv;
+        break;
+      case Operator::AssSRem:
+        op = Operator::AssURem;
+        break;
+      case Operator::SLessEq:
+        op = Operator::ULessEq;
+        break;
+      case Operator::SGreatEq:
+        op = Operator::UGreatEq;
+        break;
+      case Operator::AShr: {
+        if (lhs->IsUnsigned())
+          op = Operator::LShr;
+        break;
+      }
+      case Operator::AssAShr: {
+        if (lhs->IsUnsigned())
+          op = Operator::AssLShr;
+        break;
+      }
+      default:
+        break;
       }
       ast->set_op(op);
     }
   }
 
   // check return type
-  if (!type) return LogError(ast->logger(), "invalid binary operation");
+  if (!type)
+    return LogError(ast->logger(), "invalid binary operation");
   if (!BinaryStmt::IsOperatorAssign(ast->op()) && !type->IsRightValue()) {
     type = type->GetValueType(true);
   }
@@ -758,7 +800,8 @@ TypePtr Analyzer::visit(BinaryStmt *ast) {
 TypePtr Analyzer::visit(CastStmt *ast) {
   auto expr = ast->expr()->SemaAnalyze(*this);
   auto type = ast->type()->SemaAnalyze(*this);
-  if (!expr || !type) return nullptr;
+  if (!expr || !type)
+    return nullptr;
   // check if cast is valid
   if (!expr->CanCastTo(type)) {
     return LogError(ast->logger(), "invalid type casting");
@@ -776,30 +819,34 @@ TypePtr Analyzer::visit(UnaryStmt *ast) {
   // handle by operator
   TypePtr type;
   switch (ast->op()) {
-    case Op::Pos:
-    case Op::Neg:
-    case Op::Not:
-    case Op::LNot: {
-      if (opr->IsInteger()) type = opr;
-      break;
-    }
-    case Op::Deref: {
-      if (opr->IsPointer() || opr->IsArray()) type = opr->GetDerefedType();
-      break;
-    }
-    case Op::Addr: {
-      if (!opr->IsRightValue()) type = MakePointer(opr);
-      break;
-    }
-    case Op::SizeOf: {
-      type = MakePrimType(Type::UInt32, true);
-      break;
-    }
-    default:
-      assert(false);
+  case Op::Pos:
+  case Op::Neg:
+  case Op::Not:
+  case Op::LNot: {
+    if (opr->IsInteger())
+      type = opr;
+    break;
+  }
+  case Op::Deref: {
+    if (opr->IsPointer() || opr->IsArray())
+      type = opr->GetDerefedType();
+    break;
+  }
+  case Op::Addr: {
+    if (!opr->IsRightValue())
+      type = MakePointer(opr);
+    break;
+  }
+  case Op::SizeOf: {
+    type = MakePrimType(Type::UInt32, true);
+    break;
+  }
+  default:
+    assert(false);
   }
   // check return type
-  if (!type) return LogError(ast->logger(), "invalid unary operator");
+  if (!type)
+    return LogError(ast->logger(), "invalid unary operator");
   if (ast->op() != Op::Deref && !type->IsRightValue()) {
     type = type->GetValueType(true);
   }
@@ -810,8 +857,7 @@ TypePtr Analyzer::visit(IndexAST *ast) {
   // get expression
   auto expr = ast->expr()->SemaAnalyze(*this);
   if (!expr || !(expr->IsPointer() || expr->IsArray())) {
-    return LogError(ast->expr()->logger(),
-                    "expression is not subscriptable");
+    return LogError(ast->expr()->logger(), "expression is not subscriptable");
   }
   // get type of index
   auto index = ast->index()->SemaAnalyze(*this);
@@ -834,7 +880,8 @@ TypePtr Analyzer::visit(IndexAST *ast) {
 TypePtr Analyzer::visit(CallStmt *ast) {
   // get expression
   auto expr = ast->expr()->SemaAnalyze(*this);
-  if (!expr) return nullptr;
+  if (!expr)
+    return nullptr;
   if (!expr || !expr->IsFunction()) {
     return LogError(ast->expr()->logger(), "calling a non-function");
   }
@@ -842,19 +889,22 @@ TypePtr Analyzer::visit(CallStmt *ast) {
   TypePtrList args;
   for (const auto &i : ast->args()) {
     auto arg = i->SemaAnalyze(*this);
-    if (!arg) return nullptr;
+    if (!arg)
+      return nullptr;
     args.push_back(std::move(arg));
   }
   // check return type
   auto ret = expr->GetReturnType(args);
-  if (!ret) return LogError(ast->logger(), "invalid function call");
+  if (!ret)
+    return LogError(ast->logger(), "invalid function call");
   return ast->set_ast_type(ret->GetValueType(true));
 }
 
 TypePtr Analyzer::visit(AccessAST *ast) {
   // get expression
   auto expr = ast->expr()->SemaAnalyze(*this);
-  if (!expr) return nullptr;
+  if (!expr)
+    return nullptr;
   // get dereferenced type
   if (ast->is_arrow()) {
     // check if is pointer
@@ -868,7 +918,8 @@ TypePtr Analyzer::visit(AccessAST *ast) {
     return LogError(ast->expr()->logger(), "structure type required");
   }
   auto type = expr->GetElem(ast->id());
-  if (!type) return LogError(ast->logger(), "member not found", ast->id());
+  if (!type)
+    return LogError(ast->logger(), "member not found", ast->id());
   return ast->set_ast_type(type);
 }
 
@@ -885,14 +936,15 @@ TypePtr Analyzer::visit(CharAST *ast) {
 TypePtr Analyzer::visit(StringAST *ast) {
   // make right value 'const int8*' type
   auto type = MakePrimType(Type::Int8, true);
-  type = std::make_shared<ConstType>(std::move(type));
+  type      = std::make_shared<ConstType>(std::move(type));
   return ast->set_ast_type(MakePointer(type));
 }
 
 TypePtr Analyzer::visit(VariableAST *ast) {
   // query from environment
   auto type = symbols_->GetItem(ast->id());
-  if (!type) return LogError(ast->logger(), "undefined symbol", ast->id());
+  if (!type)
+    return LogError(ast->logger(), "undefined symbol", ast->id());
   return ast->set_ast_type(type);
 }
 
@@ -904,28 +956,32 @@ TypePtr Analyzer::visit(PrimTypeAST *ast) {
 TypePtr Analyzer::visit(UserTypeAST *ast) {
   // query from environment
   auto type = aliases_->GetItem(ast->id());
-  if (!type) return LogError(ast->logger(), "type undefined", ast->id());
+  if (!type)
+    return LogError(ast->logger(), "type undefined", ast->id());
   return ast->set_ast_type(type);
 }
 
 TypePtr Analyzer::visit(StructTypeAST *ast) {
   // query from environment
   auto type = structs_->GetItem(ast->id());
-  if (!type) return LogError(ast->logger(), "type undefined", ast->id());
+  if (!type)
+    return LogError(ast->logger(), "type undefined", ast->id());
   return ast->set_ast_type(type);
 }
 
 TypePtr Analyzer::visit(EnumTypeAST *ast) {
   // query from environment
   auto type = enums_->GetItem(ast->id());
-  if (!type) return LogError(ast->logger(), "type undefined", ast->id());
+  if (!type)
+    return LogError(ast->logger(), "type undefined", ast->id());
   return ast->set_ast_type(type);
 }
 
 TypePtr Analyzer::visit(ConstTypeAST *ast) {
   // get base type
   auto base = ast->base()->SemaAnalyze(*this);
-  if (!base) return nullptr;
+  if (!base)
+    return nullptr;
   // make const type
   auto type = std::make_shared<ConstType>(std::move(base));
   return ast->set_ast_type(type);
@@ -934,7 +990,8 @@ TypePtr Analyzer::visit(ConstTypeAST *ast) {
 TypePtr Analyzer::visit(PointerTypeAST *ast) {
   // get base type
   auto type = ast->base()->SemaAnalyze(*this);
-  if (!type) return nullptr;
+  if (!type)
+    return nullptr;
   // make pointer type
   for (std::size_t i = 0; i < ast->depth(); ++i) {
     type = MakePointer(type, false);

@@ -15,7 +15,7 @@ std::unordered_map<std::string, std::size_t> &PassCliMetadataIndex() {
   return index;
 }
 
-}
+} // namespace
 
 namespace lava::opt {
 
@@ -80,4 +80,4 @@ void RegisterAllMiddleEndPasses() {
   RegisterTailRecursionPass();
 }
 
-}
+} // namespace lava::opt

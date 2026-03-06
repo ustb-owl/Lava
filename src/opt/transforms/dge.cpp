@@ -1,8 +1,8 @@
 #include <algorithm>
 
-#include "opt/pass.h"
-#include "lib/debug.h"
 #include "common/casting.h"
+#include "lib/debug.h"
+#include "opt/pass.h"
 #include "opt/pass_manager.h"
 #include "opt/register.h"
 
@@ -39,20 +39,17 @@ public:
       (*it)->logger()->LogWarning("unused function");
 
       if ((*it)->uses().empty()) {
-
         // do not remove main function
         if ((*it)->GetFunctionName() == "main") {
           it++;
           continue;
         }
 
-        for (const auto &block : *it->get()) {
-          auto BB = dyn_cast<BasicBlock>(block.value());
+        for (const auto &BB : *it->get()) {
           BB->DeleteSelf();
         }
 
-        // clear all use of basic block
-        (*it)->Clear();
+        (*it)->ClearBlocks();
 
         // remove from function list
         funcs.erase(it);
@@ -72,7 +69,8 @@ public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<DeadGlobalCodeElimination>();
     auto passinfo =
-        std::make_shared<PassInfo>(pass, "DeadGlobalCodeElimination", false, 0, DEAD_GLOBAL_CODE_ELIMINATION);
+        std::make_shared<PassInfo>(pass, "DeadGlobalCodeElimination", false, 0,
+                                   DEAD_GLOBAL_CODE_ELIMINATION);
     return passinfo;
   }
 };
@@ -87,4 +85,4 @@ void RegisterDeadGlobalCodeEliminationPass() {
   static PassRegisterFactory<DeadGlobalCodeEliminationFactory> registry;
 }
 
-}
+} // namespace lava::opt

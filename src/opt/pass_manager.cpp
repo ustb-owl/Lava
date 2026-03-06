@@ -1,5 +1,6 @@
-#include "lib/debug.h"
 #include "pass_manager.h"
+
+#include "lib/debug.h"
 
 namespace lava::opt {
 
@@ -16,8 +17,8 @@ PassInfo &PassInfo::Invalidates(const std::string &pass_name) {
   return *this;
 }
 
-
-void PassManager::RequiredBy(const std::string &slave, const std::string &master) {
+void PassManager::RequiredBy(const std::string &slave,
+                             const std::string &master) {
   GetRequiredBy()[slave].insert(master);
 }
 
@@ -34,7 +35,6 @@ bool PassManager::RunPass(PassNameSet &valid, const PassInfoPtr &info) {
   return changed;
 }
 
-
 bool PassManager::RunPass(const PassPtr &pass) {
   bool changed = false;
 
@@ -49,8 +49,9 @@ bool PassManager::RunPass(const PassPtr &pass) {
     auto &functions = module().Functions();
     for (std::size_t i = 0; i < functions.size(); i++) {
       auto func = std::static_pointer_cast<Function>(functions[i]);
-      if (func->is_copied()) continue;
-//      TRACE("%s\n", pass->name().c_str());
+      if (func->is_copied())
+        continue;
+      //      TRACE("%s\n", pass->name().c_str());
       changed = pass->runOnFunction(func);
       // perform finalization
       pass->finalize();
@@ -64,7 +65,8 @@ void PassManager::RunPasses(const PassPtrList &passes) {
   PassNameSet valid;
   // run all passes
   for (const auto &it : passes) {
-    if (it->is_analysis()) continue;
+    if (it->is_analysis())
+      continue;
     RunPass(valid, it);
   }
 }
@@ -82,7 +84,7 @@ bool PassManager::RunRequiredPasses(const Pass *info) {
   for (const auto &name : (*pass).second->required_passes()) {
     // get pointer of pass
     const auto &passes = GetPasses();
-    auto it = passes.find(name);
+    auto        it     = passes.find(name);
     DBG_ASSERT(it != passes.end(), "required pass not found");
 
     // check if current pass can be run
@@ -95,12 +97,12 @@ bool PassManager::RunRequiredPasses(const Pass *info) {
   return false;
 }
 
-bool PassManager::RunRequiredPasses(PassNameSet &valid, const PassInfoPtr &info) {
+bool PassManager::RunRequiredPasses(PassNameSet       &valid,
+                                    const PassInfoPtr &info) {
   for (const auto &name : info->required_passes()) {
-
     // get pointer of pass
     const auto &passes = GetPasses();
-    auto it = passes.find(name);
+    auto        it     = passes.find(name);
     DBG_ASSERT(it != passes.end(), "required pass not found");
 
     // check if current pass can be run
@@ -116,7 +118,8 @@ bool PassManager::RunRequiredPasses(PassNameSet &valid, const PassInfoPtr &info)
 
 void PassManager::InvalidatePass(PassNameSet &valid, const std::string &name) {
   // return if this pass is already erased from valid
-  if (!valid.erase(name)) return;
+  if (!valid.erase(name))
+    return;
 
   // invalidate all passes that required current pass
   for (const auto &child : GetRequiredBy()[name]) {
@@ -137,9 +140,10 @@ void PassManager::RunPasses() {
 
 void PassManager::init() {
   for (std::size_t i = _initialized_factories; i < _factories.size(); ++i) {
-    auto pass = _factories[i]->CreatePass(this);
+    auto pass      = _factories[i]->CreatePass(this);
     auto pass_name = pass->name();
-    DBG_ASSERT(_pass_infos.find(pass_name) == _pass_infos.end(), "pass %s has been registered", pass_name.c_str());
+    DBG_ASSERT(_pass_infos.find(pass_name) == _pass_infos.end(),
+               "pass %s has been registered", pass_name.c_str());
     pass->pass()->SetName(pass_name);
     _pass_infos.insert(std::make_pair(pass_name, pass));
   }
@@ -150,4 +154,4 @@ bool compare(const PassInfoPtr &ptr1, const PassInfoPtr &ptr2) {
   return ptr1->pass_order() < ptr2->pass_order();
 }
 
-}
+} // namespace lava::opt

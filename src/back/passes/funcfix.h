@@ -10,15 +10,13 @@ namespace lava::back {
 */
 class FunctionFix : public PassBase {
 private:
-  int                   _gap;
-  LLBlockPtr            _ret_block;
-  LLInstList::iterator  _ret_pos;
-  std::vector<ArmReg>   _saved_regs;
-
+  int                  _gap;
+  LLBlockPtr           _ret_block;
+  LLInstList::iterator _ret_pos;
+  std::vector<ArmReg>  _saved_regs;
 
 public:
-  explicit FunctionFix(LLModule &module)
-    : PassBase(module) {}
+  explicit FunctionFix(LLModule &module) : PassBase(module) {}
 
   void Reset() final {
     _saved_regs.clear();
@@ -32,7 +30,6 @@ public:
   void runOn(const LLFunctionPtr &func) final;
 };
 
-}
+} // namespace lava::back
 
-
-#endif //LAVA_FUNCFIX_H
+#endif // LAVA_FUNCFIX_H

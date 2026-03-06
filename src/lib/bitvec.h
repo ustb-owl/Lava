@@ -1,16 +1,16 @@
 #ifndef LAVA_UTILS_BITVEC_H_
 #define LAVA_UTILS_BITVEC_H_
 
-#include <vector>
-#include <ostream>
-#include <cstdint>
 #include <cassert>
+#include <cstdint>
+#include <ostream>
+#include <vector>
 
 namespace lava::lib {
 
 // vector that can holds N bits
 class BitVec {
- public:
+public:
   // create an empty bit vector
   BitVec() : width_(0) {}
   // create a zero initialized bit vector with 'width' bits
@@ -48,14 +48,16 @@ class BitVec {
 
   // add a bit to the back of current bit vector
   void Push(bool bit) {
-    if ((++width_ + 63) / 64 > vec_.size()) vec_.push_back(0);
+    if ((++width_ + 63) / 64 > vec_.size())
+      vec_.push_back(0);
     Assign(width_ - 1, bit);
   }
 
   // remove the last bit of current bit vector
   void Pop() {
     assert(width_);
-    if ((--width_ + 63) / 64 < vec_.size()) vec_.pop_back();
+    if ((--width_ + 63) / 64 < vec_.size())
+      vec_.pop_back();
   }
 
   // remove all stored bits, set width to zero
@@ -69,12 +71,14 @@ class BitVec {
 
   // fill the bit vector with the specific bit
   void Fill(bool bit) {
-    for (auto &&i : vec_) i = bit ? static_cast<std::uint64_t>(-1) : 0;
+    for (auto &&i : vec_)
+      i = bit ? static_cast<std::uint64_t>(-1) : 0;
   }
-  
+
   // flip all stored bits
   void Flip() {
-    for (auto &&i : vec_) i = ~i;
+    for (auto &&i : vec_)
+      i = ~i;
   }
 
   // merge with another bit vector
@@ -97,13 +101,16 @@ class BitVec {
 
   // check if two bit vectors are equal
   bool operator==(const BitVec &rhs) const {
-    if (width_ != rhs.width_) return false;
-    if (!width_) return true;
+    if (width_ != rhs.width_)
+      return false;
+    if (!width_)
+      return true;
     for (std::size_t i = 0; i < vec_.size() - 1; ++i) {
-      if (vec_[i] != rhs.vec_[i]) return false;
+      if (vec_[i] != rhs.vec_[i])
+        return false;
     }
     auto shift = 64 - (width_ - 1) % 64 - 1;
-    auto mask = static_cast<std::uint64_t>(-1) >> shift;
+    auto mask  = static_cast<std::uint64_t>(-1) >> shift;
     return (vec_.back() & mask) == (rhs.vec_.back() & mask);
   }
   bool operator!=(const BitVec &rhs) const { return !(*this == rhs); }
@@ -150,11 +157,11 @@ class BitVec {
   // getters
   std::size_t width() const { return width_; }
 
- private:
+private:
   std::vector<std::uint64_t> vec_;
-  std::size_t width_;
+  std::size_t                width_;
 };
 
-}  // namespace lava::utils
+} // namespace lava::lib
 
-#endif  // LAVA_UTILS_BITVEC_H_
+#endif // LAVA_UTILS_BITVEC_H_

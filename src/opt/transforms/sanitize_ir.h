@@ -15,10 +15,11 @@ class SanitizeIRFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<SanitizeIR>();
-    return std::make_shared<PassInfo>(pass, "SanitizeIR", false, 0, SANITIZE_IR);
+    return std::make_shared<PassInfo>(pass, "SanitizeIR", false, 0,
+                                      SANITIZE_IR);
   }
 };
 
-}
+} // namespace lava::opt
 
 #endif // LAVA_SANITIZE_IR_H

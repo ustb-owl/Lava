@@ -12,27 +12,26 @@ private:
   LLFunctionPtr _cur_func;
 
 public:
-  explicit Spill(LLModule &module)
-    : PassBase(module), _cur_block(nullptr) {}
+  explicit Spill(LLModule &module) : PassBase(module), _cur_block(nullptr) {}
 
   LLOperandPtr GetTmpReg(std::uint32_t &mask);
 
   std::uint32_t GetTmpMask(const LLInstPtr &inst);
 
-  void InsertLoadInst(LLInstList::iterator &it,
-                      const LLOperandPtr &slot, const LLOperandPtr &dst);
+  void InsertLoadInst(LLInstList::iterator &it, const LLOperandPtr &slot,
+                      const LLOperandPtr &dst);
 
-  void InsertStoreInst(LLInstList::iterator &it,
-                       const LLOperandPtr &slot, const LLOperandPtr &tmp);
+  void InsertStoreInst(LLInstList::iterator &it, const LLOperandPtr &slot,
+                       const LLOperandPtr &tmp);
 
   void Reset() final {
-    _mask = 0;
+    _mask      = 0;
     _cur_block = nullptr;
-    _cur_func = nullptr;
+    _cur_func  = nullptr;
   }
 
   void runOn(const LLFunctionPtr &func) final;
 };
-}
+} // namespace lava::back
 
-#endif //LAVA_SPILL_H
+#endif // LAVA_SPILL_H

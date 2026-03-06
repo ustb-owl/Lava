@@ -1,14 +1,14 @@
-#include <iostream>
 #include "funcanalysis.h"
+
+#include <iostream>
+
 #include "opt/register.h"
 
 int FunctionInfo;
 
 namespace lava::opt {
 
-bool FunctionInfo::IsRecursive() const {
-  return F->Callers().count(F) != 0;
-}
+bool FunctionInfo::IsRecursive() const { return F->Callers().count(F) != 0; }
 
 bool FunctionInfoPass::runOnModule(Module &M) {
   for (const auto &F : M.Functions()) {
@@ -18,7 +18,8 @@ bool FunctionInfoPass::runOnModule(Module &M) {
     _func_infos.insert({F.get(), FunctionInfo()});
     if (F->is_decl()) {
       _func_infos[F.get()].has_size_effect = true;
-//      TRACE("%s %d\n", F->GetFunctionName().c_str(), _func_infos[F.get()].IsPure());
+      //      TRACE("%s %d\n", F->GetFunctionName().c_str(),
+      //      _func_infos[F.get()].IsPure());
     }
   }
 
@@ -26,13 +27,15 @@ bool FunctionInfoPass::runOnModule(Module &M) {
 
   std::vector<Function *> worklist;
   for (const auto &[k, v] : _func_infos) {
-    if (v.has_size_effect) worklist.push_back(k);
+    if (v.has_size_effect)
+      worklist.push_back(k);
   }
 
   while (!worklist.empty()) {
     auto f = worklist.back();
     worklist.pop_back();
-    if (_func_map.find(f) == _func_map.end()) continue;
+    if (_func_map.find(f) == _func_map.end())
+      continue;
     for (auto &caller : _func_map[f]->Callers()) {
       if (!_func_infos[caller->GetFunction()].has_size_effect) {
         _func_infos[caller->GetFunction()].has_size_effect = true;
@@ -42,8 +45,10 @@ bool FunctionInfoPass::runOnModule(Module &M) {
   }
 
   for (auto &[k, v] : _func_infos) {
-    if (_func_map.find(k) == _func_map.end()) continue;
-    if (_func_map[k]->Callees().empty()) v.is_leaf = true;
+    if (_func_map.find(k) == _func_map.end())
+      continue;
+    if (_func_map[k]->Callees().empty())
+      v.is_leaf = true;
   }
 
   for (auto it = _func_infos.begin(); it != _func_infos.end();) {
@@ -54,20 +59,22 @@ bool FunctionInfoPass::runOnModule(Module &M) {
     }
   }
 
-//  DumpCallGraph();
-//  dump();
+  //  DumpCallGraph();
+  //  dump();
 
   return false;
 }
 
 void FunctionInfoPass::CalculateCallGraph(Function *F) {
-  if (_visited.find(F) != _visited.end()) return;
+  if (_visited.find(F) != _visited.end())
+    return;
   _visited.insert(F);
 
   // get caller
   FuncNodePtr caller = nullptr;
-  auto it = _func_map.find(F);
-  if (it != _func_map.end()) caller = it->second;
+  auto        it     = _func_map.find(F);
+  if (it != _func_map.end())
+    caller = it->second;
   else {
     caller = std::make_shared<FunctionNode>(F);
     _func_map.insert({F, caller});
@@ -75,15 +82,15 @@ void FunctionInfoPass::CalculateCallGraph(Function *F) {
   auto &info = _func_infos[F];
   info.SetFuncNode(caller);
 
-  for (const auto &use : *F) {
-    auto BB = dyn_cast<BasicBlock>(use.value());
+  for (const auto &BB : *F) {
     for (const auto &inst : BB->insts()) {
       if (auto call_inst = dyn_cast<CallInst>(inst)) {
         auto callee = dyn_cast<Function>(call_inst->Callee());
         // get callee
         FuncNodePtr callee_node = nullptr;
-        auto res = _func_map.find(callee.get());
-        if (res != _func_map.end()) callee_node = res->second;
+        auto        res         = _func_map.find(callee.get());
+        if (res != _func_map.end())
+          callee_node = res->second;
         else {
           callee_node = std::make_shared<FunctionNode>(callee.get());
           _func_map.insert({callee.get(), callee_node});
@@ -99,14 +106,14 @@ void FunctionInfoPass::CalculateCallGraph(Function *F) {
       } else if (auto store_inst = dyn_cast<StoreInst>(inst)) {
         auto dst = store_inst->pointer();
         if (IsSSA<GlobalVariable>(dst)) {
-          info.store_global = true;
+          info.store_global    = true;
           info.has_size_effect = true;
         }
       } else if (auto access_inst = dyn_cast<AccessInst>(inst)) {
         auto array = access_inst->ptr();
         if (IsSSA<GlobalVariable>(array)) {
           info.load_global_array = true;
-          info.has_size_effect = true;
+          info.has_size_effect   = true;
         }
       } else if (auto ret_inst = dyn_cast<ReturnInst>(inst)) {
         info.SetRetInst(ret_inst);
@@ -122,8 +129,8 @@ void FunctionInfoPass::CalculateCallGraph(Function *F) {
 }
 
 void FunctionInfoPass::CollectSideEffectInfo(const FuncNodePtr &FN) {
-  if (_func_infos[FN->GetFunction()].has_size_effect) return;
-
+  if (_func_infos[FN->GetFunction()].has_size_effect)
+    return;
 }
 
 void FunctionInfoPass::DumpCallGraph() {
@@ -146,9 +153,10 @@ void FunctionInfoPass::dump() {
   for (const auto &[k, v] : _func_infos) {
     std::cout << k->GetFunctionName() << ":" << std::endl;
     std::cout << "is leaf: " << v.is_leaf << "\tload global: " << v.load_global
-              << "\tstore global: " << v.store_global << "\tload global array" << v.load_global_array
-              << "\thas side effect: " << v.has_size_effect << "\tIsPure: " << v.IsPure()
-              << std::endl;
+              << "\tstore global: " << v.store_global << "\tload global array"
+              << v.load_global_array
+              << "\thas side effect: " << v.has_size_effect
+              << "\tIsPure: " << v.IsPure() << std::endl;
     v.FuncNode()->dump();
   }
 }
@@ -176,4 +184,4 @@ void RegisterFunctionInfoPass() {
   });
   static PassRegisterFactory<FunctionInfoPassFactory> registry;
 }
-}
+} // namespace lava::opt

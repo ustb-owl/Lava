@@ -1,7 +1,7 @@
 #include "front/parser.h"
 
-#include <stack>
 #include <cassert>
+#include <stack>
 
 #include "front/token.h"
 
@@ -15,55 +15,83 @@ namespace {
 const int kOpPrecTable[] = {LAVA_OPERATORS(LAVA_EXPAND_THIRD)};
 
 // return precedence of specific operator
-inline int GetOpPrec(Operator op) {
-  return kOpPrecTable[static_cast<int>(op)];
-}
+inline int GetOpPrec(Operator op) { return kOpPrecTable[static_cast<int>(op)]; }
 
 // check if keyword is beginning of basic types
 inline bool IsBasicType(Keyword key) {
   return key == Keyword::Void || key == Keyword::Unsigned ||
-         key == Keyword::Int || key == Keyword::Char ||
-         key == Keyword::Const;
+         key == Keyword::Int || key == Keyword::Char || key == Keyword::Const;
 }
 
 // convert lexer-generated operator to binary operator
 inline Operator GetBinaryOp(Operator op) {
-//  using Op = BinaryStmt::Operator;
+  //  using Op = BinaryStmt::Operator;
   switch (op) {
-    case Operator::Add:         return Operator::Add;
-    case Operator::Sub:         return Operator::Sub;
-    case Operator::Mul:         return Operator::Mul;
-    case Operator::SDiv:        return Operator::SDiv;
-    case Operator::SRem:        return Operator::SRem;
-    case Operator::Equal:       return Operator::Equal;
-    case Operator::NotEqual:    return Operator::NotEqual;
-    case Operator::SLess:       return Operator::SLess;
-    case Operator::SLessEq:     return Operator::SLessEq;
-    case Operator::SGreat:      return Operator::SGreat;
-    case Operator::SGreatEq:    return Operator::SGreatEq;
-    case Operator::LAnd:        return Operator::LAnd;
-    case Operator::LOr:         return Operator::LOr;
-    case Operator::And:         return Operator::And;
-    case Operator::Or:          return Operator::Or;
-    case Operator::Xor:         return Operator::Xor;
-    case Operator::Shl:         return Operator::Shl;
-    case Operator::LShr:        return Operator::LShr;
-    case Operator::Assign:      return Operator::Assign;
-    case Operator::AssAdd:      return Operator::AssAdd;
-    case Operator::AssSub:      return Operator::AssSub;
-    case Operator::AssMul:      return Operator::AssMul;
-    case Operator::AssSDiv:      return Operator::AssSDiv;
-    case Operator::AssSRem:      return Operator::AssSRem;
-    case Operator::AssAnd:      return Operator::AssAnd;
-    case Operator::AssOr:       return Operator::AssOr;
-    case Operator::AssXor:      return Operator::AssXor;
-    case Operator::AssShl:      return Operator::AssShl;
-    case Operator::AssLShr:      return Operator::AssLShr;
-    default: assert(false);     return Operator::Add;
+  case Operator::Add:
+    return Operator::Add;
+  case Operator::Sub:
+    return Operator::Sub;
+  case Operator::Mul:
+    return Operator::Mul;
+  case Operator::SDiv:
+    return Operator::SDiv;
+  case Operator::SRem:
+    return Operator::SRem;
+  case Operator::Equal:
+    return Operator::Equal;
+  case Operator::NotEqual:
+    return Operator::NotEqual;
+  case Operator::SLess:
+    return Operator::SLess;
+  case Operator::SLessEq:
+    return Operator::SLessEq;
+  case Operator::SGreat:
+    return Operator::SGreat;
+  case Operator::SGreatEq:
+    return Operator::SGreatEq;
+  case Operator::LAnd:
+    return Operator::LAnd;
+  case Operator::LOr:
+    return Operator::LOr;
+  case Operator::And:
+    return Operator::And;
+  case Operator::Or:
+    return Operator::Or;
+  case Operator::Xor:
+    return Operator::Xor;
+  case Operator::Shl:
+    return Operator::Shl;
+  case Operator::LShr:
+    return Operator::LShr;
+  case Operator::Assign:
+    return Operator::Assign;
+  case Operator::AssAdd:
+    return Operator::AssAdd;
+  case Operator::AssSub:
+    return Operator::AssSub;
+  case Operator::AssMul:
+    return Operator::AssMul;
+  case Operator::AssSDiv:
+    return Operator::AssSDiv;
+  case Operator::AssSRem:
+    return Operator::AssSRem;
+  case Operator::AssAnd:
+    return Operator::AssAnd;
+  case Operator::AssOr:
+    return Operator::AssOr;
+  case Operator::AssXor:
+    return Operator::AssXor;
+  case Operator::AssShl:
+    return Operator::AssShl;
+  case Operator::AssLShr:
+    return Operator::AssLShr;
+  default:
+    assert(false);
+    return Operator::Add;
   }
 }
 
-}  // namespace
+} // namespace
 
 ASTPtr Parser::LogError(std::string_view message) {
   logger()->LogError(message);
@@ -72,16 +100,19 @@ ASTPtr Parser::LogError(std::string_view message) {
 
 ASTPtr Parser::ParseCompUnit() {
   auto ast = ParseDeclDef(true);
-  if (!ast) return LogError("invalid declaration/definition");
+  if (!ast)
+    return LogError("invalid declaration/definition");
   return ast;
 }
 
 void Parser::Parse() {
   ASTPtrList defs;
-  ASTPtr def;
+  ASTPtr     def;
   def = ParseNext();
   while (true) {
-    if (!def) { break; }
+    if (!def) {
+      break;
+    }
     defs.push_back(std::move(def));
     def = ParseNext();
   }
@@ -95,7 +126,6 @@ void Parser::Parse(ASTPtrList &defs) {
   rootNode = MakeAST<TranslationUnitDecl>(std::move(log), std::move(defs));
 }
 
-
 ASTPtr Parser::ParseDeclDef(bool parse_func_def) {
   auto log = logger();
   if (cur_token_ == Token::Keyword) {
@@ -103,46 +133,44 @@ ASTPtr Parser::ParseDeclDef(bool parse_func_def) {
       // type or struct def
       NextToken();
       // get id
-      if (!ExpectId()) return nullptr;
+      if (!ExpectId())
+        return nullptr;
       auto id = lexer_.id_val();
       NextToken();
       // check if is struct def
       if (IsTokenChar('{')) {
         return ParseStructDef(id);
-      }
-      else {
+      } else {
         // parse variable/function declaration
         auto type = MakeAST<StructTypeAST>(log, id);
         return ParseVarFunc(std::move(type), parse_func_def);
       }
-    }
-    else if (lexer_.key_val() == Keyword::Enum) {
+    } else if (lexer_.key_val() == Keyword::Enum) {
       // type or enum def
       NextToken();
       if (IsTokenChar('{')) {
         // enum def without id
         return ParseEnumDef("");
-      }
-      else {
+      } else {
         // get id
-        if (!ExpectId()) return nullptr;
+        if (!ExpectId())
+          return nullptr;
         auto id = lexer_.id_val();
         NextToken();
         // check if is enum def
         if (IsTokenChar('{')) {
           return ParseEnumDef(id);
-        }
-        else {
+        } else {
           // parse variable/function declaration
           auto type = MakeAST<EnumTypeAST>(log, id);
           return ParseVarFunc(std::move(type), parse_func_def);
         }
       }
-    }
-    else if (IsBasicType(lexer_.key_val())) {
+    } else if (IsBasicType(lexer_.key_val())) {
       // get type
       auto type = ParseType();
-      if (!type) return nullptr;
+      if (!type)
+        return nullptr;
       // parse variable/function declaration
       return ParseVarFunc(std::move(type), parse_func_def);
     }
@@ -154,7 +182,8 @@ ASTPtr Parser::ParseDeclDef(bool parse_func_def) {
 ASTPtr Parser::ParseVarFunc(ASTPtr type, bool parse_func_def) {
   auto log = logger();
   // get id
-  if (!ExpectId()) return nullptr;
+  if (!ExpectId())
+    return nullptr;
   auto id = lexer_.id_val();
   NextToken();
   // check if is function header
@@ -163,16 +192,16 @@ ASTPtr Parser::ParseVarFunc(ASTPtr type, bool parse_func_def) {
     if (parse_func_def && IsTokenChar('{')) {
       // function definition
       auto body = ParseBlock();
-      if (!body) return nullptr;
+      if (!body)
+        return nullptr;
       return MakeAST<FunctionDefAST>(log, std::move(header), std::move(body));
-    }
-    else {
+    } else {
       // function declaration
-      if (!ExpectChar(';')) return nullptr;
+      if (!ExpectChar(';'))
+        return nullptr;
       return header;
     }
-  }
-  else {
+  } else {
     // variable declaration
     return ParseVarDecl(std::move(type), id);
   }
@@ -182,21 +211,25 @@ ASTPtr Parser::ParseVarDecl(ASTPtr type, const std::string &id) {
   auto log = logger();
   // get definitions
   ASTPtrList defs;
-  auto cur_id = id;
+  auto       cur_id = id;
   for (;;) {
     auto def = ParseVarDef(cur_id);
-    if (!def) return nullptr;
+    if (!def)
+      return nullptr;
     defs.push_back(std::move(def));
     // eat ','
-    if (!IsTokenChar(',')) break;
+    if (!IsTokenChar(','))
+      break;
     NextToken();
     // get next id
-    if (!ExpectId()) return nullptr;
+    if (!ExpectId())
+      return nullptr;
     cur_id = lexer_.id_val();
     NextToken();
   }
   // check & eat ';'
-  if (!ExpectChar(';')) return nullptr;
+  if (!ExpectChar(';'))
+    return nullptr;
   return MakeAST<VariableDecl>(log, std::move(type), std::move(defs));
 }
 
@@ -204,14 +237,16 @@ ASTPtr Parser::ParseVarDef(const std::string &id) {
   auto log = logger();
   // parse array def
   ASTPtrList arr_lens;
-  if (!GetArrLens(arr_lens)) return nullptr;
+  if (!GetArrLens(arr_lens))
+    return nullptr;
   // parse initializer
   ASTPtr init;
   if (IsTokenOperator(Operator::Assign)) {
     NextToken();
     // get initializer
     init = ParseInitVal();
-    if (!init) return nullptr;
+    if (!init)
+      return nullptr;
   }
   return MakeAST<VariableDefAST>(log, id, std::move(arr_lens), std::move(init));
 }
@@ -225,18 +260,20 @@ ASTPtr Parser::ParseInitVal() {
     if (!IsTokenChar('}')) {
       for (;;) {
         auto init = ParseInitVal();
-        if (!init) return nullptr;
+        if (!init)
+          return nullptr;
         exprs.push_back(std::move(init));
         // eat ','
-        if (!IsTokenChar(',')) break;
+        if (!IsTokenChar(','))
+          break;
         NextToken();
       }
     }
     // check & eat '}'
-    if (!ExpectChar('}')) return nullptr;
+    if (!ExpectChar('}'))
+      return nullptr;
     return MakeAST<InitListAST>(log, std::move(exprs));
-  }
-  else {
+  } else {
     return ParseExpr();
   }
 }
@@ -250,15 +287,18 @@ ASTPtr Parser::ParseFuncHeader(ASTPtr type, const std::string &id) {
   if (!IsTokenChar(')')) {
     for (;;) {
       auto param = ParseFuncParam();
-      if (!param) return nullptr;
+      if (!param)
+        return nullptr;
       params.push_back(std::move(param));
       // eat ','
-      if (!IsTokenChar(',')) break;
+      if (!IsTokenChar(','))
+        break;
       NextToken();
     }
   }
   // check & eat ')'
-  if (!ExpectChar(')')) return nullptr;
+  if (!ExpectChar(')'))
+    return nullptr;
   return MakeAST<ProtoTypeAST>(log, std::move(type), id, std::move(params));
 }
 
@@ -266,9 +306,11 @@ ASTPtr Parser::ParseFuncParam() {
   auto log = logger();
   // get type
   auto type = ParseType();
-  if (!type) return nullptr;
+  if (!type)
+    return nullptr;
   // get id
-  if (!ExpectId()) return nullptr;
+  if (!ExpectId())
+    return nullptr;
   auto id = lexer_.id_val();
   NextToken();
   // get array def
@@ -279,19 +321,20 @@ ASTPtr Parser::ParseFuncParam() {
     if (IsTokenChar(']')) {
       NextToken();
       arr_lens.push_back(nullptr);
-    }
-    else {
+    } else {
       auto expr = ParseExpr();
-      if (!expr) return nullptr;
+      if (!expr)
+        return nullptr;
       arr_lens.push_back(std::move(expr));
       // check & eat ']'
-      if (!ExpectChar(']')) return nullptr;
+      if (!ExpectChar(']'))
+        return nullptr;
     }
   }
-  if (!GetArrLens(arr_lens)) return nullptr;
+  if (!GetArrLens(arr_lens))
+    return nullptr;
   // create AST
-  return MakeAST<FuncParamAST>(log, std::move(type), id,
-                               std::move(arr_lens));
+  return MakeAST<FuncParamAST>(log, std::move(type), id, std::move(arr_lens));
 }
 
 ASTPtr Parser::ParseStructDef(const std::string &id) {
@@ -302,13 +345,15 @@ ASTPtr Parser::ParseStructDef(const std::string &id) {
   ASTPtrList elems;
   while (!IsTokenChar('}')) {
     auto elem = ParseStructElem();
-    if (!elem) return nullptr;
+    if (!elem)
+      return nullptr;
     elems.push_back(std::move(elem));
   }
   // eat '}'
   NextToken();
   // check & eat ';'
-  if (!ExpectChar(';')) return nullptr;
+  if (!ExpectChar(';'))
+    return nullptr;
   return MakeAST<StructDefAST>(log, id, std::move(elems));
 }
 
@@ -320,16 +365,20 @@ ASTPtr Parser::ParseEnumDef(const std::string &id) {
   ASTPtrList elems;
   while (cur_token_ == Token::Id) {
     auto elem = ParseEnumElem();
-    if (!elem) return nullptr;
+    if (!elem)
+      return nullptr;
     elems.push_back(std::move(elem));
     // eat ','
-    if (!IsTokenChar(',')) break;
+    if (!IsTokenChar(','))
+      break;
     NextToken();
   }
   // check & eat '}'
-  if (!ExpectChar('}')) return nullptr;
+  if (!ExpectChar('}'))
+    return nullptr;
   // check & eat ';'
-  if (!ExpectChar(';')) return nullptr;
+  if (!ExpectChar(';'))
+    return nullptr;
   return MakeAST<EnumDefAST>(log, id, std::move(elems));
 }
 
@@ -337,38 +386,45 @@ ASTPtr Parser::ParseStructElem() {
   auto log = logger();
   // get type
   auto type = ParseType();
-  if (!type) return nullptr;
+  if (!type)
+    return nullptr;
   // get definitions
   ASTPtrList defs;
   for (;;) {
     auto def = ParseStructElemDef();
-    if (!def) return nullptr;
+    if (!def)
+      return nullptr;
     defs.push_back(std::move(def));
     // eat ','
-    if (!IsTokenChar(',')) break;
+    if (!IsTokenChar(','))
+      break;
     NextToken();
   }
   // check & eat ';'
-  if (!ExpectChar(';')) return nullptr;
+  if (!ExpectChar(';'))
+    return nullptr;
   return MakeAST<StructElemAST>(log, std::move(type), std::move(defs));
 }
 
 ASTPtr Parser::ParseStructElemDef() {
   auto log = logger();
   // get id
-  if (!ExpectId()) return nullptr;
+  if (!ExpectId())
+    return nullptr;
   auto id = lexer_.id_val();
   NextToken();
   // get array def
   ASTPtrList arr_lens;
-  if (!GetArrLens(arr_lens)) return nullptr;
+  if (!GetArrLens(arr_lens))
+    return nullptr;
   return MakeAST<StructElemDefAST>(log, id, std::move(arr_lens));
 }
 
 ASTPtr Parser::ParseEnumElem() {
   auto log = logger();
   // get id
-  if (!ExpectId()) return nullptr;
+  if (!ExpectId())
+    return nullptr;
   auto id = lexer_.id_val();
   NextToken();
   // get initializer
@@ -376,7 +432,8 @@ ASTPtr Parser::ParseEnumElem() {
   if (IsTokenOperator(Operator::Assign)) {
     NextToken();
     expr = ParseExpr();
-    if (!expr) return nullptr;
+    if (!expr)
+      return nullptr;
   }
   return MakeAST<EnumElemAST>(log, id, std::move(expr));
 }
@@ -384,12 +441,14 @@ ASTPtr Parser::ParseEnumElem() {
 ASTPtr Parser::ParseBlock() {
   auto log = logger();
   // check & eat '{'
-  if (!ExpectChar('{')) return nullptr;
+  if (!ExpectChar('{'))
+    return nullptr;
   // get block items
   ASTPtrList items;
   while (!IsTokenChar('}')) {
     auto item = ParseBlockItem();
-    if (!item) return nullptr;
+    if (!item)
+      return nullptr;
     items.push_back(std::move(item));
   }
   // eat '}'
@@ -400,7 +459,8 @@ ASTPtr Parser::ParseBlock() {
 ASTPtr Parser::ParseBlockItem() {
   // get declarations/definitions
   auto ast = ParseDeclDef(false);
-  if (Logger::error_num()) return nullptr;
+  if (Logger::error_num())
+    return nullptr;
   // get statements
   return ast ? std::move(ast) : ParseStmt();
 }
@@ -417,20 +477,25 @@ ASTPtr Parser::ParseStmt() {
     return ast;
   } else if (cur_token_ == Token::Keyword) {
     switch (lexer_.key_val()) {
-      // if-else
-      case Keyword::If: return ParseIfElse();
-      // while
-      case Keyword::While: return ParseWhile();
-      // control statements
-      case Keyword::Break: case Keyword::Continue:
-      case Keyword::Return: return ParseControl();
-      // size-of (bare expression)
-      case Keyword::SizeOf: return ParseBare();
-      // other
-      default: return LogError("invalid statement");
+    // if-else
+    case Keyword::If:
+      return ParseIfElse();
+    // while
+    case Keyword::While:
+      return ParseWhile();
+    // control statements
+    case Keyword::Break:
+    case Keyword::Continue:
+    case Keyword::Return:
+      return ParseControl();
+    // size-of (bare expression)
+    case Keyword::SizeOf:
+      return ParseBare();
+    // other
+    default:
+      return LogError("invalid statement");
     }
-  }
-  else {
+  } else {
     // bare expression
     return ParseBare();
   }
@@ -439,9 +504,11 @@ ASTPtr Parser::ParseStmt() {
 ASTPtr Parser::ParseBare() {
   // get expression
   auto expr = ParseExpr();
-  if (!expr) return nullptr;
+  if (!expr)
+    return nullptr;
   // check & eat ';'
-  if (!ExpectChar(';')) return nullptr;
+  if (!ExpectChar(';'))
+    return nullptr;
   return expr;
 }
 
@@ -450,21 +517,26 @@ ASTPtr Parser::ParseIfElse() {
   // eat 'if'
   NextToken();
   // check & eat '('
-  if (!ExpectChar('(')) return nullptr;
+  if (!ExpectChar('('))
+    return nullptr;
   // get condition
   auto cond = ParseExpr();
-  if (!cond) return nullptr;
+  if (!cond)
+    return nullptr;
   // check & eat ')'
-  if (!ExpectChar(')')) return nullptr;
+  if (!ExpectChar(')'))
+    return nullptr;
   // get 'then' block
   auto then = ParseStmt();
-  if (!then) return nullptr;
+  if (!then)
+    return nullptr;
   // get 'else-then' block
   ASTPtr else_then;
   if (IsTokenKeyword(Keyword::Else)) {
     NextToken();
     else_then = ParseStmt();
-    if (!else_then) return nullptr;
+    if (!else_then)
+      return nullptr;
   }
   return MakeAST<IfElseStmt>(log, std::move(cond), std::move(then),
                              std::move(else_then));
@@ -475,54 +547,72 @@ ASTPtr Parser::ParseWhile() {
   // eat 'while'
   NextToken();
   // check & eat '('
-  if (!ExpectChar('(')) return nullptr;
+  if (!ExpectChar('('))
+    return nullptr;
   // get condition
   auto cond = ParseExpr();
-  if (!cond) return nullptr;
+  if (!cond)
+    return nullptr;
   // check & eat ')'
-  if (!ExpectChar(')')) return nullptr;
+  if (!ExpectChar(')'))
+    return nullptr;
   // get body
   auto body = ParseStmt();
-  if (!body) return nullptr;
+  if (!body)
+    return nullptr;
   return MakeAST<WhileStmt>(log, std::move(cond), std::move(body));
 }
 
 ASTPtr Parser::ParseControl() {
   using Type = ControlAST::Type;
-  auto log = logger();
+  auto log   = logger();
   // get type of AST
   Type type;
   switch (lexer_.key_val()) {
-    case Keyword::Break: type = Type::Break; break;
-    case Keyword::Continue: type = Type::Continue; break;
-    case Keyword::Return: type = Type::Return; break;
-    default: assert(false); type = Type::Break; break;;
+  case Keyword::Break:
+    type = Type::Break;
+    break;
+  case Keyword::Continue:
+    type = Type::Continue;
+    break;
+  case Keyword::Return:
+    type = Type::Return;
+    break;
+  default:
+    assert(false);
+    type = Type::Break;
+    break;
+    ;
   }
   NextToken();
   // get expression (return value)
   ASTPtr expr;
   if (type == Type::Return && !IsTokenChar(';')) {
     expr = ParseExpr();
-    if (!expr) return nullptr;
+    if (!expr)
+      return nullptr;
   }
   // check & eat ';'
-  if (!ExpectChar(';')) return nullptr;
+  if (!ExpectChar(';'))
+    return nullptr;
   return MakeAST<ControlAST>(log, type, std::move(expr));
 }
 
 ASTPtr Parser::ParseExpr() {
-  auto log = logger();
-  std::stack<ASTPtr> oprs;
+  auto                 log = logger();
+  std::stack<ASTPtr>   oprs;
   std::stack<Operator> ops;
   // get the first expression
   auto expr = ParseCast();
-  if (!expr) return nullptr;
+  if (!expr)
+    return nullptr;
   oprs.push(std::move(expr));
   // convert to postfix expression
   while (cur_token_ == Token::Operator) {
     // get operator
     auto op = lexer_.op_val();
-    if (GetOpPrec(op) < 0) break;
+    if (GetOpPrec(op) < 0)
+      break;
     NextToken();
     // handle operator
     while (!ops.empty() && GetOpPrec(ops.top()) >= GetOpPrec(op)) {
@@ -533,13 +623,14 @@ ASTPtr Parser::ParseExpr() {
       oprs.pop();
       auto lhs = std::move(oprs.top());
       oprs.pop();
-      oprs.push(MakeAST<BinaryStmt>(log, cur_op, std::move(lhs),
-                                    std::move(rhs)));
+      oprs.push(
+          MakeAST<BinaryStmt>(log, cur_op, std::move(lhs), std::move(rhs)));
     }
     ops.push(op);
     // get next expression
     expr = ParseCast();
-    if (!expr) return nullptr;
+    if (!expr)
+      return nullptr;
     oprs.push(std::move(expr));
   }
   // clear stacks
@@ -551,8 +642,7 @@ ASTPtr Parser::ParseExpr() {
     oprs.pop();
     auto lhs = std::move(oprs.top());
     oprs.pop();
-    oprs.push(MakeAST<BinaryStmt>(log, cur_op, std::move(lhs),
-                                  std::move(rhs)));
+    oprs.push(MakeAST<BinaryStmt>(log, cur_op, std::move(lhs), std::move(rhs)));
   }
   return std::move(oprs.top());
 }
@@ -566,20 +656,21 @@ ASTPtr Parser::ParseCast() {
     if (cur_token_ == Token::Keyword) {
       // get type
       auto type = ParseType();
-      if (!type) return nullptr;
+      if (!type)
+        return nullptr;
       // check & eat ')'
-      if (!ExpectChar(')')) return nullptr;
+      if (!ExpectChar(')'))
+        return nullptr;
       // get expression
       auto expr = ParseCast();
-      if (!expr) return nullptr;
+      if (!expr)
+        return nullptr;
       // make type casting
       return MakeAST<CastStmt>(log, std::move(type), std::move(expr));
-    }
-    else {
+    } else {
       return ParseFactor(true);
     }
-  }
-  else {
+  } else {
     return ParseUnary();
   }
 }
@@ -591,21 +682,34 @@ ASTPtr Parser::ParseUnary() {
     // get & check unary operator
     Operator op;
     switch (lexer_.op_val()) {
-      case Operator::Add:      op = Operator::Pos; break;
-      case Operator::Sub:      op = Operator::Neg; break;
-      case Operator::Not:      op = Operator::Not; break;
-      case Operator::LNot:     op = Operator::LNot; break;
-      case Operator::Mul:      op = Operator::Deref; break;
-      case Operator::And:      op = Operator::Addr; break;
-      default: return LogError("invalid unary operator");
+    case Operator::Add:
+      op = Operator::Pos;
+      break;
+    case Operator::Sub:
+      op = Operator::Neg;
+      break;
+    case Operator::Not:
+      op = Operator::Not;
+      break;
+    case Operator::LNot:
+      op = Operator::LNot;
+      break;
+    case Operator::Mul:
+      op = Operator::Deref;
+      break;
+    case Operator::And:
+      op = Operator::Addr;
+      break;
+    default:
+      return LogError("invalid unary operator");
     }
     NextToken();
     // get factor
     auto expr = ParseUnary();
-    if (!expr) return nullptr;
+    if (!expr)
+      return nullptr;
     return MakeAST<UnaryStmt>(log, op, std::move(expr));
-  }
-  else if (IsTokenKeyword(Keyword::SizeOf)) {
+  } else if (IsTokenKeyword(Keyword::SizeOf)) {
     NextToken();
     // get type or factor
     ASTPtr expr;
@@ -615,19 +719,18 @@ ASTPtr Parser::ParseUnary() {
       if (cur_token_ == Token::Keyword) {
         expr = ParseType();
         // check & eat ')'
-        if (!ExpectChar(')')) return nullptr;
-      }
-      else {
+        if (!ExpectChar(')'))
+          return nullptr;
+      } else {
         expr = ParseFactor(true);
       }
-    }
-    else {
+    } else {
       expr = ParseFactor(false);
     }
-    if (!expr) return nullptr;
+    if (!expr)
+      return nullptr;
     return MakeAST<UnaryStmt>(log, Operator::SizeOf, std::move(expr));
-  }
-  else {
+  } else {
     return ParseFactor(false);
   }
 }
@@ -636,11 +739,12 @@ ASTPtr Parser::ParseFactor(bool in_bracket) {
   ASTPtr expr;
   if (in_bracket || IsTokenChar('(')) {
     // bracket expression
-    if (!in_bracket) NextToken();
+    if (!in_bracket)
+      NextToken();
     expr = ParseExpr();
-    if (!ExpectChar(')')) return nullptr;
-  }
-  else {
+    if (!ExpectChar(')'))
+      return nullptr;
+  } else {
     // other values
     expr = ParseValue();
   }
@@ -648,15 +752,12 @@ ASTPtr Parser::ParseFactor(bool in_bracket) {
   while (expr) {
     if (IsTokenChar('[')) {
       expr = ParseIndex(std::move(expr));
-    }
-    else if (IsTokenChar('(')) {
+    } else if (IsTokenChar('(')) {
       expr = ParseFuncCall(std::move(expr));
-    }
-    else if (IsTokenOperator(Operator::Access) ||
-             IsTokenOperator(Operator::Arrow)) {
+    } else if (IsTokenOperator(Operator::Access) ||
+               IsTokenOperator(Operator::Arrow)) {
       expr = ParseAccess(std::move(expr));
-    }
-    else {
+    } else {
       break;
     }
   }
@@ -666,11 +767,20 @@ ASTPtr Parser::ParseFactor(bool in_bracket) {
 ASTPtr Parser::ParseValue() {
   ASTPtr val;
   switch (cur_token_) {
-    case Token::Int: val = MakeAST<IntAST>(lexer_.int_val()); break;
-    case Token::Char: val = MakeAST<CharAST>(lexer_.char_val()); break;
-    case Token::String: val = MakeAST<StringAST>(lexer_.str_val()); break;
-    case Token::Id: val = MakeAST<VariableAST>(lexer_.id_val()); break;
-    default: return LogError("invalid value");
+  case Token::Int:
+    val = MakeAST<IntAST>(lexer_.int_val());
+    break;
+  case Token::Char:
+    val = MakeAST<CharAST>(lexer_.char_val());
+    break;
+  case Token::String:
+    val = MakeAST<StringAST>(lexer_.str_val());
+    break;
+  case Token::Id:
+    val = MakeAST<VariableAST>(lexer_.id_val());
+    break;
+  default:
+    return LogError("invalid value");
   }
   NextToken();
   return val;
@@ -682,7 +792,8 @@ ASTPtr Parser::ParseIndex(ASTPtr expr) {
   NextToken();
   // get index
   auto index = ParseExpr();
-  if (!index || !ExpectChar(']')) return nullptr;
+  if (!index || !ExpectChar(']'))
+    return nullptr;
   return MakeAST<IndexAST>(log, std::move(expr), std::move(index));
 }
 
@@ -695,15 +806,18 @@ ASTPtr Parser::ParseFuncCall(ASTPtr expr) {
   if (!IsTokenChar(')')) {
     for (;;) {
       auto arg = ParseExpr();
-      if (!arg) return nullptr;
+      if (!arg)
+        return nullptr;
       args.push_back(std::move(arg));
       // eat ','
-      if (!IsTokenChar(',')) break;
+      if (!IsTokenChar(','))
+        break;
       NextToken();
     }
   }
   // check & eat ')'
-  if (!ExpectChar(')')) return nullptr;
+  if (!ExpectChar(')'))
+    return nullptr;
   return MakeAST<CallStmt>(log, std::move(expr), std::move(args));
 }
 
@@ -713,28 +827,39 @@ ASTPtr Parser::ParseAccess(ASTPtr expr) {
   bool is_arrow = lexer_.op_val() != Operator::Access;
   NextToken();
   // get id
-  if (!ExpectId()) return nullptr;
+  if (!ExpectId())
+    return nullptr;
   auto id = lexer_.id_val();
   NextToken();
   return MakeAST<AccessAST>(log, is_arrow, std::move(expr), id);
 }
 
 ASTPtr Parser::ParseType() {
-  auto log = logger();
+  auto   log = logger();
   ASTPtr base;
   // get base type
   if (cur_token_ == Token::Keyword) {
     switch (lexer_.key_val()) {
-      case Keyword::Struct: base = ParseStructType(); break;
-      case Keyword::Enum: base = ParseEnumType(); break;
-      case Keyword::Const: base = ParseConst(); break;
-      default: base = ParsePrimType(); break;
+    case Keyword::Struct:
+      base = ParseStructType();
+      break;
+    case Keyword::Enum:
+      base = ParseEnumType();
+      break;
+    case Keyword::Const:
+      base = ParseConst();
+      break;
+    default:
+      base = ParsePrimType();
+      break;
     }
   }
-  if (!base) return LogError("invalid type");
+  if (!base)
+    return LogError("invalid type");
   // handle pointer type
   std::size_t depth = 0;
-  for (; IsTokenOperator(Operator::Mul); ++depth) NextToken();
+  for (; IsTokenOperator(Operator::Mul); ++depth)
+    NextToken();
   return depth ? MakeAST<PointerTypeAST>(log, std::move(base), depth)
                : std::move(base);
 }
@@ -744,15 +869,25 @@ ASTPtr Parser::ParsePrimType() {
   // get type
   Type type;
   switch (lexer_.key_val()) {
-    case Keyword::Void: type = Type::Void; break;
-    case Keyword::Int: type = Type::Int32; break;
-    case Keyword::Char: type = Type::Int8; break;
-    case Keyword::Unsigned: type = Type::UInt32; break;
-    default: return LogError("invalid primitive type");
+  case Keyword::Void:
+    type = Type::Void;
+    break;
+  case Keyword::Int:
+    type = Type::Int32;
+    break;
+  case Keyword::Char:
+    type = Type::Int8;
+    break;
+  case Keyword::Unsigned:
+    type = Type::UInt32;
+    break;
+  default:
+    return LogError("invalid primitive type");
   }
   NextToken();
   // handle 'unsigned int'
-  if (type == Type::UInt32 && IsTokenKeyword(Keyword::Int)) NextToken();
+  if (type == Type::UInt32 && IsTokenKeyword(Keyword::Int))
+    NextToken();
   return MakeAST<PrimTypeAST>(log, type);
 }
 
@@ -761,7 +896,8 @@ ASTPtr Parser::ParseStructType() {
   // eat 'struct'
   NextToken();
   // get id
-  if (!ExpectId()) return nullptr;
+  if (!ExpectId())
+    return nullptr;
   auto id = lexer_.id_val();
   NextToken();
   return MakeAST<StructTypeAST>(log, id);
@@ -772,7 +908,8 @@ ASTPtr Parser::ParseEnumType() {
   // eat 'enum'
   NextToken();
   // get id
-  if (!ExpectId()) return nullptr;
+  if (!ExpectId())
+    return nullptr;
   auto id = lexer_.id_val();
   NextToken();
   return MakeAST<EnumTypeAST>(log, id);
@@ -784,7 +921,8 @@ ASTPtr Parser::ParseConst() {
   NextToken();
   // get type
   auto type = ParseType();
-  if (!type) return nullptr;
+  if (!type)
+    return nullptr;
   return MakeAST<ConstTypeAST>(log, std::move(type));
 }
 
@@ -793,10 +931,12 @@ bool Parser::GetArrLens(ASTPtrList &arr_lens) {
     NextToken();
     // get expression
     auto expr = ParseExpr();
-    if (!expr) return false;
+    if (!expr)
+      return false;
     arr_lens.push_back(std::move(expr));
     // check & eat ']'
-    if (!ExpectChar(']')) return false;
+    if (!ExpectChar(']'))
+      return false;
   }
   return true;
 }
@@ -804,7 +944,7 @@ bool Parser::GetArrLens(ASTPtrList &arr_lens) {
 bool Parser::ExpectChar(char c) {
   if (!IsTokenChar(c)) {
     std::string msg = "expected '";
-    msg = msg + c + "'";
+    msg             = msg + c + "'";
     LogError(msg.c_str());
     return false;
   }

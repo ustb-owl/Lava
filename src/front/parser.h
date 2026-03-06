@@ -1,17 +1,17 @@
 #ifndef LAVA_FRONT_PARSER_H_
 #define LAVA_FRONT_PARSER_H_
 
-#include <string_view>
 #include <string>
+#include <string_view>
 
-#include "front/lexer.h"
 #include "define/ast.h"
+#include "front/lexer.h"
 #include "front/token.h"
 
 namespace lava::front {
 
 class Parser {
- public:
+public:
   Parser(Lexer &lexer) : lexer_(lexer) { Reset(); }
 
   // reset parser status
@@ -26,8 +26,7 @@ class Parser {
     if (cur_token_ == Token::End) {
       ended_ = true;
       return nullptr;
-    }
-    else {
+    } else {
       return ParseCompUnit();
     }
   }
@@ -42,12 +41,11 @@ class Parser {
   // return root node of ast
   define::ASTPtr &ast() { return rootNode; }
 
-
   // getters
   // returns true if parser met EOF
   bool ended() const { return ended_; }
 
- private:
+private:
   // get next token from lexer and skip all EOLs
   Token NextToken() { return cur_token_ = lexer_.NextToken(); }
 
@@ -73,7 +71,7 @@ class Parser {
 
   // create a new AST
   template <typename T, typename... Args>
-  define::ASTPtr MakeAST(Args &&... args) {
+  define::ASTPtr MakeAST(Args &&...args) {
     auto ast = std::make_unique<T>(std::forward<Args>(args)...);
     ast->set_logger(logger());
     return ast;
@@ -81,7 +79,7 @@ class Parser {
 
   // create a new AST with specific logger
   template <typename T, typename... Args>
-  define::ASTPtr MakeAST(LoggerPtr logger, Args &&... args) {
+  define::ASTPtr MakeAST(LoggerPtr logger, Args &&...args) {
     auto ast = std::make_unique<T>(std::forward<Args>(args)...);
     ast->set_logger(std::move(logger));
     return ast;
@@ -98,8 +96,7 @@ class Parser {
   define::ASTPtr ParseVarDef(const std::string &id);
   define::ASTPtr ParseInitVal();
 
-  define::ASTPtr ParseFuncHeader(define::ASTPtr type,
-                                 const std::string &id);
+  define::ASTPtr ParseFuncHeader(define::ASTPtr type, const std::string &id);
   define::ASTPtr ParseFuncParam();
 
   define::ASTPtr ParseStructDef(const std::string &id);
@@ -143,16 +140,17 @@ class Parser {
   // private getters
   // current logger
   LoggerPtr logger() {
-    return std::make_shared<Logger>(lexer_.logger().line_pos(), lexer_.logger().col_pos());
+    return std::make_shared<Logger>(lexer_.logger().line_pos(),
+                                    lexer_.logger().col_pos());
   }
 
-  bool           ended_;
-  Lexer         &lexer_;
-  Token          cur_token_;
+  bool   ended_;
+  Lexer &lexer_;
+  Token  cur_token_;
 
   define::ASTPtr rootNode;
 };
 
-}  // namespace lava::front
+} // namespace lava::front
 
-#endif  // LAVA_FRONT_PARSER_H_
+#endif // LAVA_FRONT_PARSER_H_

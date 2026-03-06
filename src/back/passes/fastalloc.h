@@ -1,9 +1,10 @@
 #ifndef LAVA_FASTALLOC_H
 #define LAVA_FASTALLOC_H
 
-#include "pass.h"
-#include "back/slot.h"
 #include <queue>
+
+#include "back/slot.h"
+#include "pass.h"
 
 namespace lava::back {
 
@@ -21,6 +22,6 @@ public:
   void runOn(const LLFunctionPtr &func) final;
 };
 
-}
+} // namespace lava::back
 
-#endif //LAVA_FASTALLOC_H
+#endif // LAVA_FASTALLOC_H

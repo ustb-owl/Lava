@@ -22,10 +22,11 @@ class StrengthReductionFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<StrengthReduction>();
-    return std::make_shared<PassInfo>(pass, "StrengthReduction", false, 1, STRENGTH_REDUCTION);
+    return std::make_shared<PassInfo>(pass, "StrengthReduction", false, 1,
+                                      STRENGTH_REDUCTION);
   }
 };
 
-}
+} // namespace lava::opt
 
 #endif // LAVA_STRENGTH_REDUCTION_H

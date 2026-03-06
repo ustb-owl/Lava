@@ -1,8 +1,9 @@
 #include "irbuilder.h"
-#include "common/casting.h"
 
 #include <deque>
 #include <iostream>
+
+#include "common/casting.h"
 
 using namespace lava::define;
 
@@ -14,7 +15,7 @@ namespace lava::mid {
 int GetLinearArrayLength(const TypePtr &ptr) {
   DBG_ASSERT(ptr->IsArray(), "not array type");
   TypePtr def = ptr;
-  int len = ptr->GetLength();
+  int     len = ptr->GetLength();
   while ((def = def->GetDerefedType()) != nullptr) {
     int tmp = def->GetLength();
     len *= tmp ? tmp : 1;
@@ -36,10 +37,10 @@ TypePtr GetArrayLinearBaseType(const TypePtr &type) {
 
 SSAPtrList GetArrayInitElement(InitListAST *node, IRBuilder *irbuiler) {
   SSAPtrList elems;
-  auto &module = irbuiler->module();
+  auto      &module = irbuiler->module();
 
   /* Get current dimension size */
-  auto &array_lens = module.array_lens();
+  auto       &array_lens = module.array_lens();
   std::size_t len, cur = array_lens.front();
   array_lens.pop_front();
 
@@ -60,7 +61,8 @@ SSAPtrList GetArrayInitElement(InitListAST *node, IRBuilder *irbuiler) {
       DBG_ASSERT(elem != nullptr, "emit array element failed");
       elems.push_back(std::move(elem));
     } else {
-      auto tmp = GetArrayInitElement(static_cast<InitListAST *>(it.get()), irbuiler);
+      auto tmp =
+          GetArrayInitElement(static_cast<InitListAST *>(it.get()), irbuiler);
       elems.insert(elems.end(), tmp.begin(), tmp.end());
     }
   }
@@ -78,7 +80,7 @@ SSAPtrList GetArrayInitElement(InitListAST *node, IRBuilder *irbuiler) {
 
 void IRBuilder::SetInsertPointAtEntry() {
   auto func_entry = _module.FuncEntry();
-  auto last = func_entry->inst_end();
+  auto last       = func_entry->inst_end();
   _module.SetInsertPoint(func_entry, --last);
 }
 
@@ -90,13 +92,9 @@ SSAPtr IRBuilder::visit(IntAST *node) {
   return _module.CreateConstInt(node->value());
 }
 
-SSAPtr IRBuilder::visit(CharAST *node) {
-  return nullptr;
-}
+SSAPtr IRBuilder::visit(CharAST *node) { return nullptr; }
 
-SSAPtr IRBuilder::visit(StringAST *node) {
-  return nullptr;
-}
+SSAPtr IRBuilder::visit(StringAST *node) { return nullptr; }
 
 SSAPtr IRBuilder::visit(VariableAST *node) {
   auto context = _module.SetContext(node->logger());
@@ -108,7 +106,6 @@ SSAPtr IRBuilder::visit(VariableAST *node) {
 
   // create gep at array's first use
   if (varType->IsPointer() && varType->GetDerefedType()->IsArray()) {
-
     // gep at function entry first if expr is global array
     if (_module.IsGlobalVariable(var_ssa)) {
       // save global array's origin SSA
@@ -120,9 +117,9 @@ SSAPtr IRBuilder::visit(VariableAST *node) {
 
       // generate array index: const zero
       SSAPtrList acc_index;
-      auto zero = _module.GetZeroValue(Type::Int32);
-      acc_index.push_back(zero);  // get array address
-      acc_index.push_back(zero);  // get array head address
+      auto       zero = _module.GetZeroValue(Type::Int32);
+      acc_index.push_back(zero); // get array address
+      acc_index.push_back(zero); // get array head address
 
       // create gep, set is global copy
       var_ssa = _module.CreateElemAccess(var_ssa, acc_index);
@@ -133,7 +130,6 @@ SSAPtr IRBuilder::visit(VariableAST *node) {
       // replace it with current gep
       _module.ReplaceValue(node->id(), var_ssa);
     }
-
   }
 
   return var_ssa;
@@ -159,32 +155,35 @@ SSAPtr IRBuilder::visit(VariableDecl *node) {
 SSAPtr IRBuilder::visit(VariableDefAST *node) {
   auto context = _module.SetContext(node->logger());
 
-  bool is_array = !node->arr_lens().empty();
-  const auto &type = node->ast_type();
-  SSAPtr variable;
+  bool        is_array = !node->arr_lens().empty();
+  const auto &type     = node->ast_type();
+  SSAPtr      variable;
 
   // global variable
   // TODO: need to handle default init
   if (_module.ValueSymTab()->is_root()) {
-    GlobalVarPtr var = _module.CreateGlobalVar(!type->IsConst(), node->id(), type);
+    GlobalVarPtr var =
+        _module.CreateGlobalVar(!type->IsConst(), node->id(), type);
     if (node->hasInit()) {
       auto &init = node->init();
-      DBG_ASSERT(init->IsLiteral(), "init value of global variable should be const expr");
+      DBG_ASSERT(init->IsLiteral(),
+                 "init value of global variable should be const expr");
 
       /* set array initlist dimension */
       if (!node->arr_lens().empty()) {
         std::deque<int> array_lens;
-        TypePtr def = node->init()->ast_type();
+        TypePtr         def = node->init()->ast_type();
         do {
           int len = def->GetLength();
-          if (len == 0) break;
+          if (len == 0)
+            break;
           array_lens.push_back(len);
         } while ((def = def->GetDerefedType()) != nullptr);
         _module.SetArrayLens(array_lens);
       }
 
       SSAPtr init_expr;
-      auto init_ssa = init->CodeGeneAction(this);
+      auto   init_ssa = init->CodeGeneAction(this);
 
       auto def = init_ssa->type()->GetDerefedType();
       if (def && def->IsArray()) {
@@ -203,13 +202,13 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
             break;
           }
         }
-        if (is_all_zero) init_expr = nullptr;
+        if (is_all_zero)
+          init_expr = nullptr;
 
       } else {
         init_expr = _module.CreateCastInst(init_ssa, type);
         DBG_ASSERT(init_expr != nullptr, "emit init of global variable failed");
       }
-
 
       var->set_init(init_expr);
     } else {
@@ -220,7 +219,8 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
         TypePtr base_type = GetArrayLinearBaseType(type);
 
         // generate new type of linear array
-        auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
+        auto new_type =
+            std::make_shared<ArrayType>(base_type, array_len, false);
         var->set_type(MakePointer(new_type));
       }
       // TODO: handle the zeroinitializer
@@ -235,14 +235,14 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
     }
 
     if (node->hasInit()) {
-
       /* set array initlist dimension */
       if (!node->arr_lens().empty()) {
         std::deque<int> array_lens;
-        TypePtr def = node->init()->ast_type();
+        TypePtr         def = node->init()->ast_type();
         do {
           int len = def->GetLength();
-          if (len == 0) break;
+          if (len == 0)
+            break;
           array_lens.push_back(len);
         } while ((def = def->GetDerefedType()) != nullptr);
         _module.SetArrayLens(array_lens);
@@ -257,7 +257,6 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
         variable = init_ssa;
       }
     } else {
-
       // create local array without init
       if (is_array) {
         int array_len = GetLinearArrayLength(type);
@@ -266,13 +265,14 @@ SSAPtr IRBuilder::visit(VariableDefAST *node) {
 
         // alloca a linear array
         // generate new type of linear array
-        auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
+        auto new_type =
+            std::make_shared<ArrayType>(base_type, array_len, false);
 
         auto val = _module.CreateAlloca(new_type);
 
         // emit gep instruction
         SSAPtrList index;
-        auto zero = _module.GetZeroValue(Type::Int32);
+        auto       zero = _module.GetZeroValue(Type::Int32);
         index.push_back(zero);
         index.push_back(zero);
 
@@ -291,9 +291,9 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
   // update context
   auto context = _module.SetContext(node->logger());
 
-  SSAPtr val;
-  const auto &type = node->ast_type();
-  bool is_root = _module.ValueSymTab()->is_root();
+  SSAPtr      val;
+  const auto &type      = node->ast_type();
+  bool        is_root   = _module.ValueSymTab()->is_root();
   std::size_t array_len = GetLinearArrayLength(type);
 
   // get base element type
@@ -302,9 +302,9 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
   // create an array in rodata if its init list is const literal
   if (node->IsLiteral()) {
     ArrayPtr const_array;
-    auto arr_name = _module.GetArrayName();
+    auto     arr_name = _module.GetArrayName();
 
-    bool isEmpty = false;
+    bool       isEmpty = false;
     SSAPtrList exprs;
 
     /* handle empty initial list */
@@ -325,7 +325,8 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
       // add to global symbol table
       if (is_root) {
         // generate new type of linear array
-        auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
+        auto new_type =
+            std::make_shared<ArrayType>(base_type, array_len, false);
         const_array = _module.CreateArray(exprs, new_type, arr_name);
         return const_array;
       }
@@ -342,7 +343,8 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
       // add to global symbol table
       if (is_root) {
         // generate new type of linear array
-        auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
+        auto new_type =
+            std::make_shared<ArrayType>(base_type, array_len, false);
         const_array = _module.CreateArray(exprs, new_type, arr_name);
         return const_array;
       }
@@ -376,7 +378,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
 
     // create a linear array on stack
     auto new_type = std::make_shared<ArrayType>(base_type, array_len, false);
-    val = _module.CreateAlloca(new_type);
+    val           = _module.CreateAlloca(new_type);
 
     // create zero
     auto zero = _module.GetZeroValue(Type::Int32);
@@ -388,35 +390,36 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
     // emit gep instruction
     SSAPtrList index;
     zero = _module.GetZeroValue(Type::Int32);
-    index.push_back(zero);  // TODO: the same const, unknown if it has side effect on use-def
+    index.push_back(zero); // TODO: the same const, unknown if it has side
+                           // effect on use-def
     index.push_back(zero);
 
     val = _module.CreateElemAccess(val, index);
 
     // memset with zero
     std::vector<SSAPtr> args;
-    auto memset_ssa = _module.GetFunction("memset");
+    auto                memset_ssa = _module.GetFunction("memset");
 
     // set arguments
-    args.push_back(val);     // array address
-    args.push_back(zero);    // array value
-    args.push_back(length);  // array length
+    args.push_back(val);    // array address
+    args.push_back(zero);   // array value
+    args.push_back(length); // array length
     _module.CreateCallInst(memset_ssa, args);
 
     // if is empty then return
-    if (isEmpty) return val;
+    if (isEmpty)
+      return val;
 
     // copy init value
     auto it = exprs.begin();
     for (std::size_t i = 0; i < exprs.size(); i++) {
       if (!(*it)->IsConst() || !dyn_cast<ConstantInt>(*it)->IsZero()) {
-        auto ptr = _module.CreateElemAccess(val, SSAPtrList{_module.CreateConstInt(i)});
+        auto ptr = _module.CreateElemAccess(
+            val, SSAPtrList{_module.CreateConstInt(i)});
         _module.CreateAssign(ptr, *it);
       }
       it++;
     }
-
-
 
     return val;
   } else {
@@ -430,7 +433,7 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
 
     // emit gep instruction
     SSAPtrList index;
-    auto zero = _module.GetZeroValue(Type::Int32);
+    auto       zero = _module.GetZeroValue(Type::Int32);
     index.push_back(zero);
     index.push_back(zero);
 
@@ -441,20 +444,21 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
 
     // memset with zero
     std::vector<SSAPtr> args;
-    auto memset_ssa = _module.GetFunction("memset");
+    auto                memset_ssa = _module.GetFunction("memset");
 
     // set arguments
-    args.push_back(val);     // array address
-    args.push_back(zero);    // array value
-    args.push_back(length);  // array length
+    args.push_back(val);    // array address
+    args.push_back(zero);   // array value
+    args.push_back(length); // array length
     _module.CreateCallInst(memset_ssa, args);
 
     // generate elements
     SSAPtrList exprs = GetArrayInitElement(node, this);
-    auto it = exprs.begin();
+    auto       it    = exprs.begin();
     for (std::size_t i = 0; i < exprs.size(); i++) {
       if (!(*it)->IsConst() || !dyn_cast<ConstantInt>(*it)->IsZero()) {
-        auto ptr = _module.CreateElemAccess(val, SSAPtrList{_module.CreateConstInt(i)});
+        auto ptr = _module.CreateElemAccess(
+            val, SSAPtrList{_module.CreateConstInt(i)});
         _module.CreateAssign(ptr, *it);
       }
       it++;
@@ -462,21 +466,20 @@ SSAPtr IRBuilder::visit(InitListAST *node) {
 
     for (std::size_t i = exprs.size(); i < node->exprs().size(); i++) {
       auto elem = node->exprs()[i]->CodeGeneAction(this);
-      auto ptr = _module.CreateElemAccess(val, SSAPtrList{_module.CreateConstInt(i)});
+      auto ptr =
+          _module.CreateElemAccess(val, SSAPtrList{_module.CreateConstInt(i)});
       _module.CreateAssign(ptr, elem);
     }
 
     return val;
   }
-
 }
 
 SSAPtr IRBuilder::visit(BinaryStmt *node) {
   auto lhs = node->lhs()->CodeGeneAction(this);
   DBG_ASSERT(lhs != nullptr, "lhs generate failed");
-  SSAPtr rhs = nullptr;
+  SSAPtr rhs      = nullptr;
   SSAPtr bin_inst = nullptr;
-
 
   TypePtr type = nullptr;
   if (lhs->type()->IsPointer()) {
@@ -486,13 +489,14 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
   }
 
   const auto &func = _module.InsertPoint()->getParent();
-  auto zero = _module.GetZeroValue(type->GetType());
+  auto        zero = _module.GetZeroValue(type->GetType());
   if (node->op() == front::Operator::LAnd) {
-    bin_inst = _module.CreateAlloca(MakePrimType(Type::Bool, false));
-    auto lhs_true = _module.CreateBlock(func, "lhs.true");
+    bin_inst       = _module.CreateAlloca(MakePrimType(Type::Bool, false));
+    auto lhs_true  = _module.CreateBlock(func, "lhs.true");
     auto lhs_false = _module.CreateBlock(func, "lhs.false");
-    auto land_end = _module.CreateBlock(func, "land.end");
-    auto cond = _module.CreateICmpInst(BinaryStmt::Operator::NotEqual, zero, lhs);
+    auto land_end  = _module.CreateBlock(func, "land.end");
+    auto cond =
+        _module.CreateICmpInst(BinaryStmt::Operator::NotEqual, zero, lhs);
     _module.CreateBranch(cond, lhs_true, lhs_false);
 
     /* LHS true */
@@ -502,12 +506,13 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     DBG_ASSERT(rhs != nullptr, "rhs generate failed");
 
     SSAPtr RHS = rhs;
-    if (NeedLoad(rhs)) RHS = _module.CreateLoad(rhs);
+    if (NeedLoad(rhs))
+      RHS = _module.CreateLoad(rhs);
 
     // convert to bool if necessary
     if (RHS->type()->GetSize() > 1) {
       zero = _module.GetZeroValue(type->GetType());
-      RHS = _module.CreateICmpInst(front::Operator::NotEqual, zero, RHS);
+      RHS  = _module.CreateICmpInst(front::Operator::NotEqual, zero, RHS);
     }
 
 #if 0
@@ -547,11 +552,12 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     bin_inst = _module.CreateLoad(bin_inst);
 
   } else if (node->op() == front::Operator::LOr) {
-    bin_inst = _module.CreateAlloca(MakePrimType(Type::Bool, false));
-    auto lhs_true = _module.CreateBlock(func, "lhs.true");
+    bin_inst       = _module.CreateAlloca(MakePrimType(Type::Bool, false));
+    auto lhs_true  = _module.CreateBlock(func, "lhs.true");
     auto lhs_false = _module.CreateBlock(func, "lhs.false");
-    auto lor_end = _module.CreateBlock(func, "lor.end");
-    auto cond = _module.CreateICmpInst(BinaryStmt::Operator::NotEqual, zero, lhs);
+    auto lor_end   = _module.CreateBlock(func, "lor.end");
+    auto cond =
+        _module.CreateICmpInst(BinaryStmt::Operator::NotEqual, zero, lhs);
     _module.CreateBranch(cond, lhs_true, lhs_false);
 
     /* LHS false */
@@ -560,12 +566,13 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
     DBG_ASSERT(rhs != nullptr, "rhs generate failed");
 
     SSAPtr RHS = rhs;
-    if (NeedLoad(rhs)) RHS = _module.CreateLoad(rhs);
+    if (NeedLoad(rhs))
+      RHS = _module.CreateLoad(rhs);
 
     // convert to bool if necessary
     if (RHS->type()->GetSize() > 1) {
       zero = _module.GetZeroValue(type->GetType());
-      RHS = _module.CreateICmpInst(front::Operator::NotEqual, zero, RHS);
+      RHS  = _module.CreateICmpInst(front::Operator::NotEqual, zero, RHS);
     }
 
 #if 0
@@ -610,11 +617,11 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
 
     const auto &lty = lhs->type();
     const auto &rty = rhs->type();
-    SSAPtr LHS = lhs, RHS = rhs;
+    SSAPtr      LHS = lhs, RHS = rhs;
     if (lty->IsInteger() && rty->IsInteger()) {
       const auto &ty = GetCommonType(lty, rty);
-      LHS = _module.CreateCastInst(lhs, ty);
-      RHS = _module.CreateCastInst(rhs, ty);
+      LHS            = _module.CreateCastInst(lhs, ty);
+      RHS            = _module.CreateCastInst(rhs, ty);
     }
 
     bin_inst = _module.CreateBinaryOperator(node->op(), LHS, RHS);
@@ -625,9 +632,9 @@ SSAPtr IRBuilder::visit(BinaryStmt *node) {
 }
 
 SSAPtr IRBuilder::visit(UnaryStmt *node) {
-  using Op = front::Operator;
+  using Op     = front::Operator;
   auto context = _module.SetContext(node->logger());
-  auto opr = node->opr()->CodeGeneAction(this);
+  auto opr     = node->opr()->CodeGeneAction(this);
 
   TypePtr type = nullptr;
   if (opr->type()->IsPointer()) {
@@ -636,38 +643,42 @@ SSAPtr IRBuilder::visit(UnaryStmt *node) {
     type = opr->type();
   }
   switch (node->op()) {
-    case Op::Pos:
-      return opr;
-    case Op::Neg: {
-      auto operand = opr;
-      if (operand->type()->GetSize() == 1) {
-        operand = _module.CreateCastInst(operand, MakePrimType(define::Type::Int32, operand->type()->IsRightValue()));
-      }
-      auto zero = _module.GetZeroValue(Type::Int32);
-      auto res = _module.CreateBinaryOperator(Op::Sub, zero, operand);
-      return res;
+  case Op::Pos:
+    return opr;
+  case Op::Neg: {
+    auto operand = opr;
+    if (operand->type()->GetSize() == 1) {
+      operand = _module.CreateCastInst(
+          operand,
+          MakePrimType(define::Type::Int32, operand->type()->IsRightValue()));
     }
-    case Op::Not: {
-      auto allBitsOne = GetAllOneValue(type->GetType());
-      auto res = _module.CreateBinaryOperator(Op::Xor, opr, allBitsOne);
-      return res;
+    auto zero = _module.GetZeroValue(Type::Int32);
+    auto res  = _module.CreateBinaryOperator(Op::Sub, zero, operand);
+    return res;
+  }
+  case Op::Not: {
+    auto allBitsOne = GetAllOneValue(type->GetType());
+    auto res        = _module.CreateBinaryOperator(Op::Xor, opr, allBitsOne);
+    return res;
+  }
+  case Op::LNot: {
+    // convert value to bool type if necessary
+    SSAPtr tobool = opr;
+    if (opr->type()->IsInteger() ||
+        (opr->type()->GetDerefedType() &&
+         opr->type()->GetDerefedType()->IsInteger())) {
+      auto zero = _module.GetZeroValue(type->GetType());
+      tobool    = _module.CreateICmpInst(Op::NotEqual, zero, opr);
     }
-    case Op::LNot: {
-      // convert value to bool type if necessary
-      SSAPtr tobool = opr;
-      if (opr->type()->IsInteger() || (opr->type()->GetDerefedType() && opr->type()->GetDerefedType()->IsInteger())) {
-        auto zero = _module.GetZeroValue(type->GetType());
-        tobool = _module.CreateICmpInst(Op::NotEqual, zero, opr);
-      }
 
-      // logic not
-      auto trueConst = _module.CreateConstInt(1, Type::Bool);
-      auto lnot = _module.CreateBinaryOperator(Op::Xor, trueConst, tobool);
-      return lnot;
-    }
-    default:
-      DBG_ASSERT(0, "not unary operator");
-      return nullptr;
+    // logic not
+    auto trueConst = _module.CreateConstInt(1, Type::Bool);
+    auto lnot      = _module.CreateBinaryOperator(Op::Xor, trueConst, tobool);
+    return lnot;
+  }
+  default:
+    DBG_ASSERT(0, "not unary operator");
+    return nullptr;
   }
 }
 
@@ -676,37 +687,37 @@ SSAPtr IRBuilder::visit(ControlAST *node) {
   auto context = _module.SetContext(node->logger());
 
   // create a new block
-  const auto &func = _module.InsertPoint()->getParent();
-  auto new_block = _module.CreateBlock(func);
+  const auto &func      = _module.InsertPoint()->getParent();
+  auto        new_block = _module.CreateBlock(func);
 
   switch (node->type()) {
+  case ControlAST::Type::Break:
+  case ControlAST::Type::Continue: {
+    // generate target
+    const auto &bk_cont = _module.BreakCont().top();
+    auto target = node->type() == ControlAST::Type::Break ? bk_cont.first
+                                                          : bk_cont.second;
 
-    case ControlAST::Type::Break:
-    case ControlAST::Type::Continue: {
-      // generate target
-      const auto &bk_cont = _module.BreakCont().top();
-      auto target = node->type() == ControlAST::Type::Break ? bk_cont.first : bk_cont.second;
+    // jump to target block
+    _module.CreateJump(target);
+    break;
+  }
+  case ControlAST::Type::Return: {
+    if (node->expr()) {
+      // generate return value
+      auto retval = node->expr()->CodeGeneAction(this);
+      DBG_ASSERT(retval != nullptr, "emit return value failed");
 
-      // jump to target block
-      _module.CreateJump(target);
-      break;
+      // copy return value
+      auto store_inst = _module.CreateAssign(_module.ReturnValue(), retval);
+      DBG_ASSERT(store_inst != nullptr, "copy return value failed");
     }
-    case ControlAST::Type::Return: {
-      if (node->expr()) {
-        // generate return value
-        auto retval = node->expr()->CodeGeneAction(this);
-        DBG_ASSERT(retval != nullptr, "emit return value failed");
 
-        // copy return value
-        auto store_inst = _module.CreateAssign(_module.ReturnValue(), retval);
-        DBG_ASSERT(store_inst != nullptr, "copy return value failed");
-      }
+    auto jump_inst = _module.CreateJump(_module.FuncExit());
+    DBG_ASSERT(jump_inst != nullptr, "emit jump instruction failed");
 
-      auto jump_inst = _module.CreateJump(_module.FuncExit());
-      DBG_ASSERT(jump_inst != nullptr, "emit jump instruction failed");
-
-      break;
-    }
+    break;
+  }
   }
   // set insert point at new block
   _module.SetInsertPoint(new_block);
@@ -715,7 +726,7 @@ SSAPtr IRBuilder::visit(ControlAST *node) {
 
 SSAPtr IRBuilder::visit(CompoundStmt *node) {
   // make new environment when not in function
-  auto guard = !_in_func ? NewEnv() : xstl::Guard(nullptr);
+  auto guard    = !_in_func ? NewEnv() : xstl::Guard(nullptr);
   bool set_name = false;
   if (_in_func) {
     set_name = true;
@@ -738,20 +749,20 @@ SSAPtr IRBuilder::visit(CompoundStmt *node) {
  *            cond_block
  *           /          \
  *         then        else
- *          |            |  ------> else and else_ssa and be merged in the opt stage
- *       then_ssa    else_ssa
+ *          |            |  ------> else and else_ssa and be merged in the opt
+ * stage then_ssa    else_ssa
  *           \          /
  *            end_block
  */
 SSAPtr IRBuilder::visit(IfElseStmt *node) {
   auto context = _module.SetContext(node->logger());
-  auto func = _module.InsertPoint()->getParent();
+  auto func    = _module.InsertPoint()->getParent();
 
   // create if-else blocks
-  auto &cond = node->cond();
-  auto then_block = _module.CreateBlock(func, "if.then");
-  auto else_block = _module.CreateBlock(func, "if.else");
-  auto end_block = _module.CreateBlock(func, "if.end");
+  auto &cond       = node->cond();
+  auto  then_block = _module.CreateBlock(func, "if.then");
+  auto  else_block = _module.CreateBlock(func, "if.else");
+  auto  end_block  = _module.CreateBlock(func, "if.end");
 
   auto cond_block = cond->CodeGeneAction(this);
   DBG_ASSERT(cond_block != nullptr, "emit condition statement failed");
@@ -767,7 +778,7 @@ SSAPtr IRBuilder::visit(IfElseStmt *node) {
   _module.SetInsertPoint(else_block);
   if (node->hasElse()) {
     auto &else_ast = node->else_then();
-    auto else_ssa = else_ast->CodeGeneAction(this);
+    auto  else_ssa = else_ast->CodeGeneAction(this);
   }
   _module.CreateJump(end_block);
 
@@ -800,20 +811,19 @@ SSAPtr IRBuilder::visit(CallStmt *node) {
 
 SSAPtr IRBuilder::visit(ProtoTypeAST *node) {
   std::string info;
-  auto context = _module.SetContext(node->logger());
+  auto        context = _module.SetContext(node->logger());
 
   // generate function prototype
-  FuncPtr func;
-  auto functions = _module.Functions();
+  FuncPtr     func;
+  auto        functions = _module.Functions();
   const auto &func_name = node->id();
   const auto &func_type = node->ast_type();
   if (!_module.GetFunction(func_name)) {
-
     func = _module.CreateFunction(func_name, func_type, !_in_func);
     functions.push_back(func);
 
     // add to environment
-    auto symbols = _module.ValueSymTab();
+    auto        symbols   = _module.ValueSymTab();
     const auto &sym_table = _in_func ? symbols->outer() : symbols;
     sym_table->AddItem(func_name, func);
   } else {
@@ -822,7 +832,8 @@ SSAPtr IRBuilder::visit(ProtoTypeAST *node) {
   }
 
   // return if is just a declaration
-  if (!_in_func) return nullptr;
+  if (!_in_func)
+    return nullptr;
 
   // create entry block to init the parameters
   auto entry = _module.CreateBlock(func, "entry");
@@ -830,7 +841,7 @@ SSAPtr IRBuilder::visit(ProtoTypeAST *node) {
   _module.SetInsertPoint(entry);
   std::size_t index = 0;
   for (const auto &it : node->params()) {
-    auto arg_name = it->ArgName();
+    auto arg_name    = it->ArgName();
     auto param_alloc = it->CodeGeneAction(this);
     // set param_name
     auto arg_ref = _module.CreateArgRef(func, index++, arg_name);
@@ -842,17 +853,19 @@ SSAPtr IRBuilder::visit(ProtoTypeAST *node) {
 
       _module.ReplaceValue(it->ArgName(), loadInst);
     } else {
-      std::static_pointer_cast<AllocaInst>(param_alloc)->set_name(arg_name + ".addr");
+      std::static_pointer_cast<AllocaInst>(param_alloc)
+          ->set_name(arg_name + ".addr");
     }
   }
-
 
   // create func_exit block to init the return value
   // TODO: not sure
   auto args_type = func_type->GetArgsType().value();
-  auto ret_type = func_type->GetReturnType(args_type);
-  auto ret_val = (ret_type->IsVoid()) ? nullptr : _module.CreateAlloca(ret_type);
-  if (ret_val) std::static_pointer_cast<AllocaInst>(ret_val)->set_name("retval");
+  auto ret_type  = func_type->GetReturnType(args_type);
+  auto ret_val =
+      (ret_type->IsVoid()) ? nullptr : _module.CreateAlloca(ret_type);
+  if (ret_val)
+    std::static_pointer_cast<AllocaInst>(ret_val)->set_name("retval");
   _module.SetRetValue(ret_val);
 
   // jump to exit
@@ -904,10 +917,7 @@ SSAPtr IRBuilder::visit(FuncParamAST *node) {
   return param;
 }
 
-SSAPtr IRBuilder::visit(PrimTypeAST *node) {
-  return nullptr;
-}
-
+SSAPtr IRBuilder::visit(PrimTypeAST *node) { return nullptr; }
 
 // create while block
 /*
@@ -921,14 +931,14 @@ SSAPtr IRBuilder::visit(PrimTypeAST *node) {
  *
  */
 SSAPtr IRBuilder::visit(WhileStmt *node) {
-  auto context = _module.SetContext(node->logger());
-  auto cur_insert = _module.InsertPoint();  // save current insert point
-  auto func = cur_insert->getParent();
+  auto context    = _module.SetContext(node->logger());
+  auto cur_insert = _module.InsertPoint(); // save current insert point
+  auto func       = cur_insert->getParent();
 
   // create while blocks
   auto cond_block = _module.CreateBlock(func, "while.cond");
-  auto loop_body = _module.CreateBlock(func, "loop.body");
-  auto while_end = _module.CreateBlock(func, "while.end");
+  auto loop_body  = _module.CreateBlock(func, "loop.body");
+  auto while_end  = _module.CreateBlock(func, "while.end");
 
   // TODO: handle break/continue
   // Add to break/continue stack
@@ -963,7 +973,8 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
 
   auto index = node->index()->CodeGeneAction(this);
   DBG_ASSERT(index != nullptr, "emit index for accessing failed");
-  if (!index->type()->IsConst() && !IsBinaryOperator(index) && !IsCallInst(index)) {
+  if (!index->type()->IsConst() && !IsBinaryOperator(index) &&
+      !IsCallInst(index)) {
     index = _module.CreateLoad(index);
     DBG_ASSERT(index != nullptr, "emit load index failed");
   }
@@ -974,14 +985,14 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
 
   SSAPtr ptr;
 
-
   if (expr_ty->GetDerefedType()->IsArray()) {
     // get rest length of the array
-    auto derefType = expr_ty->GetDerefedType();
-    int dim_len = GetLinearArrayLength(derefType);
+    auto   derefType   = expr_ty->GetDerefedType();
+    int    dim_len     = GetLinearArrayLength(derefType);
     SSAPtr dim_len_ssa = _module.CreateConstInt(dim_len);
 
-    index = _module.CreateBinaryOperator(BinaryStmt::Operator::Mul, dim_len_ssa, index);
+    index = _module.CreateBinaryOperator(BinaryStmt::Operator::Mul, dim_len_ssa,
+                                         index);
   }
 
   if (index->isInstruction()) {
@@ -999,57 +1010,31 @@ SSAPtr IRBuilder::visit(IndexAST *node) {
   return ptr;
 }
 
-SSAPtr IRBuilder::visit(StructDefAST *) {
-  return lava::mid::SSAPtr();
-}
+SSAPtr IRBuilder::visit(StructDefAST *) { return lava::mid::SSAPtr(); }
 
-SSAPtr IRBuilder::visit(EnumDefAST *) {
-  return lava::mid::SSAPtr();
-}
+SSAPtr IRBuilder::visit(EnumDefAST *) { return lava::mid::SSAPtr(); }
 
-SSAPtr IRBuilder::visit(StructElemAST *) {
-  return lava::mid::SSAPtr();
-}
+SSAPtr IRBuilder::visit(StructElemAST *) { return lava::mid::SSAPtr(); }
 
-SSAPtr IRBuilder::visit(StructElemDefAST *) {
-  return lava::mid::SSAPtr();
-}
+SSAPtr IRBuilder::visit(StructElemDefAST *) { return lava::mid::SSAPtr(); }
 
-SSAPtr IRBuilder::visit(TypeAliasAST *) {
-  return lava::mid::SSAPtr();
-}
+SSAPtr IRBuilder::visit(TypeAliasAST *) { return lava::mid::SSAPtr(); }
 
-SSAPtr IRBuilder::visit(EnumElemAST *) {
-  return lava::mid::SSAPtr();
-}
+SSAPtr IRBuilder::visit(EnumElemAST *) { return lava::mid::SSAPtr(); }
 
-SSAPtr IRBuilder::visit(CastStmt *) {
-  return lava::mid::SSAPtr();
-}
+SSAPtr IRBuilder::visit(CastStmt *) { return lava::mid::SSAPtr(); }
 
-SSAPtr IRBuilder::visit(AccessAST *) {
-  return lava::mid::SSAPtr();
-}
+SSAPtr IRBuilder::visit(AccessAST *) { return lava::mid::SSAPtr(); }
 
-SSAPtr IRBuilder::visit(StructTypeAST *) {
-  return lava::mid::SSAPtr();
-}
+SSAPtr IRBuilder::visit(StructTypeAST *) { return lava::mid::SSAPtr(); }
 
-SSAPtr IRBuilder::visit(EnumTypeAST *) {
-  return lava::mid::SSAPtr();
-}
+SSAPtr IRBuilder::visit(EnumTypeAST *) { return lava::mid::SSAPtr(); }
 
-SSAPtr IRBuilder::visit(ConstTypeAST *) {
-  return lava::mid::SSAPtr();
-}
+SSAPtr IRBuilder::visit(ConstTypeAST *) { return lava::mid::SSAPtr(); }
 
-SSAPtr IRBuilder::visit(PointerTypeAST *) {
-  return lava::mid::SSAPtr();
-}
+SSAPtr IRBuilder::visit(PointerTypeAST *) { return lava::mid::SSAPtr(); }
 
-SSAPtr IRBuilder::visit(UserTypeAST *) {
-  return lava::mid::SSAPtr();
-}
+SSAPtr IRBuilder::visit(UserTypeAST *) { return lava::mid::SSAPtr(); }
 
 SSAPtr IRBuilder::visit(TranslationUnitDecl *node) {
   auto guard = NewEnv();
@@ -1061,8 +1046,8 @@ SSAPtr IRBuilder::visit(TranslationUnitDecl *node) {
 }
 
 // print error message
-SSAPtr IRBuilder::LogError(const front::LoggerPtr &log,
-                           std::string &message, const std::string &id) {
+SSAPtr IRBuilder::LogError(const front::LoggerPtr &log, std::string &message,
+                           const std::string &id) {
   log->LogError(message, id);
   return nullptr;
 }
@@ -1072,5 +1057,4 @@ SSAPtr IRBuilder::LogError(const front::LoggerPtr &log, std::string &message) {
   return nullptr;
 }
 
-
-}
+} // namespace lava::mid

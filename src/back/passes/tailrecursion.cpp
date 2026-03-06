@@ -1,4 +1,5 @@
 #include "tailrecursion.h"
+
 #include "common/casting.h"
 
 namespace lava::back {
@@ -19,11 +20,13 @@ namespace lava::back {
     return 1;
  */
 void TailRecursionTransform::runOn(const LLFunctionPtr &func) {
-  if (!func->is_tail_recursion()) return;
+  if (!func->is_tail_recursion())
+    return;
 
   std::string func_name = func->function()->GetFunctionName();
-  auto pre_head = std::make_shared<LLBasicBlock>(func_name + "_pre_head", nullptr, func);
-  auto head = func->blocks().begin();
+  auto        pre_head =
+      std::make_shared<LLBasicBlock>(func_name + "_pre_head", nullptr, func);
+  auto head  = func->blocks().begin();
   auto entry = func->entry();
   entry->SetBlockName(func_name + "_entry");
   auto jump_to_entry = std::make_shared<LLJump>(entry);
@@ -37,13 +40,13 @@ void TailRecursionTransform::runOn(const LLFunctionPtr &func) {
           if (call_inst->function() == func->function()) {
             auto jump_inst = std::make_shared<LLJump>(entry);
             block->insts().insert(it, jump_inst);
-            while (it != block->insts().end()) it = block->insts().erase(it);
+            while (it != block->insts().end())
+              it = block->insts().erase(it);
           }
         }
       }
     }
   }
-
 }
 
-}
+} // namespace lava::back

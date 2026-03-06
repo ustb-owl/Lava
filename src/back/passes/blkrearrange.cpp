@@ -1,12 +1,13 @@
 #include "blkrearrange.h"
-#include "common/casting.h"
+
 #include "back/arch/arm/instdef.h"
+#include "common/casting.h"
 
 namespace lava::back {
 
-
 void BlockRearrange::runOn(const LLFunctionPtr &func) {
-  if (func->is_decl()) return;
+  if (func->is_decl())
+    return;
   std::vector<LLBlockPtr> blocks;
 
   DFS(func->blocks().front());
@@ -17,7 +18,8 @@ void BlockRearrange::runOn(const LLFunctionPtr &func) {
 
 void BlockRearrange::DFS(LLBlockPtr BB) {
   // return if visited
-  if (!_records.insert(BB).second) return;
+  if (!_records.insert(BB).second)
+    return;
 
   if (BB->insts().back()->classId() == ClassId::LLReturnId) {
     _exit = BB;
@@ -41,4 +43,4 @@ void BlockRearrange::DFS(LLBlockPtr BB) {
   }
 }
 
-}
+} // namespace lava::back

@@ -1,17 +1,19 @@
 #include "liveness.h"
-#include "common/casting.h"
+
 #include <iostream>
+
+#include "common/casting.h"
 
 namespace lava::back {
 
-
 void LivenessAnalysis::runOn(const LLFunctionPtr &func) {
-  if (func->is_decl()) return;
+  if (func->is_decl())
+    return;
   Init(func);
   SolveLiveness();
   SolveLiveInterval(func);
-//  DumpInitInfo(func);
-//  DumpLiveInterval();
+  //  DumpInitInfo(func);
+  //  DumpLiveInterval();
 }
 
 void LivenessAnalysis::Init(const LLFunctionPtr &F) {
@@ -21,7 +23,8 @@ void LivenessAnalysis::Init(const LLFunctionPtr &F) {
 
   // get reverse post order block list
   TraverseRPO(F->entry());
-  DBG_ASSERT(F->blocks().size() == _rpo_blocks.size(), "blocks size is different");
+  DBG_ASSERT(F->blocks().size() == _rpo_blocks.size(),
+             "blocks size is different");
 
   // mark each block with id
   std::size_t id = 0;
@@ -44,7 +47,6 @@ void LivenessAnalysis::Init(const LLFunctionPtr &F) {
           ue_var.insert(opr);
         }
       }
-
     }
 
     BlockInfo blk_info(ue_var, var_kill, live_out);
@@ -55,14 +57,16 @@ void LivenessAnalysis::Init(const LLFunctionPtr &F) {
 bool IsTempReg(const LLOperandPtr &opr) {
   if (opr->IsRealReg()) {
     auto reg = opr->reg();
-    if ((reg >= ArmReg::r0 && reg <= ArmReg::r3) || (reg == ArmReg::lr)) return true;
+    if ((reg >= ArmReg::r0 && reg <= ArmReg::r3) || (reg == ArmReg::lr))
+      return true;
   }
   return false;
 }
 
 void LivenessAnalysis::TraverseRPO(const LLBlockPtr &BB) {
   // return if visited
-  if (!_visited.insert(BB).second) return;
+  if (!_visited.insert(BB).second)
+    return;
 
   auto termInst = BB->insts().back();
   if (auto jump_inst = dyn_cast<LLJump>(termInst)) {
@@ -82,26 +86,28 @@ void LivenessAnalysis::TraverseRPO(const LLBlockPtr &BB) {
 
 void LivenessAnalysis::SolveLiveness() {
   // clear live out set
-  for (const auto &BB : _rpo_blocks) _blk_info[BB].live_out.clear();
-
+  for (const auto &BB : _rpo_blocks)
+    _blk_info[BB].live_out.clear();
 
   bool changed = true;
   while (changed) {
     changed = false;
     for (const auto &BB : _rpo_blocks) {
       auto &liveout = _blk_info[BB].live_out;
-      auto succs = GetSuccessors(BB);
+      auto  succs   = GetSuccessors(BB);
 
       // LiveOut(j) ← 􏰛k∈succ(j) UEVar(k) ∪ (LiveOut(k) ∩ VarKill(k))
       for (const auto &succ : succs) {
         auto &succ_info = _blk_info[succ];
         for (const auto &vreg : succ_info.ue_var) {
-          if (liveout.insert(vreg).second) changed = true;
+          if (liveout.insert(vreg).second)
+            changed = true;
         }
 
         for (const auto &vreg : succ_info.live_out) {
           if (!succ_info.var_kill.count(vreg)) {
-            if (liveout.insert(vreg).second) changed = true;
+            if (liveout.insert(vreg).second)
+              changed = true;
           }
         }
       }
@@ -111,7 +117,7 @@ void LivenessAnalysis::SolveLiveness() {
 
 std::vector<LLBlockPtr> LivenessAnalysis::GetSuccessors(const LLBlockPtr &BB) {
   std::vector<LLBlockPtr> succs;
-  auto term_inst = BB->insts().back();
+  auto                    term_inst = BB->insts().back();
   if (auto jump_inst = dyn_cast<LLJump>(term_inst)) {
     succs.push_back(jump_inst->target());
   } else if (auto branch_inst = dyn_cast<LLBranch>(term_inst)) {
@@ -132,7 +138,8 @@ void LivenessAnalysis::SolveLiveInterval(const LLFunctionPtr &func) {
     for (const auto &inst : BB->insts()) {
       // record operands
       for (const auto &opr : inst->operands()) {
-        if (!opr || !opr->IsVirtual()) continue;
+        if (!opr || !opr->IsVirtual())
+          continue;
         RecordLiveInterval(opr, pos, last_tmp_pos);
       }
 
@@ -143,13 +150,12 @@ void LivenessAnalysis::SolveLiveInterval(const LLFunctionPtr &func) {
       }
 
       // update last_tmp_pos
-      auto mv_inst = dyn_cast<LLMove>(inst);
+      auto mv_inst  = dyn_cast<LLMove>(inst);
       auto str_inst = dyn_cast<LLStore>(inst);
       auto ldr_inst = dyn_cast<LLLoad>(inst);
-      if ((dst && IsTempReg(dst))                     ||
-          (mv_inst && IsTempReg(mv_inst->src()))      ||
-//          (str_inst && (IsTempReg(str_inst->data())   ||
-//                        IsTempReg(str_inst->addr()))) ||
+      if ((dst && IsTempReg(dst)) || (mv_inst && IsTempReg(mv_inst->src())) ||
+          //          (str_inst && (IsTempReg(str_inst->data())   ||
+          //                        IsTempReg(str_inst->addr()))) ||
           inst->classId() == ClassId::LLCallId) {
         last_tmp_pos = pos;
       }
@@ -165,7 +171,9 @@ void LivenessAnalysis::SolveLiveInterval(const LLFunctionPtr &func) {
 }
 
 // record live interval for each operands
-void LivenessAnalysis::RecordLiveInterval(const LLOperandPtr &opr, std::size_t end_pos, std::size_t last_tmp_pos) {
+void LivenessAnalysis::RecordLiveInterval(const LLOperandPtr &opr,
+                                          std::size_t         end_pos,
+                                          std::size_t         last_tmp_pos) {
   DBG_ASSERT(opr->IsVirtual(), "operand is not virtual register");
   auto it = _live_intervals.find(opr);
   if (it != _live_intervals.end()) {
@@ -183,7 +191,6 @@ void LivenessAnalysis::RecordLiveInterval(const LLOperandPtr &opr, std::size_t e
   }
 }
 
-
 void LivenessAnalysis::DumpInitInfo(const LLFunctionPtr &func) {
   std::cout << func->function()->GetFunctionName() << ":" << std::endl;
   for (const auto &it : _blk_info) {
@@ -191,16 +198,19 @@ void LivenessAnalysis::DumpInitInfo(const LLFunctionPtr &func) {
 
     // output ue
     std::cout << "ue: ";
-    for (const auto &ue : it.second.ue_var) std::cout << ue << " ";
+    for (const auto &ue : it.second.ue_var)
+      std::cout << ue << " ";
     std::cout << std::endl;
 
     // output kill
     std::cout << "kill: ";
-    for (const auto &kill : it.second.var_kill) std::cout << kill << " ";
+    for (const auto &kill : it.second.var_kill)
+      std::cout << kill << " ";
     std::cout << std::endl;
 
     std::cout << "liveout: ";
-    for (const auto &liveout : it.second.live_out) std::cout << liveout << " ";
+    for (const auto &liveout : it.second.live_out)
+      std::cout << liveout << " ";
     std::cout << std::endl << std::endl;
   }
   std::cout << "-----------------" << std::endl;
@@ -208,8 +218,9 @@ void LivenessAnalysis::DumpInitInfo(const LLFunctionPtr &func) {
 
 void LivenessAnalysis::DumpLiveInterval() {
   for (const auto &it : _live_intervals) {
-    std::cout << it.first << "\tstart: " << it.second.start_pos() << "\tend: " << it.second.end_pos()
-              << "\t" << it.second.can_alloc_to_tmp() << std::endl;
+    std::cout << it.first << "\tstart: " << it.second.start_pos()
+              << "\tend: " << it.second.end_pos() << "\t"
+              << it.second.can_alloc_to_tmp() << std::endl;
   }
   std::cout << std::endl;
 }
@@ -230,4 +241,4 @@ bool __CmpEnd(const LiveInterval &S1, const LiveInterval &S2) {
   return LiveIntervalCmpEnd(S1, S2);
 }
 
-}
+} // namespace lava::back

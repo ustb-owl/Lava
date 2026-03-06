@@ -1,8 +1,8 @@
 #include <algorithm>
 
-#include "opt/pass.h"
-#include "lib/debug.h"
 #include "common/casting.h"
+#include "lib/debug.h"
+#include "opt/pass.h"
 #include "opt/pass_manager.h"
 #include "opt/register.h"
 
@@ -32,14 +32,14 @@ public:
     } else {
       // find all call instruction
       for (const auto &BB : *F) {
-        auto block = dyn_cast<BasicBlock>(BB.value());
-        for (auto it = block->inst_begin(); it !=block->insts().end(); it++) {
+        for (auto it = BB->inst_begin(); it != BB->insts().end(); it++) {
           if (auto call_inst = dyn_cast<CallInst>(*it)) {
             auto callee = dyn_cast<Function>(call_inst->Callee());
             DBG_ASSERT(callee != nullptr, "callee is not function");
             auto name = callee->GetFunctionName();
             if (name == "_sysy_starttime" || name == "_sysy_stoptime") {
-              if (call_inst->size() == 2) continue;
+              if (call_inst->size() == 2)
+                continue;
               auto zero = std::make_shared<ConstantInt>(0);
               zero->set_type(MakePrimType(Type::Int32, true));
               call_inst->AddParam(zero);
@@ -65,14 +65,15 @@ public:
   void FixTypeAndParam(const FuncPtr &F) {
     // 1. set function type
     define::TypePtrList params;
-    auto param_type = MakePrimType(Type::Int32, false);
+    auto                param_type = MakePrimType(Type::Int32, false);
     params.push_back(std::move(param_type));
     auto ret_type = MakePrimType(Type::Void, false);
-    F->set_type(std::make_shared<define::FuncType>(std::move(params), ret_type, false));
+    F->set_type(
+        std::make_shared<define::FuncType>(std::move(params), ret_type, false));
 
     // 2. add argument
     auto arg_type = MakePrimType(Type::Int32, false);
-    auto arg = std::make_shared<ArgRefSSA>(F, 0, "lineno");
+    auto arg      = std::make_shared<ArgRefSSA>(F, 0, "lineno");
     arg->set_type(arg_type);
     F->set_arg(0, arg);
   }
@@ -81,9 +82,9 @@ public:
 class DirtyFunctionNameConvertFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
-    auto pass = std::make_shared<DirtyFunctionNameConvert>();
-    auto passinfo =
-        std::make_shared<PassInfo>(pass, "DirtyFunctionNameConvert", false, 0, DIRTY_FUNCTION_CONV);
+    auto pass     = std::make_shared<DirtyFunctionNameConvert>();
+    auto passinfo = std::make_shared<PassInfo>(pass, "DirtyFunctionNameConvert",
+                                               false, 0, DIRTY_FUNCTION_CONV);
     return passinfo;
   }
 };
@@ -97,4 +98,4 @@ void RegisterDirtyFunctionNameConvertPass() {
   });
   static PassRegisterFactory<DirtyFunctionNameConvertFactory> registry;
 }
-}
+} // namespace lava::opt

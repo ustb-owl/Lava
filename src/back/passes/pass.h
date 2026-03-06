@@ -1,14 +1,14 @@
 #ifndef LAVA_BACK_PASS_H
 #define LAVA_BACK_PASS_H
 
-#include "back/arch/arm/module.h"
 #include "back/arch/arm/instdef.h"
+#include "back/arch/arm/module.h"
 
 namespace lava::back {
 
 class PassBase {
 protected:
-  LLModule      &_module;
+  LLModule &_module;
 
 public:
   PassBase(LLModule &module) : _module(module) {}
@@ -27,10 +27,10 @@ using PassList = std::list<PassPtr>;
 
 // create a new pass pointer
 template <typename T, typename... Args>
-inline std::shared_ptr<T> MakePass(Args &&... args) {
+inline std::shared_ptr<T> MakePass(Args &&...args) {
   return std::make_shared<T>(std::forward<Args>(args)...);
 }
 
-}
+} // namespace lava::back
 
-#endif //LAVA_BACK_PASS_H
+#endif // LAVA_BACK_PASS_H

@@ -12,6 +12,6 @@ public:
 
   void runOn(const LLFunctionPtr &func) final;
 };
-}
+} // namespace lava::back
 
-#endif //LAVA_TAILRECURSION_H
+#endif // LAVA_TAILRECURSION_H

@@ -3,4 +3,4 @@
 
 #define VERSION "1.0.0"
 
-#endif //LAVA_VERSION_H
+#endif // LAVA_VERSION_H
