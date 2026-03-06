@@ -4,6 +4,8 @@
 
 #include "opt/analysis/loopinfo.h"
 #include "opt/analysis/identiy.h"
+#include "opt/transforms/loop_invariant_hoist.h"
+#include "opt/transforms/strength_reduction.h"
 #include "opt/transforms/gvn_gcm.h"
 
 int LoopUnrolling;
@@ -35,20 +37,38 @@ public:
     if (need_gcm->IsCrypto()) return _changed;
     TRACE0();
 
-    auto A = PassManager::GetTransformPass<GlobalValueNumberingGlobalCodeMotion>("GlobalValueNumberingGlobalCodeMotion");
+    auto strength = PassManager::GetTransformPass<StrengthReduction>("StrengthReduction");
+    auto gvn = PassManager::GetTransformPass<GlobalValueNumberingGlobalCodeMotion>("GlobalValueNumberingGlobalCodeMotion");
+    auto hoist = PassManager::GetTransformPass<LoopInvariantHoist>("LoopInvariantHoist");
     _in_last_loop = false;
     UnrollConst(F);
 
-    A->initialize();
-    A->runOnFunction(F);
-    A->finalize();
+    strength->initialize();
+    strength->runOnFunction(F);
+    strength->finalize();
+
+    gvn->initialize();
+    gvn->runOnFunction(F);
+    gvn->finalize();
+
+    hoist->initialize();
+    hoist->runOnFunction(F);
+    hoist->finalize();
 
 #if 0
     UnrollLeftConst(F);
 
-    A->initialize();
-    A->runOnFunction(F);
-    A->finalize();
+    strength->initialize();
+    strength->runOnFunction(F);
+    strength->finalize();
+
+    gvn->initialize();
+    gvn->runOnFunction(F);
+    gvn->finalize();
+
+    hoist->initialize();
+    hoist->runOnFunction(F);
+    hoist->finalize();
 #endif
 
     return _changed;

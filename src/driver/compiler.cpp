@@ -1,5 +1,6 @@
 #include <sstream>
 #include "compiler.h"
+#include "opt/transforms/sanitize_ir.h"
 
 using namespace lava::opt;
 
@@ -38,6 +39,7 @@ void Compiler::Parse() {
 }
 
 void Compiler::RunPasses() {
+  ForceSanitizeIRLink();
   if (_opt_flag) PassManager::set_opt_level(2);
   PassManager::Initialize();
   PassManager::SetModule(_irbuilder->module());

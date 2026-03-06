@@ -15,6 +15,7 @@
 #define FUNCTION_CLEANUP              14
 #define DEAD_GLOBAL_CODE_ELIMINATION  15
 #define LOOP_UNROLLING                16
+#define SANITIZE_IR                   17
 
 
 // analysis

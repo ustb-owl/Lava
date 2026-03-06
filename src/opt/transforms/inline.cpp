@@ -9,6 +9,8 @@
 #include "opt/analysis/funcanalysis.h"
 #include "opt/transforms/gvn_gcm.h"
 #include "opt/transforms/blocksimp.h"
+#include "opt/transforms/loop_invariant_hoist.h"
+#include "opt/transforms/strength_reduction.h"
 
 int Inlining;
 
@@ -103,10 +105,20 @@ public:
     changed |= blk->runOnFunction(F);
     blk->finalize();
 
+    auto strength = PassManager::GetTransformPass<StrengthReduction>("StrengthReduction");
+    strength->initialize();
+    changed |= strength->runOnFunction(F);
+    strength->finalize();
+
     auto gvn_gcm = PassManager::GetTransformPass<GlobalValueNumberingGlobalCodeMotion>("GlobalValueNumberingGlobalCodeMotion");
     gvn_gcm->initialize();
     changed |= gvn_gcm->runOnFunction(F);
     gvn_gcm->finalize();
+
+    auto hoist = PassManager::GetTransformPass<LoopInvariantHoist>("LoopInvariantHoist");
+    hoist->initialize();
+    changed |= hoist->runOnFunction(F);
+    hoist->finalize();
 
     return changed;
   }
@@ -220,6 +232,7 @@ SSAPtr FunctionInlining::CopyValue(const SSAPtr &value) {
 }
 
 SSAPtr FunctionInlining::GetOperand(const SSAPtr &value) {
+  if (!value) return nullptr;
   if (value->isInstruction()) {
     if (!ssa_map.count(value)) {
       CopyInstruction(cast<Instruction>(value));
@@ -528,7 +541,7 @@ public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<FunctionInlining>();
     auto passinfo =
-        std::make_shared<PassInfo>(pass, "FunctionInlining", false, 2, FUNCTION_INLINING);
+        std::make_shared<PassInfo>(pass, "FunctionInlining", false, 99, FUNCTION_INLINING);
     passinfo->Requires("FunctionInfoPass");
     return passinfo;
   }
@@ -552,7 +565,7 @@ public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<FunctionCleanUp>();
     auto passinfo =
-        std::make_shared<PassInfo>(pass, "FunctionCleanUp", false, 2, FUNCTION_CLEANUP);
+        std::make_shared<PassInfo>(pass, "FunctionCleanUp", false, 99, FUNCTION_CLEANUP);
     passinfo->Requires("FunctionInfoPass");
     return passinfo;
   }

@@ -1,5 +1,6 @@
 #include <fstream>
 #include <sstream>
+#include <cstdlib>
 #include <utility>
 #include "version.h"
 #include "driver/compiler.h"
@@ -65,8 +66,6 @@ int Main(bool AST = fire::arg({"-T", "--dump-ast"}),
     comp.set_opt_flat(true);
   }
 
-  // if run register allocation
-  printf("nora: %d", NO_RA);
   if (NO_RA) {
     comp.no_ra(true);
   }
@@ -82,6 +81,11 @@ int Main(bool AST = fire::arg({"-T", "--dump-ast"}),
   // generate IR and perform optimization
   comp.EmitIR();
   comp.RunPasses();
+
+  if (std::getenv("LAVA_DUMP_IR_ONLY")) {
+    comp.DumpIR(*os);
+    return 0;
+  }
 
   // code generation
   comp.CodeGeneAction();

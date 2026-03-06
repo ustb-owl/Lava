@@ -43,7 +43,11 @@ public:
   /* Remove value from phi-node in the successors */
   void RemovePhiNode(BasicBlock *block, std::vector<BasicBlock *> successors);
 
+  std::vector<BlockPtr> CollectPredecessors(const FuncPtr &F, BasicBlock *target);
+
   void CleanUp(const FuncPtr &F);
+
+  void RebuildPredecessors(const FuncPtr &F);
 
   void initialize() final;
 };
@@ -52,7 +56,7 @@ class BlockSimplificationFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<BlockSimplification>();
-    auto passinfo = std::make_shared<PassInfo>(pass, "BlockSimplification", false, 0, BLOCK_SIMPLIFICATION);
+    auto passinfo = std::make_shared<PassInfo>(pass, "BlockSimplification", false, 2, BLOCK_SIMPLIFICATION);
     return passinfo;
   }
 };

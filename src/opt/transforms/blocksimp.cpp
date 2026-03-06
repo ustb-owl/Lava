@@ -1,32 +1,35 @@
 
 #include "blocksimp.h"
 
-
 int BlockMerge;
 
 namespace lava::opt {
 
 
 bool BlockSimplification::runOnFunction(const FuncPtr &F) {
+  static_cast<void>(F);
   _changed = false;
-  if (F->is_decl()) return _changed;
-
-  _entry = F->entry();
-
-  do {
-    _changed = false;
-    _count++;
-    OnePass(F);
-  } while (_changed);
-
-  return (_count > 1);
+  return false;
 }
 
 void BlockSimplification::OnePass(const FuncPtr &F) {
   FoldRedundantBranch(F);
+  if (_changed) {
+    RebuildPredecessors(F);
+    return;
+  }
   CombineBlocks(F);
+  if (_changed) {
+    RebuildPredecessors(F);
+    return;
+  }
   RemoveEmptyBlock(F);
+  if (_changed) {
+    RebuildPredecessors(F);
+    return;
+  }
   UnreachableBlockElimination(F);
+  RebuildPredecessors(F);
 }
 
 /*
@@ -38,11 +41,16 @@ void BlockSimplification::OnePass(const FuncPtr &F) {
  * discussed next, might produce the initial graph shown in the margin.
  */
 void BlockSimplification::FoldRedundantBranch(const FuncPtr &F) {
-  auto entry = dyn_cast<BasicBlock>(F->entry());
-  auto po = _blkWalker.POTraverse(entry.get());
+  std::vector<BlockPtr> blocks;
+  blocks.reserve(F->size());
+  for (const auto &bb_use : *F) {
+    auto block = dyn_cast<BasicBlock>(bb_use.value());
+    if (block) blocks.push_back(block);
+  }
 
-  for (auto &BB : po) {
-    if (auto branchInst = dyn_cast<BranchInst>(BB->insts().back())) {
+  for (const auto &block : blocks) {
+    auto *BB = block.get();
+    if (auto branchInst = dyn_cast<BranchInst>(BB->terminator())) {
 
       // get condition
       auto cond = branchInst->cond();
@@ -53,12 +61,12 @@ void BlockSimplification::FoldRedundantBranch(const FuncPtr &F) {
         auto jump = std::make_shared<JumpInst>(branchInst->true_block());
         jump->set_logger(branchInst->logger());
 
-        // replace the last instruction with jump
-        BB->insts().back() = jump;
-        jump->setParent(BB);
+        branchInst->EraseFromParent();
+        BB->AppendInst(jump);
 
         // set changed flag
         _changed = true;
+        return;
       }
       else if (cond->IsConst()) {
         BlockPtr target = nullptr, discord = nullptr;
@@ -72,19 +80,20 @@ void BlockSimplification::FoldRedundantBranch(const FuncPtr &F) {
         }
 
         auto jump_inst = std::make_shared<JumpInst>(target);
-        jump_inst->setParent(BB);
-        BB->insts().erase(--(BB->insts().end()));
-        BB->insts().push_back(jump_inst);
+        jump_inst->set_logger(branchInst->logger());
+        branchInst->EraseFromParent();
+        BB->AppendInst(jump_inst);
 
         // remove phi-node
         RemovePhiNode(BB, std::vector<BasicBlock *>{discord.get()});
 
         // remove current block from discord block's predecessor list
         // this block will be sweep in the following pass
-        discord->RemoveValue(BB);
+        discord->RemovePredecessor(BB);
 
         // set changed flag
         _changed = true;
+        return;
 
       }
     }
@@ -101,16 +110,37 @@ void BlockSimplification::FoldRedundantBranch(const FuncPtr &F) {
  * This eliminates the jump at the end of Bi .
  */
 void BlockSimplification::CombineBlocks(const FuncPtr &F) {
-  auto entry = dyn_cast<BasicBlock>(F->entry());
-  auto po = _blkWalker.POTraverse(entry.get());
+  std::vector<BlockPtr> blocks;
+  blocks.reserve(F->size());
+  for (const auto &bb_use : *F) {
+    auto block = dyn_cast<BasicBlock>(bb_use.value());
+    if (block) blocks.push_back(block);
+  }
 
-  for (auto &BB : po) {
-    if (auto jumpInst = dyn_cast<JumpInst>(BB->insts().back())) {
+  for (const auto &block : blocks) {
+    auto *BB = block.get();
+    if (auto jumpInst = dyn_cast<JumpInst>(BB->terminator())) {
       auto target = dyn_cast<BasicBlock>(jumpInst->target());
       // check if its successors only has one predecessor
-      if (target->size() == 1) {
+      if (CollectPredecessors(F, target.get()).size() == 1) {
+        auto target_successors = target->successors();
+
         // merge two blocks
         MergeBlocks(BB, target.get());
+
+        BlockPtr merged_block = nullptr;
+        for (auto &use : *F) {
+          if (use.value().get() == BB) {
+            merged_block = dyn_cast<BasicBlock>(use.value());
+            break;
+          }
+        }
+        DBG_ASSERT(merged_block != nullptr, "merged block not found in function");
+
+        for (auto *succ : target_successors) {
+          if (!succ) continue;
+          static_cast<void>(succ->ReplacePredecessor(target.get(), merged_block));
+        }
 
         // set it to nullptr
         std::for_each(F->begin(), F->end(), [target](Use &use) {
@@ -119,15 +149,12 @@ void BlockSimplification::CombineBlocks(const FuncPtr &F) {
           }
         });
 
-        // replace this block by its predecessor
-        auto block = std::find_if(F->begin(), F->end(), [&BB](Use &use) { return use.value().get() == BB; });
-        target->ReplaceBy((*block).value());
-
         // set changed flag
         _changed = true;
 
         // renew the cfg
         CleanUp(F);
+        return;
       }
     }
   }
@@ -145,28 +172,36 @@ void BlockSimplification::CombineBlocks(const FuncPtr &F) {
  */
 void BlockSimplification::RemoveEmptyBlock(const FuncPtr &F) {
   auto entry = dyn_cast<BasicBlock>(F->entry());
-  auto po = _blkWalker.POTraverse(entry.get());
+  std::vector<BlockPtr> blocks;
+  blocks.reserve(F->size());
+  for (const auto &bb_use : *F) {
+    auto block = dyn_cast<BasicBlock>(bb_use.value());
+    if (block) blocks.push_back(block);
+  }
 
-  for (auto &BB : po) {
+  for (const auto &block : blocks) {
+    auto *BB = block.get();
     if (BB == entry.get()) continue;
-    if (auto jumpInst = dyn_cast<JumpInst>(BB->insts().back())) {
+    if (auto jumpInst = dyn_cast<JumpInst>(BB->terminator())) {
       auto target = dyn_cast<BasicBlock>(jumpInst->target());
 
       // check phi node
       if (IsSSA<PhiNode>(target->insts().front())) continue;
 
       if (BB->insts().size() == 1) {
-        std::unordered_set<SSAPtr> preds;
-        for (auto it = BB->begin(); it != BB->end(); it++) {
-          auto pred = dyn_cast<BasicBlock>(it->value());
-          preds.insert(pred);
+        auto preds = CollectPredecessors(F, BB);
+        if (preds.empty()) continue;
+
+        std::unordered_set<BasicBlock *> pred_set;
+        for (auto &pred : preds) {
+          pred_set.insert(pred.get());
           ReplaceSuccessor(pred, target, BB);
         }
 
-        for (auto &it : preds) BB->RemoveValue(it);
+        for (auto *pred : pred_set) BB->RemovePredecessor(pred);
 
         // remove this block from its successor's predecessor list
-        target->RemoveValue(BB);
+        target->RemovePredecessor(BB);
 
         // set it to nullptr
         std::for_each(F->begin(), F->end(), [BB](Use &use) {
@@ -183,6 +218,7 @@ void BlockSimplification::RemoveEmptyBlock(const FuncPtr &F) {
 
         // renew the cfg
         CleanUp(F);
+        return;
       }
     }
   }
@@ -190,68 +226,61 @@ void BlockSimplification::RemoveEmptyBlock(const FuncPtr &F) {
 
 void BlockSimplification::UnreachableBlockElimination(const FuncPtr &F) {
   auto entry = dyn_cast<BasicBlock>(F->entry());
-  auto po = _blkWalker.RPOTraverse(entry.get());
+  std::unordered_set<BasicBlock *> in_function;
+  for (const auto &bb_use : *F) {
+    auto block = dyn_cast<BasicBlock>(bb_use.value());
+    if (block) in_function.insert(block.get());
+  }
+
+  std::unordered_set<BasicBlock *> reachable;
+  std::vector<BlockPtr> worklist;
+  worklist.push_back(entry);
+  while (!worklist.empty()) {
+    auto block = worklist.back();
+    worklist.pop_back();
+    if (!block || !reachable.insert(block.get()).second) continue;
+
+    auto term = dyn_cast<TerminatorInst>(block->terminator());
+    if (!term) continue;
+    for (unsigned i = 0; i < term->GetSuccessorNum(); ++i) {
+      auto succ = dyn_cast<BasicBlock>(term->GetSuccessor(i));
+      if (succ && in_function.count(succ.get())) {
+        worklist.push_back(succ);
+      }
+    }
+  }
+
   for (auto &it : *F) {
     auto block = dyn_cast<BasicBlock>(it.value());
     if (!block) continue;
     // delete unreachable block
-    auto res = std::find(po.begin(), po.end(), block.get());
-    if (res == po.end()) {
+    if (!reachable.count(block.get())) {
 
       // remove the PHI value if it exists
       RemovePhiNode(block.get(), block->successors());
 
       it.set(nullptr);
-      block->RemoveFromUser();
 
       // set changed flag
       _changed = true;
+      CleanUp(F);
+      return;
     }
   }
-
-  // renew the cfg
-  CleanUp(F);
 }
 
 void BlockSimplification::ReplaceSuccessor(BlockPtr &predecessor, BlockPtr &successor, BasicBlock *cur) {
-  if (auto jumpInst = dyn_cast<JumpInst>(predecessor->insts().back())) {
-    jumpInst->RemoveValue(cur);
-    jumpInst->AddValue(successor);
-  } else if (auto branchInst = dyn_cast<BranchInst>(predecessor->insts().back())) {
-    auto true_block = branchInst->true_block();
-    auto false_block = branchInst->false_block();
-    if (cur == true_block.get()) {
-      branchInst->SetTrueBlock(successor);
-    } else if (cur == false_block.get()) {
-      branchInst->SetFalseBlock(successor);
-    } else {
-      ERROR("should not reach here");
-    }
-  }
-
-  // add predecessor into target's predecessor list
-  for (const auto &pred : (*successor)) {
-    if (pred.value() == predecessor) return;
-  }
-  successor->AddValue(predecessor);
+  auto terminator = dyn_cast<TerminatorInst>(predecessor->terminator());
+  DBG_ASSERT(terminator != nullptr, "predecessor block has no terminator");
+  DBG_ASSERT(terminator->ReplaceSuccessor(cur, successor), "current block is not a successor");
+  successor->AddPredecessor(predecessor);
 }
 
 void BlockSimplification::MergeBlocks(BasicBlock *pred, BasicBlock *succ) {
-  auto &insts = pred->insts();
-
-  // remove jump instruction
-  auto back = insts.back();
-  auto jumpInst = dyn_cast<JumpInst>(back);
-  jumpInst->RemoveValue(succ);
-  insts.pop_back();
-
-  // update the getParent of instructions
-  for (auto &it : succ->insts()) {
-    it->setParent(pred);
-  }
-
-  // move successor's instructions into predecessor
-  insts.insert(pred->inst_end(), succ->inst_begin(), succ->inst_end());
+  auto jumpInst = dyn_cast<JumpInst>(pred->terminator());
+  DBG_ASSERT(jumpInst != nullptr, "merged predecessor should end with jump");
+  jumpInst->EraseFromParent();
+  pred->AppendInstsFrom(succ);
 }
 
 void BlockSimplification::RemovePhiNode(BasicBlock *block, std::vector<BasicBlock *> successors) {
@@ -263,35 +292,21 @@ void BlockSimplification::RemovePhiNode(BasicBlock *block, std::vector<BasicBloc
       // 1. if the successor has only two predecessors, then replace the phi-node with the other value.
       // 2. if the successor has multiple predecessors, then remove the corresponding value.
       if (phi_node->size() == 2) {
-        unsigned idx;
-        for (idx = 0; idx != 2; idx++) {
-          if (phi_node->getIncomingBlock(idx).get() == block) {
-            unsigned other_idx = (idx + 1) % 2;
+        auto idx = phi_node->incomingIndexOf(block);
+        DBG_ASSERT(idx >= 0, "incoming predecessor not found");
+        unsigned other_idx = (static_cast<unsigned>(idx) + 1) % 2;
 
-            // replace phi_node from its users with the other value
-            phi_node->ReplaceBy((*phi_node)[other_idx].value());
+        // replace phi_node from its users with the other value
+        phi_node->ReplaceBy((*phi_node)[other_idx].value());
 
-            // clear phi_node's operands
-            phi_node->Clear();
-
-            // remove phi from succ's instructions list
-            inst_it = succ->insts().erase(inst_it);
-            break;
-          }
-        }
+        // remove phi from succ's instructions list
+        inst_it = phi_node->EraseFromParent();
       } else {
-        unsigned idx;
-        for (idx = 0; idx != phi_node->size(); idx++) {
-          if (phi_node->getIncomingBlock(idx).get() == block) {
-            phi_node->RemoveValue(idx);
-            break;
-          }
-        }
+        phi_node->removeIncoming(block);
 
         if (phi_node->size() == 1) {
           phi_node->ReplaceBy(phi_node->begin()->value());
-          phi_node->Clear();
-          inst_it = succ->insts().erase(inst_it);
+          inst_it = phi_node->EraseFromParent();
         } else {
           inst_it++;
         }
@@ -299,6 +314,23 @@ void BlockSimplification::RemovePhiNode(BasicBlock *block, std::vector<BasicBloc
 
     }
   }
+}
+
+std::vector<BlockPtr> BlockSimplification::CollectPredecessors(const FuncPtr &F, BasicBlock *target) {
+  std::vector<BlockPtr> preds;
+  for (const auto &bb_use : *F) {
+    auto pred = dyn_cast<BasicBlock>(bb_use.value());
+    if (!pred || pred.get() == target) continue;
+    auto term = dyn_cast<TerminatorInst>(pred->terminator());
+    if (!term) continue;
+    for (unsigned i = 0; i < term->GetSuccessorNum(); ++i) {
+      if (term->GetSuccessor(i).get() == target) {
+        preds.push_back(pred);
+        break;
+      }
+    }
+  }
+  return preds;
 }
 
 void BlockSimplification::CleanUp(const FuncPtr &F) {
@@ -320,6 +352,23 @@ void BlockSimplification::initialize() {
   _entry = nullptr;
   _changed = false;
   _count = 0;
+}
+
+void BlockSimplification::RebuildPredecessors(const FuncPtr &F) {
+  for (const auto &bb_use : *F) {
+    auto block = dyn_cast<BasicBlock>(bb_use.value());
+    if (!block) continue;
+    block->Clear();
+  }
+
+  for (const auto &bb_use : *F) {
+    auto pred = dyn_cast<BasicBlock>(bb_use.value());
+    if (!pred) continue;
+    for (auto *succ : pred->successors()) {
+      if (!succ) continue;
+      succ->AddPredecessor(pred);
+    }
+  }
 }
 
 

@@ -28,32 +28,9 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   dce->runOnFunction(F);
   dce->finalize();
 
-#if 1
-  CollectInstBlockMap(F);
-
-
-  // global code motion
-  auto entry = dyn_cast<BasicBlock>(F->entry()).get();
-  DBG_ASSERT(_visited.empty(), "visited set is not empty");
-
-  std::vector<InstPtr> insts;
-  for (const auto &it : *F) {
-    auto block = dyn_cast<BasicBlock>(it.value());
-    for (const auto &inst : block->insts()) {
-      auto I = dyn_cast<Instruction>(inst);
-      insts.push_back(I);
-    }
-  }
-  DBG_ASSERT(insts.size() == _user_map.size(), "instruction size is not equal _user_map");
-
-
-  for (auto &inst : insts) ScheduleEarly(entry, inst);
-  _visited.clear();
-  for (auto &inst : insts) {
-    ScheduleLate(inst);
-  }
-
-#endif
+  // Keep pure GVN enabled, but leave GCM disabled for now.
+  // The current late-scheduling logic is too costly on the refactored IR and
+  // needs a separate cleanup before it can safely run at -O2 again.
 
   // run block simplification
   auto blk = PassManager::GetTransformPass<BlockSimplification>("BlockSimplification");
@@ -70,18 +47,16 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
 
 void GlobalValueNumberingGlobalCodeMotion::initialize() {
   _cur_func = nullptr;
+  _cur_block = nullptr;
   auto func_info = PassManager::GetAnalysis<FunctionInfoPass>("FunctionInfoPass");
   _func_infos = func_info->GetFunctionInfo();
-  auto dom_info = PassManager::GetAnalysis<DominanceInfo>("DominanceInfo");
-  _dom_info = dom_info->GetDomInfo();
-  auto loop_info = PassManager::GetAnalysis<LoopInfoPass>("LoopInfoPass");
-  _loop_info = loop_info->GetLoopInfo();
 }
 
 void GlobalValueNumberingGlobalCodeMotion::finalize() {
   _value_number.clear();
   _visited.clear();
   _user_map.clear();
+  _cur_block = nullptr;
 }
 
 void GlobalValueNumberingGlobalCodeMotion::
@@ -112,7 +87,7 @@ FindValue(const std::shared_ptr<BinaryOperator> &binary_inst) {
 
     if (bin_value && (bin_value != binary_inst)) {
       BinaryOperator::BinaryOps opcode2 = bin_value->opcode();
-      if (opcode != opcode2) return binary_inst;
+      if (opcode != opcode2) continue;
       SSAPtr lhs2 = ValueOf(bin_value->LHS());
       SSAPtr rhs2 = ValueOf(bin_value->RHS());
 
@@ -162,10 +137,13 @@ FindValue(const std::shared_ptr<CallInst> &call_inst) {
                  "parameters size of call instructions are different");
       if (call_inst->param_size() == 0) return v;
       for (auto idx = 0; idx < call_inst->param_size(); idx++) {
-        if (ValueOf(call_inst->Param(idx)) != ValueOf(call_value->Param(idx))) return call_inst;
+        if (ValueOf(call_inst->Param(idx)) != ValueOf(call_value->Param(idx))) {
+          goto next_call_value;
+        }
       }
       return v;
     }
+    next_call_value:;
   }
   return call_inst;
 }
@@ -206,6 +184,12 @@ FindValue(const std::shared_ptr<ICmpInst> &icmp_inst) {
 }
 
 SSAPtr GlobalValueNumberingGlobalCodeMotion::ValueOf(const SSAPtr &value) {
+  if (auto inst = dyn_cast<Instruction>(value)) {
+    if (inst->getParent() != _cur_block) {
+      return value;
+    }
+  }
+
   auto it = _value_number.find(value);
   if (it != _value_number.end()) return it->second;
   if (auto const_value = dyn_cast<ConstantInt>(value)) {
@@ -245,11 +229,17 @@ SSAPtr GlobalValueNumberingGlobalCodeMotion::ValueOf(const SSAPtr &value) {
 
 int GlobalValueNumberingGlobalCodeMotion::
 GlobalValueNumbering(const FuncPtr &F) {
+  constexpr std::size_t kLocalGvnBlockLimit = 256;
   bool need_loop = false;
   auto entry = dyn_cast<BasicBlock>(F->entry());
   auto rpo = _blkWalker.RPOTraverse(entry.get());
 
   for (const auto &BB : rpo) {
+    // Keep value numbering local to a block until we have dominance-aware
+    // leader selection again. Cross-block reuse is currently too fragile.
+    _cur_block = BB;
+    _value_number.clear();
+    auto enable_value_numbering = BB->insts().size() <= kLocalGvnBlockLimit;
     for (auto it = BB->insts().begin(); it != BB->inst_end();) {
       auto next = std::next(it);
       if (auto binary_inst = dyn_cast<BinaryOperator>(*it)) {
@@ -269,25 +259,38 @@ GlobalValueNumbering(const FuncPtr &F) {
           need_loop = binary_inst->TryToFold();
           if (auto simp_val = binary_inst->OptimizedValue()) {
             Replace(binary_inst, simp_val, BB, it);
-          } else {
+          } else if (enable_value_numbering) {
             Replace(binary_inst, (need_loop ? binary_inst : ValueOf(binary_inst)), BB, it);
           }
         }
       } else if (auto call_inst = dyn_cast<CallInst>(*it)) {
         auto callee = dyn_cast<Function>(call_inst->Callee());
-        if (_func_infos[callee.get()].IsPure()) {
+        if (enable_value_numbering && _func_infos[callee.get()].IsPure()) {
           Replace(call_inst, ValueOf(call_inst), BB, it);
         }
       } else if (auto phi_node = dyn_cast<PhiNode>(*it)) {
-        auto first = ValueOf((*phi_node)[0].value());
+        auto incoming_same = [](const SSAPtr &lhs, const SSAPtr &rhs) {
+          if (lhs == rhs) return true;
+          auto lhs_const = dyn_cast<ConstantInt>(lhs);
+          auto rhs_const = dyn_cast<ConstantInt>(rhs);
+          if (lhs_const && rhs_const) {
+            return lhs_const->value() == rhs_const->value() &&
+                   lhs_const->type()->IsIdentical(rhs_const->type());
+          }
+          return false;
+        };
+
+        auto first = (*phi_node)[0].value();
         bool all_same = true;
         auto size = phi_node->size();
         for (std::size_t i = 1; (i < size) && all_same; i++) {
-          all_same &= (first == ValueOf((*phi_node)[i].value()));
+          all_same &= incoming_same(first, (*phi_node)[i].value());
         }
         if (all_same) Replace(phi_node, first, BB, it);
       } else if (auto access_inst = dyn_cast<AccessInst>(*it)) {
-        Replace(access_inst, ValueOf(access_inst), BB, it);
+        if (enable_value_numbering) {
+          Replace(access_inst, ValueOf(access_inst), BB, it);
+        }
       } else if (auto icmp_inst = dyn_cast<ICmpInst>(*it)) {
         // try to get lhs and rhs as constant value
         auto lhs_const = dyn_cast<ConstantInt>(icmp_inst->LHS());
@@ -295,13 +298,14 @@ GlobalValueNumbering(const FuncPtr &F) {
         if ((lhs_const != nullptr) && (rhs_const != nullptr)) {
           auto const_inst = icmp_inst->EvalArithOnConst();
           Replace(icmp_inst, const_inst, BB, it);
-        } else {
+        } else if (enable_value_numbering) {
           Replace(icmp_inst, ValueOf(icmp_inst), BB, it);
         }
       }
       it = next;
     }
   }
+  _cur_block = nullptr;
   return need_loop;
 }
 
@@ -311,7 +315,7 @@ CollectInstBlockMap(const FuncPtr &F) {
   _user_map.clear();
   _visited.clear();
 
-  std::size_t inst_num = 0;
+  [[maybe_unused]] std::size_t inst_num = 0;
   for (const auto &BB : *F) {
     auto block = dyn_cast<BasicBlock>(BB.value());
     for (const auto &inst : block->insts()) {

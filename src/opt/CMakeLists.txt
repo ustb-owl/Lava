@@ -20,6 +20,7 @@ add_library(opt
         transforms/localmemprop.cpp
         transforms/tailrecursion.cpp
         transforms/simpunrolling.cpp
+        transforms/sanitize_ir.cpp
         transforms/dirtyname_conv.cpp
         transforms/globalconstprop.cpp
         transforms/dirtyarray_conv.cpp

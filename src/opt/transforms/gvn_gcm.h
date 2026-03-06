@@ -30,6 +30,7 @@ private:
   DomInfo            _dom_info;
   LoopInfo           _loop_info;
   Function          *_cur_func;
+  BasicBlock        *_cur_block = nullptr;
 
   std::unordered_set<Instruction *> _visited;
   std::unordered_map<Instruction *, InstPtr> _user_map;
@@ -90,8 +91,6 @@ public:
     auto pass = std::make_shared<GlobalValueNumberingGlobalCodeMotion>();
     auto passinfo = std::make_shared<PassInfo>(pass, "GlobalValueNumberingGlobalCodeMotion", false, 2, GVN_GCM);
     passinfo->Requires("FunctionInfoPass");
-    passinfo->Requires("LoopInfoPass");
-    passinfo->Requires("DominanceInfo");
     return passinfo;
   }
 };
