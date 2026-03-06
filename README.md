@@ -14,6 +14,7 @@ git clone https://github.com/ustb-owl/Lava
 cd compiler && mkdir build && cd build
 cmake .. && make -j8
 ./lacc -h
+ninja format
 ```
 
 ## Usage
