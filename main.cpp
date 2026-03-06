@@ -1,118 +1,111 @@
-#include <fstream>
-#include <sstream>
-#include <cstdlib>
-#include <utility>
-#include "version.h"
-#include "driver/compiler.h"
+#include <algorithm>
+#include <cctype>
+#include <iostream>
+#include <string>
 
-#include "lib/fire.hpp"
+#include "driver/driver.h"
+#include "driver/options.h"
+#include "lib/CLI11.hpp"
 
-using namespace std;
-using namespace lava::driver;
-//using namespace argparse;
-using namespace fire;
+namespace {
 
-enum class OPTION {
-  NONE,
-  DUMP_AST,
-  DUMP_IR,
-  DUMP_ASM,
-  DUMP_CFG,
-};
+using lava::driver::DriverOptions;
+using lava::driver::EmitKind;
 
-int Main(bool AST = fire::arg({"-T", "--dump-ast"}),
-         bool IR = fire::arg({"-I", "--dump-ir"}),
-         bool ASM = fire::arg({"-S", "--dump-asm"}),
-         bool CFG = fire::arg({"-C", "--dump-cfg"}),
-         const fire::optional<std::string>& output = fire::arg({"-o", "--output", "set output file name"}),
-         std::vector<std::string> filename = fire::arg(fire::variadic()),
-         bool Opt = fire::arg({"-O", "--opt", "optimization level is {num}"}),
-         bool NO_RA = fire::arg({"--no-ra", "disable register allocation"}),
-         bool level = fire::arg{{"-2", "opt level"}}
-         ) {
-
-  OPTION option = OPTION::NONE;
-  std::ostream *os = &cout;
-
-  Compiler comp;
-  std::string file, output_file;
-
-  if (AST) {
-    option = OPTION::DUMP_AST;
-  } else if (IR) {
-    option = OPTION::DUMP_IR;
-  } else if (ASM) {
-    option = OPTION::DUMP_ASM;
-  } else if (CFG) {
-    option = OPTION::DUMP_CFG;
-  } else {
-    ERROR("should not reach here");
-  }
-
-  if (level) comp.set_opt_flat(true);
-
-  if (output.has_value()) {
-    std::ofstream *o_file;
-    output_file = output.value();
-    o_file = new ofstream(output_file, std::fstream::out | std::fstream::trunc);
-    if (!o_file->is_open()) ERROR("open output file ");
-    os = o_file;
-  }
-
-  file = std::move(filename[0]);
-  comp.SetFile(file);
-
-  if (Opt) {
-    comp.set_opt_flat(true);
-  }
-
-  if (NO_RA) {
-    comp.no_ra(true);
-  }
-
-  ifstream ifs(file);
-  if (!ifs.is_open()) ERROR("open file %s failed", file.c_str());
-
-  comp.Open(&ifs);
-
-  // parse
-  comp.Parse();
-
-  // generate IR and perform optimization
-  comp.EmitIR();
-  comp.RunPasses();
-
-  if (std::getenv("LAVA_DUMP_IR_ONLY")) {
-    comp.DumpIR(*os);
-    return 0;
-  }
-
-  // code generation
-  comp.CodeGeneAction();
-
-  switch (option) {
-    case OPTION::NONE:
-      break;
-    case OPTION::DUMP_AST: {
-      auto &rootNode = comp.ast();
-      rootNode->Dump(*os);
-      break;
-    }
-    case OPTION::DUMP_IR: {
-      comp.DumpIR(*os);
-      break;
-    }
-    case OPTION::DUMP_ASM: {
-      comp.DumpASM(*os);
-      break;
-      }
-    case OPTION::DUMP_CFG: {
-      comp.DumpCFG(output_file.empty() ? "ir" : output_file);
-      break;
-    }
-  }
-
-  return 0;
+std::string LowerCase(std::string value) {
+  std::ranges::transform(value, value.begin(), [](unsigned char ch) {
+    return static_cast<char>(std::tolower(ch));
+  });
+  return value;
 }
 
-FIRE(Main, "Lava compiler")
+void SetEmitKindOrThrow(DriverOptions &options,
+                        EmitKind emit,
+                        bool &emit_selected,
+                        std::string_view source) {
+  if (emit_selected && options.emit != emit) {
+    throw CLI::ValidationError(std::string(source), "multiple emit modes specified");
+  }
+  options.emit = emit;
+  emit_selected = true;
+}
+
+}
+
+int main(int argc, char **argv) {
+  CLI::App app{"Lava compiler"};
+  DriverOptions options;
+  bool emit_selected = false;
+  std::string emit_name;
+  int opt_level = 0;
+
+  app.add_option("input", options.input_file, "input filename")
+      ->check(CLI::ExistingFile);
+
+  app.add_option("-o,--output", options.output_file, "set output file name");
+
+  app.add_option("--emit", emit_name, "emit ast, ir, asm, or cfg")
+      ->check(CLI::IsMember({"ast", "ir", "asm", "cfg"}, CLI::ignore_case));
+
+  app.add_flag_callback("-T,--dump-ast",
+                        [&] { SetEmitKindOrThrow(options, EmitKind::Ast, emit_selected, "--dump-ast"); },
+                        "dump AST");
+  app.add_flag_callback("-I,--dump-ir",
+                        [&] { SetEmitKindOrThrow(options, EmitKind::Ir, emit_selected, "--dump-ir"); },
+                        "dump LLVM IR");
+  app.add_flag_callback("-S,--dump-asm",
+                        [&] { SetEmitKindOrThrow(options, EmitKind::Asm, emit_selected, "--dump-asm"); },
+                        "dump assembly");
+  app.add_flag_callback("-C,--dump-cfg",
+                        [&] { SetEmitKindOrThrow(options, EmitKind::Cfg, emit_selected, "--dump-cfg"); },
+                        "dump CFG");
+
+  app.add_option("-O,--opt-level", opt_level, "optimization level")
+      ->check(CLI::Range(0, 2))
+      ->capture_default_str();
+
+  app.add_flag("--no-ra", options.no_ra, "disable register allocation");
+  app.add_flag("--list-passes", options.list_passes, "list middle-end transform passes");
+  app.add_flag("--print-pipeline", options.print_pipeline, "print active middle-end pipeline");
+  app.add_flag("--time-passes", options.time_passes, "print middle-end pass timings");
+
+  app.add_option("--disable-pass", options.disable_passes, "disable one or more middle-end passes")
+      ->delimiter(',');
+  app.add_option("--run-pass", options.run_passes, "run only the listed middle-end passes")
+      ->delimiter(',');
+  app.add_option("--start-after", options.start_after, "start the pipeline after the named pass");
+  app.add_option("--stop-after", options.stop_after, "stop the pipeline after the named pass");
+  app.add_option("--dump-ir-before", options.dump_ir_before, "dump LLVM IR before the named pass")
+      ->delimiter(',');
+  app.add_option("--dump-ir-after", options.dump_ir_after, "dump LLVM IR after the named pass")
+      ->delimiter(',');
+  app.add_option("--dump-ir-dir", options.dump_ir_dir, "directory for IR dumps");
+
+  try {
+    app.parse(argc, argv);
+  } catch (const CLI::ParseError &e) {
+    return app.exit(e);
+  }
+
+  if (!emit_name.empty()) {
+    auto parsed_emit = lava::driver::ParseEmitKind(LowerCase(emit_name));
+    if (!parsed_emit.has_value()) {
+      std::cerr << "error: unsupported emit mode '" << emit_name << "'\n";
+      return 1;
+    }
+    if (emit_selected && options.emit != *parsed_emit) {
+      std::cerr << "error: multiple emit modes specified\n";
+      return 1;
+    }
+    options.emit = *parsed_emit;
+  }
+
+  options.opt_level = opt_level;
+
+  if (options.input_file.empty() && !options.list_passes && !options.print_pipeline) {
+    std::cerr << "error: no input file provided\n";
+    return 1;
+  }
+
+  return lava::driver::RunDriver(options);
+}

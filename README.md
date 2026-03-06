@@ -18,16 +18,42 @@ cmake .. && make -j8
 
 ## Usage
 
-```
-Usage: lacc [options...] [filename]
+```text
+Usage: lacc [OPTIONS] [input]
+
+Positionals:
+    input                      input filename
+
 Options:
-    -o, --output           set output file name
-    -S, --dump-asm         generate asm file
-    -I, --dump-ir          generate ir file
-    -T, --dump-ast         generate ast file
-    -C, --dump-cfg         generate visable CFG file
-    filename               input filename          (Required)
-    -h, --help             Shows this page
+    -o, --output               set output file name
+        --emit                 emit ast, ir, asm, or cfg
+    -T, --dump-ast             dump AST
+    -I, --dump-ir              dump LLVM IR
+    -S, --dump-asm             dump assembly
+    -C, --dump-cfg             dump CFG
+    -O, --opt-level            optimization level (0-2)
+        --no-ra                disable register allocation
+        --list-passes          list middle-end transform passes
+        --print-pipeline       print active middle-end pipeline
+        --time-passes          print middle-end pass timings
+        --disable-pass         disable one or more middle-end passes
+        --run-pass             run only the listed middle-end passes
+        --start-after          start the pipeline after the named pass
+        --stop-after           stop the pipeline after the named pass
+        --dump-ir-before       dump LLVM IR before the named pass
+        --dump-ir-after        dump LLVM IR after the named pass
+        --dump-ir-dir          directory for IR dumps
+    -h, --help                 show this help message
+```
+
+Examples:
+
+```bash
+./lacc foo.sy -O2 --emit=ir
+./lacc --list-passes
+./lacc --print-pipeline -O2
+./lacc foo.sy -O2 --disable-pass=local-gvn --emit=ir
+./lacc foo.sy -O2 --stop-after=mem2reg --dump-ir-after=mem2reg
 ```
 
 ## Features

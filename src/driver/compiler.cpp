@@ -1,8 +1,5 @@
 #include <sstream>
 #include "compiler.h"
-#include "opt/transforms/sanitize_ir.h"
-
-using namespace lava::opt;
 
 namespace lava::driver {
 
@@ -38,14 +35,6 @@ void Compiler::Parse() {
   }
 }
 
-void Compiler::RunPasses() {
-  ForceSanitizeIRLink();
-  if (_opt_flag) PassManager::set_opt_level(2);
-  PassManager::Initialize();
-  PassManager::SetModule(_irbuilder->module());
-  PassManager::RunPasses();
-}
-
 ASTPtr Compiler::PreBuild() {
   std::istringstream iss;
   iss.str(
@@ -68,8 +57,8 @@ ASTPtr Compiler::PreBuild() {
   return std::move(tmp_paser.ast());
 }
 
-void Compiler::CodeGeneAction() {
-  _codegen.no_ra(_no_ra);
+void Compiler::CodeGeneAction(bool no_ra) {
+  _codegen.no_ra(no_ra);
   _codegen.SetModule(&_irbuilder->module());
   _codegen.RegisterPasses();
   _codegen.CodeGene();
