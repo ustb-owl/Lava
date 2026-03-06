@@ -57,8 +57,7 @@ public:
   template <typename T, typename... Args>
   auto AddInst(Args &&... args) {
     auto inst = MakeSSA<T>(std::forward<Args>(args)...);
-    _insert_pos = ++_insert_point->insts().insert(_insert_pos, inst);
-    inst->setParent(_insert_point.get());
+    _insert_pos = ++_insert_point->InsertInst(_insert_pos, inst);
     return inst;
   }
 

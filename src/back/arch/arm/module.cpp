@@ -148,6 +148,7 @@ LLOperandPtr LLModule::CreateImmediate(int value) {
 
 void LLModule::DFS(const mid::BlockPtr &BB) {
   // return if visited
+  if (!BB || BB->insts().empty()) return;
   if (!_visited.insert(BB).second) return;
 
   if (BB->insts().back()->classId() == ClassId::ReturnInstId) {
@@ -160,11 +161,14 @@ void LLModule::DFS(const mid::BlockPtr &BB) {
   auto termInst = BB->insts().back();
   if (auto jump_inst = dyn_cast<mid::JumpInst>(termInst)) {
     // visit its successor
-    DFS(dyn_cast<mid::BasicBlock>(jump_inst->target()));
+    auto target = dyn_cast<mid::BasicBlock>(jump_inst->target());
+    if (target) DFS(target);
   } else if (auto branch_inst = dyn_cast<mid::BranchInst>(termInst)) {
     // visit false block firstly
-    DFS(dyn_cast<mid::BasicBlock>(branch_inst->false_block()));
-    DFS(dyn_cast<mid::BasicBlock>(branch_inst->true_block()));
+    auto false_block = dyn_cast<mid::BasicBlock>(branch_inst->false_block());
+    if (false_block) DFS(false_block);
+    auto true_block = dyn_cast<mid::BasicBlock>(branch_inst->true_block());
+    if (true_block) DFS(true_block);
   } else if (auto ret_inst = dyn_cast<mid::ReturnInst>(termInst)) {
     // do nothing
   } else {
@@ -185,25 +189,9 @@ LLFunctionPtr LLModule::CreateFunction(const mid::FuncPtr &function) {
 
   // create block map
   if (function->is_decl()) return ll_function;
-  DFS(dyn_cast<mid::BasicBlock>(function->entry()));
-  DBG_ASSERT(_blocks.size() + 1 == function->size(), "block size error");
-  for (const auto &block : _blocks) {
-    auto ll_block = std::make_shared<LLBasicBlock>(block->name(), block, ll_function);
-
-    // insert blocks into function
-    ll_function->AddBlock(ll_block);
-
-    // insert block into _block_map
-    _block_map[block] = ll_block;
-  }
-  auto ll_exit = std::make_shared<LLBasicBlock>(_exit->name(), _exit, ll_function);
-  ll_function->AddBlock(ll_exit);
-  _block_map[_exit] = ll_exit;
-  ClearBlocks();
-
-#if 0
   for (const auto &it : *function) {
     auto block = dyn_cast<mid::BasicBlock>(it.value());
+    if (!block) continue;
     auto ll_block = std::make_shared<LLBasicBlock>(block->name(), block, ll_function);
 
     // insert blocks into function
@@ -212,7 +200,6 @@ LLFunctionPtr LLModule::CreateFunction(const mid::FuncPtr &function) {
     // insert block into _block_map
     _block_map[block] = ll_block;
   }
-#endif
 
   if (function->GetFunctionName() == "median") ll_function->SetNeedHash();
 

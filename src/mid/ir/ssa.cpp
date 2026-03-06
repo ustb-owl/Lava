@@ -20,6 +20,76 @@ Function::BlockList Function::GetBlockList() {
   return list;
 }
 
+InstList::iterator BasicBlock::AppendInst(const InstPtr &inst) {
+  return InsertInst(_insts.end(), inst);
+}
+
+InstList::iterator BasicBlock::InsertInst(InstList::iterator pos, const InstPtr &inst) {
+  auto inserted = _insts.insert(pos, inst);
+  inst->setParent(this);
+  return inserted;
+}
+
+InstList::iterator BasicBlock::InsertInstBefore(const InstPtr &insertBefore, const InstPtr &inst) {
+  auto pos = std::find_if(_insts.begin(), _insts.end(), [&insertBefore](const InstPtr &current) {
+    return current == insertBefore;
+  });
+  DBG_ASSERT(pos != _insts.end(), "insertBefore instruction is not in this block");
+  return InsertInst(pos, inst);
+}
+
+void BasicBlock::AddInstBefore(const InstPtr &insertBefore, const SSAPtr &inst) {
+  auto instruction = dyn_cast<Instruction>(inst);
+  DBG_ASSERT(instruction != nullptr, "inserted value is not an instruction");
+  static_cast<void>(InsertInstBefore(insertBefore, instruction));
+}
+
+InstList::iterator BasicBlock::EraseInst(InstList::iterator pos) {
+  DBG_ASSERT(pos != _insts.end(), "erase position is out of range");
+  return _insts.erase(pos);
+}
+
+InstList::iterator BasicBlock::EraseInst(const InstPtr &inst) {
+  auto pos = std::find_if(_insts.begin(), _insts.end(), [&inst](const InstPtr &current) {
+    return current == inst;
+  });
+  DBG_ASSERT(pos != _insts.end(), "instruction is not in this block");
+  return EraseInst(pos);
+}
+
+void BasicBlock::AppendInstsFrom(BasicBlock *other) {
+  if ((other == nullptr) || (other == this) || other->_insts.empty()) return;
+  for (auto &inst : other->_insts) {
+    inst->setParent(this);
+  }
+  _insts.splice(_insts.end(), other->_insts);
+}
+
+bool BasicBlock::HasPredecessor(const BasicBlock *pred) const {
+  return std::any_of(begin(), end(), [pred](const Use &use) {
+    return use.value().get() == pred;
+  });
+}
+
+void BasicBlock::AddPredecessor(const BlockPtr &pred) {
+  if (!pred || HasPredecessor(pred.get())) return;
+  AddValue(pred);
+}
+
+void BasicBlock::RemovePredecessor(const BasicBlock *pred) {
+  RemoveValue(const_cast<BasicBlock *>(pred));
+}
+
+bool BasicBlock::ReplacePredecessor(const BasicBlock *oldPred, const BlockPtr &newPred) {
+  bool replaced = false;
+  for (auto &use : *this) {
+    if (use.value().get() != oldPred) continue;
+    use.set(newPred);
+    replaced = true;
+  }
+  return replaced;
+}
+
 void Function::RemoveFromParent() {
   auto &functions = _module->Functions();
   for (auto it = functions.begin(); it != functions.end(); it++) {
@@ -41,6 +111,12 @@ InstList::iterator Instruction::RemoveFromParent() {
   return BB->inst_end();
 }
 
+InstList::iterator Instruction::EraseFromParent() {
+  DBG_ASSERT(uses().empty(), "can't erase instruction with live users");
+  Clear();
+  return RemoveFromParent();
+}
+
 InstList::iterator Instruction::GetPosition() {
   auto BB = getParent();
   for (auto it = BB->inst_begin(); it != BB->inst_end(); it++) {
@@ -49,6 +125,19 @@ InstList::iterator Instruction::GetPosition() {
     }
   }
   return BB->inst_end();
+}
+
+void Instruction::MoveBefore(const InstPtr &insertBefore) {
+  DBG_ASSERT(insertBefore != nullptr, "insertBefore instruction is nullptr");
+  auto *srcBB = getParent();
+  auto *dstBB = insertBefore->getParent();
+  auto srcPos = GetPosition();
+  auto dstPos = insertBefore->GetPosition();
+  DBG_ASSERT(srcPos != srcBB->inst_end(), "source instruction is not in parent block");
+  DBG_ASSERT(dstPos != dstBB->inst_end(), "target instruction is not in parent block");
+  if ((srcBB == dstBB) && (srcPos == dstPos)) return;
+  dstBB->insts().splice(dstPos, srcBB->insts(), srcPos);
+  setParent(dstBB);
 }
 
 Instruction::Instruction(unsigned opcode, unsigned operand_nums, ClassId classId)
@@ -208,6 +297,7 @@ constexpr static std::pair<BinaryOperator::BinaryOps, BinaryOperator::BinaryOps>
 BinaryOperator::BinaryOperator(Instruction::BinaryOps opcode, const SSAPtr &S1,
                                const SSAPtr &S2, const define::TypePtr &type)
     : Instruction(opcode, 2, ClassId::BinaryOperatorId) {
+  set_type(type);
   AddValue(S1);
   AddValue(S2);
 }
@@ -434,7 +524,8 @@ bool BinaryOperator::classof(const Value *value) {
 
 std::vector<BasicBlock *> BasicBlock::successors() {
   std::vector<BasicBlock *> succes;
-  auto inst = insts().back();
+  auto inst = terminator();
+  if (inst == nullptr) return succes;
   if (auto jumpInst = dyn_cast<JumpInst>(inst)) {
     if (jumpInst->size())
       succes.push_back(dyn_cast<BasicBlock>(jumpInst->target()).get());
@@ -686,6 +777,32 @@ BlockPtr PhiNode::getIncomingBlock(const Use &val) const  {
   return blocks()[idx];
 }
 
+int PhiNode::incomingIndexOf(const BasicBlock *pred) const {
+  auto incoming_blocks = blocks();
+  for (std::size_t i = 0; i < incoming_blocks.size(); ++i) {
+    if (incoming_blocks[i].get() == pred) return static_cast<int>(i);
+  }
+  return -1;
+}
+
+SSAPtr PhiNode::getIncomingValue(const BasicBlock *pred) const {
+  auto idx = incomingIndexOf(pred);
+  DBG_ASSERT(idx >= 0, "incoming predecessor not found");
+  return GetOperand(static_cast<unsigned>(idx));
+}
+
+void PhiNode::setIncomingValue(const BasicBlock *pred, const SSAPtr &value) {
+  auto idx = incomingIndexOf(pred);
+  DBG_ASSERT(idx >= 0, "incoming predecessor not found");
+  SetOperand(static_cast<unsigned>(idx), value);
+}
+
+void PhiNode::removeIncoming(const BasicBlock *pred) {
+  auto idx = incomingIndexOf(pred);
+  if (idx < 0) return;
+  RemoveValue(static_cast<unsigned>(idx));
+}
+
 
 
 
@@ -710,6 +827,10 @@ xstl::Guard InBranch() {
 }
 
 void DumpType(std::ostream &os, const define::TypePtr &type) {
+  if (type->IsPointer()) {
+    os << "ptr";
+    return;
+  }
   os << type->GetTypeId();
 }
 
@@ -865,8 +986,7 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
   if (!args_type.empty()) {
     for (std::size_t i = 0; i < args_type.size(); i++) {
       if (args_type[i]->IsPointer() || args_type[i]->IsArray()) {
-        auto tmpType = define::MakePointer(define::MakePrimType(define::Type::Int32, true));
-        DumpType(os, tmpType);
+        os << "ptr";
       } else {
         DumpType(os, args_type[i]);
       }
@@ -898,6 +1018,10 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
     auto it = worklist.front();
     worklist.pop();
     auto block = dyn_cast<BasicBlock>(it);
+    if (!block || block->insts().empty()) {
+      bbs.push_back(block);
+      continue;
+    }
     if (block->name() == "func_exit" || IsSSA<ReturnInst>(block->insts().back())) {
       func_exit = it;
       bbs.push_back(nullptr);
@@ -907,18 +1031,21 @@ void Function::Dump(std::ostream &os, IdManager &id_mgr) const {
 
     auto back = block->insts().back();
     if (auto jump_inst = dyn_cast<JumpInst>(back)) {
-      if (!visited.count(dyn_cast<BasicBlock>(jump_inst->target()).get())) {
-        visited.insert(jump_inst->target().get());
-        worklist.push(jump_inst->target());
+      auto target = dyn_cast<BasicBlock>(jump_inst->target());
+      if (target && !visited.count(target.get())) {
+        visited.insert(target.get());
+        worklist.push(target);
       }
     } else if (auto branch_inst = dyn_cast<BranchInst>(back)) {
-      if (!visited.count(dyn_cast<BasicBlock>(branch_inst->true_block()).get())) {
-        visited.insert(branch_inst->true_block().get());
-        worklist.push(branch_inst->true_block());
+      auto true_block = dyn_cast<BasicBlock>(branch_inst->true_block());
+      if (true_block && !visited.count(true_block.get())) {
+        visited.insert(true_block.get());
+        worklist.push(true_block);
       }
-      if (!visited.count(dyn_cast<BasicBlock>(branch_inst->false_block()).get())) {
-        visited.insert(branch_inst->false_block().get());
-        worklist.push(branch_inst->false_block());
+      auto false_block = dyn_cast<BasicBlock>(branch_inst->false_block());
+      if (false_block && !visited.count(false_block.get())) {
+        visited.insert(false_block.get());
+        worklist.push(false_block);
       }
     } else if (auto ret_inst = dyn_cast<ReturnInst>(back)) {
       // do nothing
@@ -1101,12 +1228,14 @@ void GlobalVariable::Dump(std::ostream &os, IdManager &id_mgr) const {
   os << "@" << _name;
   if (in_expr) return;
   auto &init_val = init();
+  bool dumped_with_trailing_newline = false;
 
   if (init_val) {
     auto init_type = init_val->type();
     /* Dump array */
     if (init_type->GetDerefedType() && init_type->GetDerefedType()->IsArray()) {
       init_val->Dump(os, id_mgr);
+      dumped_with_trailing_newline = true;
     } else {
       /* Dump global variable */
       os << " = global ";
@@ -1116,6 +1245,10 @@ void GlobalVariable::Dump(std::ostream &os, IdManager &id_mgr) const {
     os << " = global ";
     DumpType(os, type()->GetDerefedType());
     os << " " << "zeroinitializer";
+  }
+
+  if (!dumped_with_trailing_newline) {
+    os << std::endl;
   }
 }
 

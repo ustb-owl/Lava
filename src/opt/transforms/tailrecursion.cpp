@@ -17,7 +17,6 @@ public:
     _changed = false;
     if (F->is_decl() || F->args().size() > 4) return _changed;
     CheckIfTailRecursion(F);
-    std::cout << F->GetFunctionName() << ": " << F->is_tail_recursion() << std::endl;
     return _changed;
   }
 
@@ -89,4 +88,3 @@ public:
 static PassRegisterFactory<TailRecursionFactory> registry;
 
 }
-

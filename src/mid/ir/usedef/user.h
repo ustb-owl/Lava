@@ -58,20 +58,25 @@ public:
   }
 
   void RemoveValue(Value *V) {
-    _operands.erase(
-        std::remove_if(_operands.begin(), _operands.end(),
-              [&V](const Use &use) {
-                  return use.value().get() == V;
-              }),_operands.end());
+    Operands filtered;
+    filtered.reserve(_operands.size());
+    for (const auto &use : _operands) {
+      if (use.value().get() == V) continue;
+      filtered.emplace_back(use.value(), this);
+    }
+    _operands.swap(filtered);
     _operands_num = _operands.size();
   }
 
   void RemoveValue(unsigned idx) {
     DBG_ASSERT(idx < size(), "idx out of bound");
-    auto it = _operands.begin();
-    for (unsigned i = 0; i < idx; i++) it++;
-    DBG_ASSERT(it != _operands.end(), "it is out of bound");
-    _operands.erase(it);
+    Operands filtered;
+    filtered.reserve(_operands.size() - 1);
+    for (unsigned i = 0; i < _operands.size(); ++i) {
+      if (i == idx) continue;
+      filtered.emplace_back(_operands[i].value(), this);
+    }
+    _operands.swap(filtered);
     _operands_num = _operands.size();
   }
 

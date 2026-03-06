@@ -307,12 +307,12 @@ TypePtr Analyzer::visit(InitListAST *ast) {
   /* ---------- rebuild linear array ---------- */
   if (is_top_dim) {
     // get total size
-    int total_size = 1;
+    [[maybe_unused]] std::size_t total_size = 1;
     for (const auto &it : array_lens_) total_size *= it;
 
     // get linear array list
     auto result = GetLinearInitList(exprs);
-    DBG_ASSERT(total_size = result.size(), "init list size is incorrect");
+    DBG_ASSERT(total_size == result.size(), "init list size is incorrect");
 
     ASTPtrList final_init_list = std::move(result);
     if (array_lens_.size() > 1) {

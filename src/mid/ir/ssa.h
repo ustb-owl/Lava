@@ -36,9 +36,29 @@ public:
 
   void setParent(const FuncPtr &parent) { _parent = parent; }
 
-  void AddInstToEnd(const InstPtr &inst) { _insts.emplace_back(inst); }
+  InstList::iterator AppendInst(const InstPtr &inst);
+
+  InstList::iterator InsertInst(InstList::iterator pos, const InstPtr &inst);
+
+  InstList::iterator InsertInstBefore(const InstPtr &insertBefore, const InstPtr &inst);
+
+  InstList::iterator EraseInst(InstList::iterator pos);
+
+  InstList::iterator EraseInst(const InstPtr &inst);
+
+  void AppendInstsFrom(BasicBlock *other);
+
+  void AddInstToEnd(const InstPtr &inst) { static_cast<void>(AppendInst(inst)); }
 
   void AddInstBefore(const InstPtr &insertBefore, const SSAPtr &inst);
+
+  bool HasPredecessor(const BasicBlock *pred) const;
+
+  void AddPredecessor(const BlockPtr &pred);
+
+  void RemovePredecessor(const BasicBlock *pred);
+
+  bool ReplacePredecessor(const BasicBlock *oldPred, const BlockPtr &newPred);
 
   // remove all instructions
   void ClearInst();
@@ -52,6 +72,9 @@ public:
   InstList::iterator inst_end()        { return _insts.end();   }
   const FuncPtr     &getParent() const { return _parent;        }
   const std::string &name()   const    { return _name;          }
+  InstPtr            terminator() const {
+    return _insts.empty() ? nullptr : _insts.back();
+  }
 
   void SetBlockName(const std::string name) {
     _name = name;
@@ -143,8 +166,14 @@ public:
   // remove this instruction from parent
   InstList::iterator RemoveFromParent();
 
+  // clear operands and erase this instruction from parent
+  InstList::iterator EraseFromParent();
+
   // get position in the instruction list
   InstList::iterator GetPosition();
+
+  // move this instruction before another instruction
+  void MoveBefore(const InstPtr &insertBefore);
 
   //----------------------------------------------------------------------
   // Exported opcode enumerations...
@@ -195,6 +224,7 @@ public:
   virtual SSAPtr GetSuccessor(unsigned idx) const = 0;
   virtual void SetSuccessor(unsigned idx, const BlockPtr &BB) = 0;
   virtual void AddSuccessor(const BlockPtr &BB) { _successors.push_back(BB); }
+  virtual bool ReplaceSuccessor(BasicBlock *oldBlock, const BlockPtr &newBlock) = 0;
 
   // methods for dyn_cast
   static inline bool classof(TerminatorInst *) { return true; }
@@ -372,6 +402,12 @@ public:
     this->SetOperand(0, B);
   }
 
+  bool ReplaceSuccessor(BasicBlock *oldBlock, const BlockPtr &newBlock) override {
+    if (target().get() != oldBlock) return false;
+    SetSuccessor(0, newBlock);
+    return true;
+  }
+
   const SSAPtr &target() const { return (*this)[0].value(); }
 
   // methods for dyn_cast
@@ -402,19 +438,24 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // virtual functions of TerminatorInst
-  unsigned GetSuccessorNum() const override { return 1; }
+  unsigned GetSuccessorNum() const override { return 0; }
 
   SSAPtr GetSuccessor(unsigned idx) const override {
-    DBG_ASSERT(idx == 0, "index out of range");
-    auto succs = GetSuccessors();
-    DBG_ASSERT(succs.size() == 1, "successors size error");
-    return succs[idx];
+    static_cast<void>(idx);
+    DBG_ASSERT(false, "return instruction has no successors");
+    return nullptr;
   };
 
   void SetSuccessor(unsigned idx, const BlockPtr &BB) override {
-    DBG_ASSERT(idx == 0, "index out of range");
-    auto succs = GetSuccessors();
-    succs[idx] = BB;
+    static_cast<void>(idx);
+    static_cast<void>(BB);
+    DBG_ASSERT(false, "return instruction has no successors");
+  }
+
+  bool ReplaceSuccessor(BasicBlock *oldBlock, const BlockPtr &newBlock) override {
+    static_cast<void>(oldBlock);
+    static_cast<void>(newBlock);
+    return false;
   }
 
   // getter/setter
@@ -446,19 +487,30 @@ public:
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
   // virtual functions of TerminatorInst
-  unsigned GetSuccessorNum() const override { return 3; }
+  unsigned GetSuccessorNum() const override { return 2; }
 
   SSAPtr GetSuccessor(unsigned idx) const override {
     DBG_ASSERT(idx < 2, "index out of range");
-    auto succs = GetSuccessors();
-    DBG_ASSERT(succs.size() == 2, "successors size error");
-    return succs[idx];
+    return (idx == 0) ? true_block() : false_block();
   };
 
   void SetSuccessor(unsigned idx, const BlockPtr &BB) override {
     DBG_ASSERT(idx < 2, "index out of range");
-    auto succs = GetSuccessors();
-    succs[idx] = BB;
+    if (idx == 0) SetTrueBlock(BB);
+    else SetFalseBlock(BB);
+  }
+
+  bool ReplaceSuccessor(BasicBlock *oldBlock, const BlockPtr &newBlock) override {
+    bool replaced = false;
+    if (true_block().get() == oldBlock) {
+      SetTrueBlock(newBlock);
+      replaced = true;
+    }
+    if (false_block().get() == oldBlock) {
+      SetFalseBlock(newBlock);
+      replaced = true;
+    }
+    return replaced;
   }
 
   // getter/setter
@@ -865,6 +917,14 @@ public:
   }
 
   BlockPtr getIncomingBlock(const Use &val) const;
+
+  int incomingIndexOf(const BasicBlock *pred) const;
+
+  SSAPtr getIncomingValue(const BasicBlock *pred) const;
+
+  void setIncomingValue(const BasicBlock *pred, const SSAPtr &value);
+
+  void removeIncoming(const BasicBlock *pred);
 
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
