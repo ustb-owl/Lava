@@ -54,8 +54,8 @@ void DeadCodeElimination::Mark(const FuncPtr &F) {
 
     // insert operands into critical set
     DBG_ASSERT(inst->isInstruction(), "get instruction failed");
-    for (const auto &op_use : *inst) {
-      auto val = op_use.value();
+    for (unsigned i = 0; i < inst->size(); ++i) {
+      auto val = (*inst)[i].value();
       if (!val || _critical_list.count(val.get()))
         continue;
       if (val->isInstruction()) {

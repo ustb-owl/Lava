@@ -958,33 +958,76 @@ public:
 };
 
 // phi node
-// operands: value1, value2, ...
+// incoming edges: [pred, value], ...
 class PhiNode : public Instruction {
+public:
+  using IncomingValue  = std::pair<BlockPtr, SSAPtr>;
+  using IncomingValues = std::vector<IncomingValue>;
+
 private:
-  std::vector<BlockPtr> _incoming_blocks;
+  struct Incoming {
+    BlockPtr pred;
+    Use      value;
+
+    Incoming(PhiNode *phi, const BlockPtr &incoming_pred,
+             const SSAPtr &incoming_value)
+        : pred(incoming_pred), value(incoming_value, phi) {}
+  };
+
+  std::vector<Incoming> _incoming;
 
 public:
   explicit PhiNode(BasicBlock *BB)
-      : Instruction(Instruction::OtherOps::PHI, BB->predecessor_count(),
-                    ClassId::PHINodeId),
-        _incoming_blocks(BB->predecessors()) {
+      : Instruction(Instruction::OtherOps::PHI, 0, ClassId::PHINodeId) {
     setParent(BB);
-    ReserveOperands();
+    for (const auto &pred : BB->predecessors()) {
+      _incoming.emplace_back(this, pred, nullptr);
+    }
   }
 
   std::vector<BlockPtr> blocks() const;
 
-  const std::vector<BlockPtr> &incomingBlocks() const {
-    return _incoming_blocks;
+  std::vector<BlockPtr> incomingBlocks() const { return blocks(); }
+
+  IncomingValues incomingValues() const;
+
+  unsigned operandNum() const override {
+    return static_cast<unsigned>(_incoming.size());
   }
 
-  void ResetIncomingBlocks(const std::vector<BlockPtr> &blocks);
+  unsigned size() const override {
+    return static_cast<unsigned>(_incoming.size());
+  }
+
+  bool empty() const override { return _incoming.empty(); }
+
+  SSAPtr GetOperand(unsigned i) const override {
+    DBG_ASSERT(i < _incoming.size(), "getOperand() out of range");
+    return _incoming[i].value.value();
+  }
+
+  void SetOperand(unsigned i, const SSAPtr &V) override {
+    DBG_ASSERT(i < _incoming.size(), "setOperand() out of range");
+    _incoming[i].value.set(V);
+  }
+
+  Use &GetOperandUse(unsigned i) override {
+    DBG_ASSERT(i < _incoming.size(), "getOperandUse() out of range");
+    return _incoming[i].value;
+  }
+
+  const Use &GetOperandUse(unsigned i) const override {
+    DBG_ASSERT(i < _incoming.size(), "getOperandUse() out of range");
+    return _incoming[i].value;
+  }
+
+  void ResetIncoming(const IncomingValues &incoming);
 
   void addIncoming(const BlockPtr &pred, const SSAPtr &value);
 
   BlockPtr getIncomingBlock(unsigned int i) const {
-    DBG_ASSERT(i < _incoming_blocks.size(), "PHI index out of bound");
-    return _incoming_blocks[i];
+    DBG_ASSERT(i < _incoming.size(), "PHI index out of bound");
+    return _incoming[i].pred;
   }
 
   BlockPtr getIncomingBlock(const Use &val) const;

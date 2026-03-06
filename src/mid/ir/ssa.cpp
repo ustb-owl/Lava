@@ -915,36 +915,49 @@ bool IsCmp(const SSAPtr &ptr) {
   return false;
 }
 
-std::vector<BlockPtr> PhiNode::blocks() const { return _incoming_blocks; }
+std::vector<BlockPtr> PhiNode::blocks() const {
+  std::vector<BlockPtr> blocks;
+  blocks.reserve(_incoming.size());
+  for (const auto &incoming : _incoming) {
+    blocks.push_back(incoming.pred);
+  }
+  return blocks;
+}
 
-void PhiNode::ResetIncomingBlocks(const std::vector<BlockPtr> &blocks) {
-  _incoming_blocks = blocks;
-  ClearOperands();
-  SetOperandNum(_incoming_blocks.size());
-  ReserveOperands();
+PhiNode::IncomingValues PhiNode::incomingValues() const {
+  IncomingValues incoming;
+  incoming.reserve(_incoming.size());
+  for (const auto &it : _incoming) {
+    incoming.emplace_back(it.pred, it.value.value());
+  }
+  return incoming;
+}
+
+void PhiNode::ResetIncoming(const IncomingValues &incoming) {
+  _incoming.clear();
+  _incoming.reserve(incoming.size());
+  for (const auto &[pred, value] : incoming) {
+    _incoming.emplace_back(this, pred, value);
+  }
 }
 
 void PhiNode::addIncoming(const BlockPtr &pred, const SSAPtr &value) {
-  _incoming_blocks.push_back(pred);
-  AppendOperand(value);
+  _incoming.emplace_back(this, pred, value);
 }
 
 BlockPtr PhiNode::getIncomingBlock(const Use &val) const {
   DBG_ASSERT(val.getUser() == this, "val is not PHI's use");
-  unsigned idx = 0;
-  for (const auto &it : (*this)) {
-    if (&it != &val)
-      idx++;
-    else
-      break;
+  for (std::size_t idx = 0; idx < _incoming.size(); ++idx) {
+    if (&_incoming[idx].value == &val)
+      return getIncomingBlock(static_cast<unsigned>(idx));
   }
-  DBG_ASSERT(idx < size(), "PHI index out of bound");
-  return blocks()[idx];
+  DBG_ASSERT(false, "PHI use not found");
+  return nullptr;
 }
 
 int PhiNode::incomingIndexOf(const BasicBlock *pred) const {
-  for (std::size_t i = 0; i < _incoming_blocks.size(); ++i) {
-    if (_incoming_blocks[i].get() == pred)
+  for (std::size_t i = 0; i < _incoming.size(); ++i) {
+    if (_incoming[i].pred.get() == pred)
       return static_cast<int>(i);
   }
   return -1;
@@ -974,9 +987,9 @@ void PhiNode::setIncomingValue(const BasicBlock *pred, const SSAPtr &value) {
 
 void PhiNode::replaceIncomingBlock(const BasicBlock *oldPred,
                                    const BlockPtr   &newPred) {
-  for (auto &pred : _incoming_blocks) {
-    if (pred.get() == oldPred)
-      pred = newPred;
+  for (auto &incoming : _incoming) {
+    if (incoming.pred.get() == oldPred)
+      incoming.pred = newPred;
   }
 }
 
@@ -984,8 +997,14 @@ void PhiNode::removeIncoming(const BasicBlock *pred) {
   auto idx = incomingIndexOf(pred);
   if (idx < 0)
     return;
-  _incoming_blocks.erase(_incoming_blocks.begin() + idx);
-  RemoveOperand(static_cast<unsigned>(idx));
+  std::vector<Incoming> filtered;
+  filtered.reserve(_incoming.size() - 1);
+  for (std::size_t i = 0; i < _incoming.size(); ++i) {
+    if (static_cast<int>(i) == idx)
+      continue;
+    filtered.emplace_back(this, _incoming[i].pred, _incoming[i].value.value());
+  }
+  _incoming.swap(filtered);
 }
 
 /* ---------------------------- Methods of dumping IR

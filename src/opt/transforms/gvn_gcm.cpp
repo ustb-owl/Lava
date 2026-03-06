@@ -430,14 +430,7 @@ void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
 
         // handle phi node
         if (auto phi_node = dyn_cast<PhiNode>(user)) {
-          auto it = std::find_if(phi_node->begin(), phi_node->end(),
-                                 [use](const Use &U) { return &U == use; });
-
-          DBG_ASSERT(it != phi_node->end(), "can't find phi incoming use");
-          user_block =
-              phi_node
-                  ->getIncomingBlock(static_cast<int>(it - phi_node->begin()))
-                  .get();
+          user_block = phi_node->getIncomingBlock(*use).get();
         }
         lca = lca ? FindLCA(lca, user_block) : user_block;
       }

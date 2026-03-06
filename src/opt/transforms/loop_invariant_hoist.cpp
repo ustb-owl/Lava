@@ -79,8 +79,8 @@ bool LoopInvariantHoist::HoistInstructionIfInvariant(
   if (!active.insert(raw_inst).second)
     return false;
 
-  for (const auto &operand : *inst) {
-    auto op_inst = dyn_cast<Instruction>(operand.value());
+  for (unsigned i = 0; i < inst->size(); ++i) {
+    auto op_inst = dyn_cast<Instruction>((*inst)[i].value());
     if (!op_inst)
       continue;
     if (IsInLoop(op_inst->getParent(), loop)) {

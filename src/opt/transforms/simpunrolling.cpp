@@ -161,9 +161,10 @@ public:
             // #if 0
             for (auto it = loop_body->insts().begin();; it++) {
               auto inst = dyn_cast<Instruction>(*it);
-              for (auto &use : *inst) {
-                auto value = use.value();
-                auto res   = _phi_map.find(value);
+              for (unsigned i = 0; i < inst->size(); ++i) {
+                auto &use   = (*inst)[i];
+                auto  value = use.value();
+                auto  res   = _phi_map.find(value);
                 if (res != _phi_map.end()) {
                   auto phi = dyn_cast<PhiNode>(res->first);
                   use.set(phi->getIncomingValueAt(0));

@@ -28,7 +28,7 @@ public:
     }
   }
 
-  unsigned operandNum() const { return _operands.size(); }
+  virtual unsigned operandNum() const { return _operands.size(); }
 
   const Operands &GetOperands() const { return _operands; }
 
@@ -42,6 +42,16 @@ public:
   virtual void SetOperand(unsigned i, const SSAPtr &V) {
     DBG_ASSERT(i < _operands_num, "setOperand() out of range");
     _operands[i].set(V);
+  }
+
+  virtual Use &GetOperandUse(unsigned i) {
+    DBG_ASSERT(i < _operands_num, "getOperandUse() out of range");
+    return _operands[i];
+  }
+
+  virtual const Use &GetOperandUse(unsigned i) const {
+    DBG_ASSERT(i < _operands_num, "getOperandUse() out of range");
+    return _operands[i];
   }
 
   void AppendOperand(const SSAPtr &V) {
@@ -107,13 +117,15 @@ public:
 
   // access value in current user
   Use &operator[](std::size_t pos) {
-    _operands_num = _operands.size();
-    DBG_ASSERT(pos < _operands_num, "position out of range");
-    return _operands[pos];
+    DBG_ASSERT(pos < size(), "position out of range");
+    return GetOperandUse(pos);
   }
 
   // access value in current user (const)
-  const Use &operator[](std::size_t pos) const { return _operands[pos]; }
+  const Use &operator[](std::size_t pos) const {
+    DBG_ASSERT(pos < size(), "position out of range");
+    return GetOperandUse(pos);
+  }
 
   // begin iterator
   auto begin() { return _operands.begin(); }
@@ -126,8 +138,8 @@ public:
   Use       &back() { return _operands.back(); }
   const Use &back() const { return _operands.back(); }
 
-  bool     empty() const { return _operands.empty(); }
-  unsigned size() const { return _operands.size(); }
+  virtual bool     empty() const { return _operands.empty(); }
+  virtual unsigned size() const { return _operands.size(); }
 
   // methods for dyn_cast
   static inline bool classof(User *) { return true; }

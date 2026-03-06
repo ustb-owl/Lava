@@ -191,22 +191,15 @@ std::size_t FunctionInlining::GetInstCount(const FuncPtr &F) const {
 
 void FunctionInlining::Rename() {
   for (const auto &orig_phi : phi_list) {
-    auto phi = dyn_cast<PhiNode>(ssa_map[orig_phi]);
-    phi->ResetIncomingBlocks(phi->getParent()->predecessors());
-
-    auto     orig_preds = orig_phi->blocks();
-    auto     preds      = phi->blocks();
-    uint32_t idx        = 0;
-    for (const auto &it : *orig_phi) {
-      auto        pred = orig_preds[idx];
-      std::size_t i;
-      for (i = 0; i < orig_preds.size(); i++) {
-        if (blk_map[pred] == preds[i])
-          break;
-      }
-      phi->setIncomingValueAt(i, GetOperand(it.value()));
-      idx++;
+    auto                    phi = dyn_cast<PhiNode>(ssa_map[orig_phi]);
+    PhiNode::IncomingValues incoming;
+    incoming.reserve(orig_phi->size());
+    for (uint32_t idx = 0; idx < orig_phi->size(); ++idx) {
+      auto pred = orig_phi->getIncomingBlock(idx);
+      incoming.emplace_back(blk_map[pred],
+                            GetOperand(orig_phi->getIncomingValueAt(idx)));
     }
+    phi->ResetIncoming(incoming);
     DBG_ASSERT(phi->size() == orig_phi->size(),
                "The operand number of PHI instruction is wrong");
   }

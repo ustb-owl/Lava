@@ -311,7 +311,7 @@ void BlockSimplification::RemovePhiNode(BasicBlock               *block,
         unsigned other_idx = (static_cast<unsigned>(idx) + 1) % 2;
 
         // replace phi_node from its users with the other value
-        phi_node->ReplaceBy((*phi_node)[other_idx].value());
+        phi_node->ReplaceBy(phi_node->getIncomingValueAt(other_idx));
 
         // remove phi from succ's instructions list
         inst_it = phi_node->EraseFromParent();
@@ -319,7 +319,7 @@ void BlockSimplification::RemovePhiNode(BasicBlock               *block,
         phi_node->removeIncoming(block);
 
         if (phi_node->size() == 1) {
-          phi_node->ReplaceBy(phi_node->begin()->value());
+          phi_node->ReplaceBy(phi_node->getIncomingValueAt(0));
           inst_it = phi_node->EraseFromParent();
         } else {
           inst_it++;

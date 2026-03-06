@@ -77,12 +77,12 @@ bool SanitizeFunctionCFG(const FuncPtr &F) {
 
       for (auto it = dead_pred_indices.rbegin(); it != dead_pred_indices.rend();
            ++it) {
-        if (*it < phi->blocks().size())
+        if (*it < phi->size())
           phi->removeIncoming(phi->getIncomingBlock(*it).get());
       }
 
       if (phi->size() == 1) {
-        phi->ReplaceBy(phi->begin()->value());
+        phi->ReplaceBy(phi->getIncomingValueAt(0));
         inst_it = phi->EraseFromParent();
         changed = true;
       } else {
