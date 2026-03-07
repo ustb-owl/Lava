@@ -13,7 +13,6 @@ bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
     return _changed;
 
 GVN:
-  PassManager::RunRequiredPasses(this);
   initialize();
 
   _cur_func = F.get();
@@ -23,23 +22,14 @@ GVN:
   _value_number.clear();
 
   // run dead code elimination before gcm
-  auto dce =
-      PassManager::GetTransformPass<DeadCodeElimination>("DeadCodeElimination");
-  dce->initialize();
-  PassManager::RunRequiredPasses(dce);
-  dce->runOnFunction(F);
-  dce->finalize();
+  PassManager::RunPassOnFunction("DeadCodeElimination", F);
 
   // Keep pure GVN enabled, but leave GCM disabled for now.
   // The current late-scheduling logic is too costly on the refactored IR and
   // needs a separate cleanup before it can safely run at -O2 again.
 
   // run block simplification
-  auto blk =
-      PassManager::GetTransformPass<BlockSimplification>("BlockSimplification");
-  blk->initialize();
-  _changed |= blk->runOnFunction(F);
-  blk->finalize();
+  _changed |= PassManager::RunPassOnFunction("BlockSimplification", F);
   if (_changed) {
     _changed = false;
     goto GVN;
@@ -52,7 +42,7 @@ void GlobalValueNumberingGlobalCodeMotion::initialize() {
   _cur_func  = nullptr;
   _cur_block = nullptr;
   auto func_info =
-      PassManager::GetAnalysis<FunctionInfoPass>("FunctionInfoPass");
+      PassManager::RequireAnalysis<FunctionInfoPass>("FunctionInfoPass");
   _func_infos = func_info->GetFunctionInfo();
 }
 

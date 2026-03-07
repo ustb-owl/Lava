@@ -4,6 +4,33 @@
 
 namespace lava::opt {
 
+namespace {
+
+class ActiveValidGuard {
+private:
+  PassNameSet *&_slot;
+  PassNameSet  *_saved;
+
+public:
+  ActiveValidGuard(PassNameSet *&slot, PassNameSet &next)
+      : _slot(slot), _saved(slot) {
+    _slot = &next;
+  }
+
+  ~ActiveValidGuard() { _slot = _saved; }
+};
+
+PassInfoPtr LookupPassInfo(const std::string &name) {
+  const auto &passes = PassManager::GetPasses();
+  auto        it     = passes.find(name);
+  if (it == passes.end()) {
+    ERROR("pass %s not found", name.c_str());
+  }
+  return it->second;
+}
+
+} // namespace
+
 PassManager *PassManager::_instance = nullptr;
 
 PassInfo &PassInfo::Requires(const std::string &pass_name) {
@@ -23,15 +50,23 @@ void PassManager::RequiredBy(const std::string &slave,
 }
 
 bool PassManager::RunPass(PassNameSet &valid, const PassInfoPtr &info) {
-  bool changed = false;
+  if (valid.contains(info->name())) {
+    return false;
+  }
 
-  // check dependencies, run required passes first
+  ActiveValidGuard guard(GetPassManager()->_active_valid, valid);
   RunRequiredPasses(valid, info);
 
-  // run current pass
-  if (RunPass(info->pass())) {
-    changed = true;
+  auto changed = RunPass(info->pass());
+  valid.insert(info->name());
+
+  if (!info->is_analysis() && changed) {
+    InvalidateAnalyses(valid);
+    for (const auto &name : info->invalidated_passes()) {
+      InvalidatePass(valid, name);
+    }
   }
+
   return changed;
 }
 
@@ -52,7 +87,7 @@ bool PassManager::RunPass(const PassPtr &pass) {
       if (func->is_copied())
         continue;
       //      TRACE("%s\n", pass->name().c_str());
-      changed = pass->runOnFunction(func);
+      changed |= pass->runOnFunction(func);
       // perform finalization
       pass->finalize();
     }
@@ -71,47 +106,32 @@ void PassManager::RunPasses(const PassPtrList &passes) {
   }
 }
 
-bool PassManager::RunRequiredPasses(const PassPtr &info) {
-  return RunRequiredPasses(info.get());
-}
-
-bool PassManager::RunRequiredPasses(const Pass *info) {
-  PassNameSet valid;
-
-  auto pass = GetPasses().find(info->name());
-  DBG_ASSERT(pass != GetPasses().end(), "find pass failed");
-
-  for (const auto &name : (*pass).second->required_passes()) {
-    // get pointer of pass
-    const auto &passes = GetPasses();
-    auto        it     = passes.find(name);
-    DBG_ASSERT(it != passes.end(), "required pass not found");
-
-    // check if current pass can be run
-    if (!it->second->is_analysis() &&
-        it->second->min_opt_level() > opt_level()) {
+bool PassManager::RunRequiredPasses(PassNameSet       &valid,
+                                    const PassInfoPtr &info) {
+  for (const auto &name : info->required_passes()) {
+    auto required = LookupPassInfo(name);
+    if (!required->is_analysis() && required->min_opt_level() > opt_level()) {
       continue;
     }
-    RunPass(valid, it->second);
+    RunPass(valid, required);
   }
   return false;
 }
 
-bool PassManager::RunRequiredPasses(PassNameSet       &valid,
-                                    const PassInfoPtr &info) {
+bool PassManager::RunRequiredPassesOnFunction(PassNameSet       &valid,
+                                              const PassInfoPtr &info,
+                                              const FuncPtr     &F) {
   for (const auto &name : info->required_passes()) {
-    // get pointer of pass
-    const auto &passes = GetPasses();
-    auto        it     = passes.find(name);
-    DBG_ASSERT(it != passes.end(), "required pass not found");
-
-    // check if current pass can be run
-    if (!it->second->is_analysis() &&
-        it->second->min_opt_level() > opt_level()) {
+    auto required = LookupPassInfo(name);
+    if (!required->is_analysis() && required->min_opt_level() > opt_level()) {
       continue;
     }
 
-    RunPass(valid, it->second);
+    if (required->pass()->IsFunctionPass()) {
+      RunPassOnFunction(name, F);
+    } else {
+      RunPass(valid, required);
+    }
   }
   return false;
 }
@@ -125,6 +145,51 @@ void PassManager::InvalidatePass(PassNameSet &valid, const std::string &name) {
   for (const auto &child : GetRequiredBy()[name]) {
     InvalidatePass(valid, child);
   }
+}
+
+void PassManager::InvalidateAnalyses(PassNameSet &valid) {
+  for (const auto &[name, info] : GetPasses()) {
+    if (info->is_analysis()) {
+      InvalidatePass(valid, name);
+    }
+  }
+}
+
+bool PassManager::RunPassOnFunction(const std::string &name, const FuncPtr &F) {
+  auto info = LookupPassInfo(name);
+  if (info->pass()->IsModulePass()) {
+    if (auto *active_valid = GetPassManager()->_active_valid) {
+      return RunPass(*active_valid, info);
+    }
+    PassNameSet local_valid;
+    return RunPass(local_valid, info);
+  }
+
+  DBG_ASSERT(info->pass()->IsFunctionPass(), "pass is not function pass");
+
+  PassNameSet local_valid;
+  auto       &valid = GetPassManager()->_active_valid != nullptr
+                          ? *GetPassManager()->_active_valid
+                          : local_valid;
+
+  ActiveValidGuard guard(GetPassManager()->_active_valid, valid);
+  RunRequiredPassesOnFunction(valid, info, F);
+
+  auto pass = info->pass();
+  pass->initialize();
+  auto changed = pass->runOnFunction(F);
+  pass->finalize();
+
+  if (info->is_analysis()) {
+    InvalidatePass(valid, info->name());
+  } else if (changed) {
+    InvalidateAnalyses(valid);
+    for (const auto &invalidated : info->invalidated_passes()) {
+      InvalidatePass(valid, invalidated);
+    }
+  }
+
+  return changed;
 }
 
 void PassManager::RunPasses() {

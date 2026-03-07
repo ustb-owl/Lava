@@ -96,7 +96,7 @@ public:
     _cur_func = nullptr;
     _loop_info.Clear();
     _visited.clear();
-    auto A    = PassManager::GetAnalysis<DominanceInfo>("DominanceInfo");
+    auto A    = PassManager::RequireAnalysis<DominanceInfo>("DominanceInfo");
     _dom_info = A->GetDomInfo();
   }
 

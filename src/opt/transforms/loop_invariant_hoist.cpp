@@ -109,7 +109,6 @@ bool LoopInvariantHoist::runOnFunction(const FuncPtr &F) {
   if (F->is_decl())
     return false;
 
-  PassManager::RunRequiredPasses(this);
   initialize();
   _cur_func = F.get();
 
@@ -148,11 +147,11 @@ bool LoopInvariantHoist::runOnFunction(const FuncPtr &F) {
 void LoopInvariantHoist::initialize() {
   _cur_func = nullptr;
   auto func_info =
-      PassManager::GetAnalysis<FunctionInfoPass>("FunctionInfoPass");
+      PassManager::RequireAnalysis<FunctionInfoPass>("FunctionInfoPass");
   _func_infos    = func_info->GetFunctionInfo();
-  auto dom_info  = PassManager::GetAnalysis<DominanceInfo>("DominanceInfo");
+  auto dom_info  = PassManager::RequireAnalysis<DominanceInfo>("DominanceInfo");
   _dom_info      = dom_info->GetDomInfo();
-  auto loop_info = PassManager::GetAnalysis<LoopInfoPass>("LoopInfoPass");
+  auto loop_info = PassManager::RequireAnalysis<LoopInfoPass>("LoopInfoPass");
   _loop_info     = loop_info->GetLoopInfo();
 }
 

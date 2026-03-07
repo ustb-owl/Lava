@@ -57,10 +57,8 @@ public:
       return changed;
 
     module.emplace(*F->getParent());
-    // get loop info
-    auto loop_analysis = PassManager::GetAnalysis<LoopInfoPass>("LoopInfoPass");
-    loop_analysis->initialize();
-    loop_analysis->runOnFunction(F);
+    auto loop_analysis =
+        PassManager::RequireAnalysisOnFunction<LoopInfoPass>("LoopInfoPass", F);
     loop_info = loop_analysis->GetLoopInfo();
 
     // collect call instructions
@@ -103,31 +101,11 @@ public:
     if (!func_info.is_leaf)
       func_info.is_leaf = become_leaf;
 
-    // run block simplification
-    auto blk = PassManager::GetTransformPass<BlockSimplification>(
-        "BlockSimplification");
-    blk->initialize();
-    changed |= blk->runOnFunction(F);
-    blk->finalize();
-
-    auto strength =
-        PassManager::GetTransformPass<StrengthReduction>("StrengthReduction");
-    strength->initialize();
-    changed |= strength->runOnFunction(F);
-    strength->finalize();
-
-    auto gvn_gcm =
-        PassManager::GetTransformPass<GlobalValueNumberingGlobalCodeMotion>(
-            "GlobalValueNumberingGlobalCodeMotion");
-    gvn_gcm->initialize();
-    changed |= gvn_gcm->runOnFunction(F);
-    gvn_gcm->finalize();
-
-    auto hoist =
-        PassManager::GetTransformPass<LoopInvariantHoist>("LoopInvariantHoist");
-    hoist->initialize();
-    changed |= hoist->runOnFunction(F);
-    hoist->finalize();
+    changed |= PassManager::RunPassOnFunction("BlockSimplification", F);
+    changed |= PassManager::RunPassOnFunction("StrengthReduction", F);
+    changed |= PassManager::RunPassOnFunction(
+        "GlobalValueNumberingGlobalCodeMotion", F);
+    changed |= PassManager::RunPassOnFunction("LoopInvariantHoist", F);
 
     return changed;
   }
@@ -135,7 +113,7 @@ public:
   void initialize() final {
     ret_inst = nullptr;
     auto func_info =
-        PassManager::GetAnalysis<FunctionInfoPass>("FunctionInfoPass");
+        PassManager::RequireAnalysis<FunctionInfoPass>("FunctionInfoPass");
     func_infos = func_info->GetFunctionInfo();
   }
 

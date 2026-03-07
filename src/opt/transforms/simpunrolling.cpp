@@ -33,47 +33,24 @@ public:
     if (F->is_decl())
       return _changed;
 
-    auto need_gcm = PassManager::GetAnalysis<NeedGcm>("NeedGcm");
+    auto need_gcm = PassManager::RequireAnalysis<NeedGcm>("NeedGcm");
     if (need_gcm->IsCrypto())
       return _changed;
     TRACE0();
 
-    auto strength =
-        PassManager::GetTransformPass<StrengthReduction>("StrengthReduction");
-    auto gvn =
-        PassManager::GetTransformPass<GlobalValueNumberingGlobalCodeMotion>(
-            "GlobalValueNumberingGlobalCodeMotion");
-    auto hoist =
-        PassManager::GetTransformPass<LoopInvariantHoist>("LoopInvariantHoist");
     _in_last_loop = false;
     UnrollConst(F);
 
-    strength->initialize();
-    strength->runOnFunction(F);
-    strength->finalize();
-
-    gvn->initialize();
-    gvn->runOnFunction(F);
-    gvn->finalize();
-
-    hoist->initialize();
-    hoist->runOnFunction(F);
-    hoist->finalize();
+    PassManager::RunPassOnFunction("StrengthReduction", F);
+    PassManager::RunPassOnFunction("GlobalValueNumberingGlobalCodeMotion", F);
+    PassManager::RunPassOnFunction("LoopInvariantHoist", F);
 
 #if 0
     UnrollLeftConst(F);
 
-    strength->initialize();
-    strength->runOnFunction(F);
-    strength->finalize();
-
-    gvn->initialize();
-    gvn->runOnFunction(F);
-    gvn->finalize();
-
-    hoist->initialize();
-    hoist->runOnFunction(F);
-    hoist->finalize();
+    PassManager::RunPassOnFunction("StrengthReduction", F);
+    PassManager::RunPassOnFunction("GlobalValueNumberingGlobalCodeMotion", F);
+    PassManager::RunPassOnFunction("LoopInvariantHoist", F);
 #endif
 
     return _changed;
@@ -92,9 +69,8 @@ public:
   }
 
   void UnrollConst(const FuncPtr &F) {
-    auto A = PassManager::GetAnalysis<LoopInfoPass>("LoopInfoPass");
-    A->initialize();
-    A->runOnFunction(F);
+    auto A =
+        PassManager::RequireAnalysisOnFunction<LoopInfoPass>("LoopInfoPass", F);
     _loop_info = A->GetLoopInfo();
 
     auto deepest = _loop_info.deepest_loops();
@@ -247,9 +223,8 @@ public:
   }
 
   void UnrollLeftConst(const FuncPtr &F) {
-    auto A = PassManager::GetAnalysis<LoopInfoPass>("LoopInfoPass");
-    A->initialize();
-    A->runOnFunction(F);
+    auto A =
+        PassManager::RequireAnalysisOnFunction<LoopInfoPass>("LoopInfoPass", F);
     _loop_info = A->GetLoopInfo();
 
     auto deepest = _loop_info.deepest_loops();

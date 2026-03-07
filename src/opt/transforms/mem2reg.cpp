@@ -41,8 +41,9 @@ public:
   }
 
   void initialize() final {
-    auto dominance = PassManager::GetAnalysis<DominanceInfo>("DominanceInfo");
-    _dom_info      = dominance->GetDomInfo();
+    auto dominance =
+        PassManager::RequireAnalysis<DominanceInfo>("DominanceInfo");
+    _dom_info = dominance->GetDomInfo();
   }
 
   void finalize() final {

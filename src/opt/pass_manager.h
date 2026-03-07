@@ -97,6 +97,7 @@ private:
   RequirementMap  _requirements;
   PassPtrList     _candidates;
   PassFactoryList _factories;
+  PassNameSet    *_active_valid;
 
   void AddFactory(const std::shared_ptr<PassFactory> &factory) {
     _factories.push_back(factory);
@@ -107,10 +108,13 @@ private:
 public:
   static PassManager *_instance;
 
-  PassManager() : _opt_level(0), _module(nullptr), _initialized_factories(0) {}
+  PassManager()
+      : _opt_level(0), _module(nullptr), _initialized_factories(0),
+        _active_valid(nullptr) {}
 
   explicit PassManager(mid::Module &module)
-      : _opt_level(0), _module(&module), _initialized_factories(0) {}
+      : _opt_level(0), _module(&module), _initialized_factories(0),
+        _active_valid(nullptr) {}
 
   static void Initialize() { GetPassManager()->init(); }
 
@@ -131,19 +135,23 @@ public:
   static void RequiredBy(const std::string &slave, const std::string &master);
 
   // run required passes
-  static bool RunRequiredPasses(const PassPtr &info);
-  static bool RunRequiredPasses(const Pass *info);
   static bool RunRequiredPasses(PassNameSet &valid, const PassInfoPtr &info);
+  static bool RunRequiredPassesOnFunction(PassNameSet       &valid,
+                                          const PassInfoPtr &info,
+                                          const FuncPtr     &F);
 
   // invalidate the specific pass
   static void InvalidatePass(PassNameSet &valid, const std::string &name);
 
+  static void InvalidateAnalyses(PassNameSet &valid);
+
   /* methods related with analysis result */
   template <typename AnalysisType>
   static std::shared_ptr<AnalysisType> GetAnalysis(const std::string &name) {
-    auto pass = _instance->_pass_infos.find(name);
+    auto manager = GetPassManager();
+    auto pass    = manager->_pass_infos.find(name);
     // found pass by name
-    if (pass == _instance->_pass_infos.end()) {
+    if (pass == manager->_pass_infos.end()) {
       ERROR("analysis pass %s not found", name.c_str());
     }
 
@@ -155,20 +163,50 @@ public:
     return std::static_pointer_cast<AnalysisType>(pass->second->pass());
   }
 
-  /* run pass in another pass */
-  template <typename PassType>
-  static std::shared_ptr<PassType> GetTransformPass(const std::string &name) {
-    auto pass = _instance->_pass_infos.find(name);
-    // found pass by name
-    if (pass == _instance->_pass_infos.end()) {
-      ERROR("transform pass %s not found", name.c_str());
+  template <typename AnalysisType>
+  static std::shared_ptr<AnalysisType>
+  RequireAnalysis(const std::string &name) {
+    auto manager = GetPassManager();
+    auto pass    = manager->_pass_infos.find(name);
+    if (pass == manager->_pass_infos.end()) {
+      ERROR("analysis pass %s not found", name.c_str());
+    }
+    if (!pass->second->is_analysis()) {
+      ERROR("pass %s is not analysis pass", name.c_str());
     }
 
-    if (pass->second->is_analysis()) {
-      ERROR("pass %s is not transform pass", name.c_str());
+    if (manager->_active_valid != nullptr) {
+      RunPass(*manager->_active_valid, pass->second);
+    } else {
+      PassNameSet local_valid;
+      RunPass(local_valid, pass->second);
     }
 
-    return std::static_pointer_cast<PassType>(pass->second->pass());
+    return std::static_pointer_cast<AnalysisType>(pass->second->pass());
+  }
+
+  template <typename AnalysisType>
+  static std::shared_ptr<AnalysisType>
+  RequireAnalysisOnFunction(const std::string &name, const FuncPtr &F) {
+    auto manager = GetPassManager();
+    auto pass    = manager->_pass_infos.find(name);
+    if (pass == manager->_pass_infos.end()) {
+      ERROR("analysis pass %s not found", name.c_str());
+    }
+    if (!pass->second->is_analysis()) {
+      ERROR("pass %s is not analysis pass", name.c_str());
+    }
+
+    if (pass->second->pass()->IsFunctionPass()) {
+      RunPassOnFunction(name, F);
+    } else if (manager->_active_valid != nullptr) {
+      RunPass(*manager->_active_valid, pass->second);
+    } else {
+      PassNameSet local_valid;
+      RunPass(local_valid, pass->second);
+    }
+
+    return std::static_pointer_cast<AnalysisType>(pass->second->pass());
   }
 
   // register pass
@@ -182,6 +220,10 @@ public:
   // run a specific pass if it's not valid
   // returns true if changed
   static bool RunPass(PassNameSet &valid, const PassInfoPtr &info);
+
+  // run a specific function pass on a single function through the manager
+  // without exposing manual initialize/run/finalize in transforms.
+  static bool RunPassOnFunction(const std::string &name, const FuncPtr &F);
 
   // run all passes
   static void RunPasses(const PassPtrList &passes);

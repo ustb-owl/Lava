@@ -38,7 +38,7 @@ public:
 
   void initialize() final {
     auto func_info =
-        PassManager::GetAnalysis<FunctionInfoPass>("FunctionInfoPass");
+        PassManager::RequireAnalysis<FunctionInfoPass>("FunctionInfoPass");
     _func_infos = func_info->GetFunctionInfo();
   }
 
