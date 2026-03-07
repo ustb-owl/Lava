@@ -13,7 +13,7 @@ private:
 
 public:
   explicit BlockRearrange(LLModule &module)
-  : PassBase(module), _exit(nullptr) {}
+      : PassBase(module), _exit(nullptr) {}
 
   void Reset() final {
     _exit = nullptr;
@@ -26,6 +26,6 @@ public:
   void DFS(LLBlockPtr BB);
 };
 
-}
+} // namespace lava::back
 
-#endif //LAVA_BLOCKREARRANGE_H
+#endif // LAVA_BLOCKREARRANGE_H

@@ -23,7 +23,8 @@ private:
 public:
   bool runOnFunction(const FuncPtr &F) final {
     _changed = false;
-    if (F->is_decl()) return _changed;
+    if (F->is_decl())
+      return _changed;
 
     SolveDominance(F);
 
@@ -34,18 +35,18 @@ public:
     _cur_func = nullptr;
     _dom_info.clear();
   }
-
 };
 
 class DominanceInfoPassFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
-    auto pass = std::make_shared<DominanceInfo>();
-    auto passinfo =  std::make_shared<PassInfo>(pass, "DominanceInfo", true, 0, DOMINANCE_INFO);
+    auto pass     = std::make_shared<DominanceInfo>();
+    auto passinfo = std::make_shared<PassInfo>(pass, "DominanceInfo", true, 0,
+                                               DOMINANCE_INFO);
     return passinfo;
   }
 };
 
-}
+} // namespace lava::opt
 
-#endif //LAVA_DOMINANCE_H
+#endif // LAVA_DOMINANCE_H

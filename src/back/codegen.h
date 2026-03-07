@@ -1,32 +1,29 @@
 #ifndef LAVA_CODEGEN_H
 #define LAVA_CODEGEN_H
 
-#include "passes/pass.h"
 #include "mid/ir/module.h"
+#include "passes/pass.h"
 
 namespace lava::back {
 
-enum class TargetArch {
-  ARM = 0
-};
+enum class TargetArch { ARM = 0 };
 
 // consume IR and generate
 class CodeGenerator {
 private:
-  TargetArch            _target_arch;
-  mid::Module*          _module;
-  LLModule              _ll_module;
-  std::vector<PassPtr>  _passes;
-  bool                  _no_ra;       // disable register allocation
+  TargetArch           _target_arch;
+  mid::Module         *_module;
+  LLModule             _ll_module;
+  std::vector<PassPtr> _passes;
+  bool                 _no_ra; // disable register allocation
 
 public:
   CodeGenerator() : _target_arch(TargetArch::ARM), _module(nullptr) {}
 
-  CodeGenerator(TargetArch targetArch) : _target_arch(targetArch), _module(nullptr) {}
+  CodeGenerator(TargetArch targetArch)
+      : _target_arch(targetArch), _module(nullptr) {}
 
-  ~CodeGenerator() {
-    _passes.clear();
-  }
+  ~CodeGenerator() { _passes.clear(); }
 
   // set IR module
   void SetModule(mid::Module *module) { _module = module; }
@@ -37,8 +34,8 @@ public:
   void CodeGene();
 
   // create passes
-  template<typename TYPE, typename... Args>
-  std::shared_ptr<TYPE> CREATE_PASS(Args &&... args) {
+  template <typename TYPE, typename... Args>
+  std::shared_ptr<TYPE> CREATE_PASS(Args &&...args) {
     auto pass = std::make_shared<TYPE>(std::forward<Args>(args)...);
     DBG_ASSERT(pass != nullptr, "create pass failed");
     return pass;
@@ -60,6 +57,6 @@ public:
   void no_ra(bool no_ra) { _no_ra = no_ra; }
 };
 
-}
+} // namespace lava::back
 
-#endif //LAVA_CODEGEN_H
+#endif // LAVA_CODEGEN_H

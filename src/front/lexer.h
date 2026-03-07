@@ -1,18 +1,18 @@
 #ifndef LAVA_FRONT_LEXER_H_
 #define LAVA_FRONT_LEXER_H_
 
-#include <istream>
-#include <string_view>
-#include <string>
 #include <cstdint>
+#include <istream>
+#include <string>
+#include <string_view>
 
-#include "front/token.h"
 #include "front/logger.h"
+#include "front/token.h"
 
 namespace lava::front {
 
 class Lexer {
- public:
+public:
   Lexer() : logger_() { Reset(nullptr); }
   Lexer(std::istream *in) : logger_() { Reset(in); }
 
@@ -40,13 +40,12 @@ class Lexer {
   // other characters
   char other_val() const { return other_val_; }
 
- private:
+private:
   bool IsEOF() { return !in_ || in_->eof(); }
-  bool IsEOL() {
-    return IsEOF() || last_char_ == '\n' || last_char_ == '\r';
-  }
+  bool IsEOL() { return IsEOF() || last_char_ == '\n' || last_char_ == '\r'; }
   void NextChar() {
-    if (IsEOF()) return;
+    if (IsEOF())
+      return;
     *in_ >> last_char_;
     logger_.IncreaseColPos();
   }
@@ -69,17 +68,17 @@ class Lexer {
   Token HandleEOL();
 
   std::istream *in_;
-  Logger logger_;
-  char last_char_;
+  Logger        logger_;
+  char          last_char_;
   // value of token
-  std::string id_val_, str_val_;
+  std::string   id_val_, str_val_;
   std::uint32_t int_val_;
-  std::int8_t char_val_;
-  Keyword key_val_;
-  Operator op_val_;
-  char other_val_;
+  std::int8_t   char_val_;
+  Keyword       key_val_;
+  Operator      op_val_;
+  char          other_val_;
 };
 
-}  // namespace lava::front
+} // namespace lava::front
 
-#endif  // LAVA_FRONT_LEXER_H_
+#endif // LAVA_FRONT_LEXER_H_

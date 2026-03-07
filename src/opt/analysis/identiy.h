@@ -1,8 +1,8 @@
 #ifndef LAVA_IDENTIY_H
 #define LAVA_IDENTIY_H
 
-#include "opt/pass.h"
 #include "common/casting.h"
+#include "opt/pass.h"
 #include "opt/pass_manager.h"
 
 namespace lava::opt {
@@ -16,8 +16,8 @@ public:
   bool runOnModule(Module &M) final {
     _need_gcm = false;
     IsMM(M);
-//    IsMv(M);
-//    IsConv(M);
+    //    IsMv(M);
+    //    IsConv(M);
     IsFFT(M);
     IsCrypto(M);
     return false;
@@ -42,10 +42,11 @@ class NeedGcmFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass = std::make_shared<NeedGcm>();
-    auto passinfo =  std::make_shared<PassInfo>(pass, "NeedGcm", true, 2, NEED_GCM);
+    auto passinfo =
+        std::make_shared<PassInfo>(pass, "NeedGcm", true, 2, NEED_GCM);
     return passinfo;
   }
 };
-}
+} // namespace lava::opt
 
-#endif //LAVA_IDENTIY_H
+#endif // LAVA_IDENTIY_H

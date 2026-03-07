@@ -14,7 +14,8 @@ namespace lava::back {
 class DeadMoveElimination : public PassBase {
 private:
   std::unordered_set<LLOperandPtr> _visited;
-  std::unordered_map<LLOperandPtr, std::pair<LLBlockPtr, LLInstList::iterator>> _mov_dst_map;
+  std::unordered_map<LLOperandPtr, std::pair<LLBlockPtr, LLInstList::iterator>>
+      _mov_dst_map;
 
 public:
   explicit DeadMoveElimination(LLModule &module) : PassBase(module) {}
@@ -23,6 +24,6 @@ public:
 
   void runOn(const LLFunctionPtr &func) final;
 };
-}
+} // namespace lava::back
 
-#endif //LAVA_DME_H
+#endif // LAVA_DME_H

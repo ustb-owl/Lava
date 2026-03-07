@@ -7,14 +7,17 @@
 namespace xstl {
 
 class Guard {
- public:
+public:
   explicit Guard(std::function<void()> release) : release_(release) {}
   // move constructor
   Guard(Guard &&guard) noexcept : release_(std::move(guard.release_)) {}
   // remove copy constructor
   Guard(const Guard &) = delete;
   // destructor
-  ~Guard() { if (release_) release_(); }
+  ~Guard() {
+    if (release_)
+      release_();
+  }
 
   // remove move operator
   Guard &operator=(Guard &&) noexcept = delete;
@@ -29,10 +32,10 @@ class Guard {
     }
   }
 
- private:
+private:
   std::function<void()> release_;
 };
 
-}  // namespace xstl
+} // namespace xstl
 
-#endif  // XSTL_GUARD_H_
+#endif // XSTL_GUARD_H_

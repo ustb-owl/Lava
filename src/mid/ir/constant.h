@@ -3,9 +3,8 @@
 
 #include <utility>
 
-#include "mid/ir/usedef/user.h"
 #include "define/type.h"
-
+#include "mid/ir/usedef/user.h"
 
 namespace lava::mid {
 
@@ -26,7 +25,8 @@ private:
   int _value;
 
 public:
-  explicit ConstantInt(unsigned int value) : ConstantValue(ClassId::ConstantIntId), _value(value) {}
+  explicit ConstantInt(unsigned int value)
+      : ConstantValue(ClassId::ConstantIntId), _value(value) {}
 
   // dump ir
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
@@ -75,25 +75,29 @@ public:
   const std::string &value() const { return _str; }
 };
 
-
 // constant array value ssa
 // operands: elem1, elem2, ...
 class ConstantArray : public ConstantValue {
 private:
   std::string _name;
+
 public:
   explicit ConstantArray(const SSAPtrList &elems, std::string name)
       : ConstantValue(ClassId::ConstantArrayId), _name(std::move(name)) {
-    for (const auto &it : elems) AddValue(it);
+    for (const auto &it : elems)
+      AppendOperand(it);
   }
 
   SSAPtr Copy() const final {
     SSAPtrList vals;
     for (const auto &it : *this) {
-      DBG_ASSERT(it.value()->IsConst(), "the element of constant array should be constant value");
-      vals.push_back(std::static_pointer_cast<ConstantValue>(it.value())->Copy());
+      DBG_ASSERT(it.value()->IsConst(),
+                 "the element of constant array should be constant value");
+      vals.push_back(
+          std::static_pointer_cast<ConstantValue>(it.value())->Copy());
     }
-    DBG_ASSERT(vals.size() == size(), "the size of the new constant array is wrong");
+    DBG_ASSERT(vals.size() == size(),
+               "the size of the new constant array is wrong");
     auto res = std::make_shared<ConstantArray>(vals, _name);
     res->set_type(type());
     return res;
@@ -101,12 +105,13 @@ public:
 
   void Dump(std::ostream &os, IdManager &id_mgr) const override;
 
-  void Dump(std::ostream &os, IdManager &id_mgr, const std::string &separator) const;
+  void Dump(std::ostream &os, IdManager &id_mgr,
+            const std::string &separator) const;
 };
 
 SSAPtr GetZeroValue(define::Type type);
 
 SSAPtr GetAllOneValue(define::Type type);
 
-}
-#endif //LAVA_CONSTANT_H
+} // namespace lava::mid
+#endif // LAVA_CONSTANT_H

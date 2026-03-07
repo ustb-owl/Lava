@@ -1,16 +1,16 @@
 #ifndef LAVA_DEFINE_TYPE_H_
 #define LAVA_DEFINE_TYPE_H_
 
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
-#include <vector>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include <optional>
-#include <cstdint>
-#include <cstddef>
-#include <cassert>
+#include <vector>
 
 #include "lib/debug.h"
 
@@ -18,19 +18,22 @@ namespace lava::define {
 
 // definition of base class of all types
 class BaseType;
-using TypePtr = std::shared_ptr<BaseType>;
-using TypePtrList = std::vector<TypePtr>;
-using TypePair = std::pair<std::string, TypePtr>;
+using TypePtr      = std::shared_ptr<BaseType>;
+using TypePtrList  = std::vector<TypePtr>;
+using TypePair     = std::pair<std::string, TypePtr>;
 using TypePairList = std::vector<TypePair>;
 
 enum class Type {
   Void,
-  Int8, Int32, Bool,
-  UInt8, UInt32,
+  Int8,
+  Int32,
+  Bool,
+  UInt8,
+  UInt32,
 };
 
 class BaseType {
- public:
+public:
   virtual ~BaseType() = default;
 
   // return true if is right value
@@ -75,8 +78,8 @@ class BaseType {
   // return the element with specific name
   virtual TypePtr GetElem(const std::string &name) const = 0;
   // return the index of element with specific name
-  virtual std::optional<std::size_t> GetElemIndex(
-      const std::string &name) const = 0;
+  virtual std::optional<std::size_t>
+  GetElemIndex(const std::string &name) const = 0;
   // return the dereferenced type of current type
   virtual TypePtr GetDerefedType() const = 0;
   // return the deconsted type of current type
@@ -105,14 +108,13 @@ class BaseType {
   // getters
   static std::size_t ptr_size() { return ptr_size_; }
 
- private:
+private:
   // size of pointer
   static std::size_t ptr_size_;
 };
 
 class PrimType : public BaseType {
- public:
-
+public:
   PrimType(Type type, bool is_right) : type_(type), is_right_(is_right) {}
 
   bool IsRightValue() const override { return is_right_; }
@@ -127,45 +129,43 @@ class PrimType : public BaseType {
     return t >= static_cast<int>(Type::UInt8) &&
            t <= static_cast<int>(Type::UInt32);
   }
-  bool IsStruct() const override { return false; }
-  bool IsConst() const override { return false; }
-  bool IsFunction() const override { return false; }
-  bool IsArray() const override { return false; }
-  bool IsPointer() const override { return false; }
-  std::size_t GetAlignSize() const override { return GetSize(); }
+  bool                       IsStruct() const override { return false; }
+  bool                       IsConst() const override { return false; }
+  bool                       IsFunction() const override { return false; }
+  bool                       IsArray() const override { return false; }
+  bool                       IsPointer() const override { return false; }
+  std::size_t                GetAlignSize() const override { return GetSize(); }
   std::optional<TypePtrList> GetArgsType() const override { return {}; }
   TypePtr GetReturnType(const TypePtrList &args) const override {
     return nullptr;
   }
   std::size_t GetLength() const override { return 0; }
-  TypePtr GetElem(std::size_t index) const override { return nullptr; }
-  TypePtr GetElem(const std::string &name) const override {
-    return nullptr;
-  }
-  std::optional<std::size_t> GetElemIndex(
-      const std::string &name) const override {
+  TypePtr     GetElem(std::size_t index) const override { return nullptr; }
+  TypePtr GetElem(const std::string &name) const override { return nullptr; }
+  std::optional<std::size_t>
+  GetElemIndex(const std::string &name) const override {
     return {};
   }
   TypePtr GetDerefedType() const override { return nullptr; }
   TypePtr GetDeconstedType() const override { return nullptr; }
   TypePtr GetTrivialType() const override { return GetValueType(false); }
 
-  bool CanAccept(const TypePtr &type) const override;
-  bool CanCastTo(const TypePtr &type) const override;
-  bool IsIdentical(const TypePtr &type) const override;
+  bool        CanAccept(const TypePtr &type) const override;
+  bool        CanCastTo(const TypePtr &type) const override;
+  bool        IsIdentical(const TypePtr &type) const override;
   std::size_t GetSize() const override;
   std::string GetTypeId() const override;
-  TypePtr GetValueType(bool is_right) const override;
-  Type GetType() const final { return type_; }
-  bool IsPrime() const override { return true; }
+  TypePtr     GetValueType(bool is_right) const override;
+  Type        GetType() const final { return type_; }
+  bool        IsPrime() const override { return true; }
 
- private:
+private:
   Type type_;
   bool is_right_;
 };
 
 class StructType : public BaseType {
- public:
+public:
   StructType(TypePairList elems, const std::string &id, bool is_right)
       : elems_(std::move(elems)), id_(id), is_right_(is_right) {
     CalcSize();
@@ -190,18 +190,18 @@ class StructType : public BaseType {
     return nullptr;
   }
   std::size_t GetLength() const override { return elems_.size(); }
-  TypePtr GetElem(std::size_t index) const override {
+  TypePtr     GetElem(std::size_t index) const override {
     return elems_[index].second;
   }
-  TypePtr GetDerefedType() const override { return nullptr; }
-  TypePtr GetDeconstedType() const override { return nullptr; }
+  TypePtr     GetDerefedType() const override { return nullptr; }
+  TypePtr     GetDeconstedType() const override { return nullptr; }
   std::string GetTypeId() const override { return id_; }
 
-  bool CanAccept(const TypePtr &type) const override;
-  bool IsIdentical(const TypePtr &type) const override;
+  bool    CanAccept(const TypePtr &type) const override;
+  bool    IsIdentical(const TypePtr &type) const override;
   TypePtr GetElem(const std::string &name) const override;
-  std::optional<std::size_t> GetElemIndex(
-      const std::string &name) const override;
+  std::optional<std::size_t>
+          GetElemIndex(const std::string &name) const override;
   TypePtr GetValueType(bool is_right) const override;
   TypePtr GetTrivialType() const override;
 
@@ -213,17 +213,17 @@ class StructType : public BaseType {
     CalcSize();
   }
 
- private:
+private:
   void CalcSize();
 
   TypePairList elems_;
-  std::string id_;
-  bool is_right_;
-  std::size_t size_, base_size_;
+  std::string  id_;
+  bool         is_right_;
+  std::size_t  size_, base_size_;
 };
 
 class ConstType : public BaseType {
- public:
+public:
   ConstType(TypePtr type) : type_(type) {}
 
   bool IsRightValue() const override { return type_->IsRightValue(); }
@@ -237,17 +237,14 @@ class ConstType : public BaseType {
   bool IsPointer() const override { return type_->IsPointer(); }
   bool CanAccept(const TypePtr &type) const override { return false; }
   bool CanCastTo(const TypePtr &type) const override {
-    return type_->CanCastTo(type->IsConst() ? type->GetDeconstedType()
-                                            : type);
+    return type_->CanCastTo(type->IsConst() ? type->GetDeconstedType() : type);
   }
   bool IsIdentical(const TypePtr &type) const override {
     return type_->IsIdentical(type->IsConst() ? type->GetDeconstedType()
                                               : type);
   }
   std::size_t GetSize() const override { return type_->GetSize(); }
-  std::size_t GetAlignSize() const override {
-    return type_->GetAlignSize();
-  }
+  std::size_t GetAlignSize() const override { return type_->GetAlignSize(); }
   std::optional<TypePtrList> GetArgsType() const override {
     return type_->GetArgsType();
   }
@@ -255,169 +252,151 @@ class ConstType : public BaseType {
     return type_->GetReturnType(args);
   }
   std::size_t GetLength() const override { return type_->GetLength(); }
-  std::optional<std::size_t> GetElemIndex(
-      const std::string &name) const override {
+  std::optional<std::size_t>
+  GetElemIndex(const std::string &name) const override {
     return type_->GetElemIndex(name);
   }
-  TypePtr GetDerefedType() const override {
-    return type_->GetDerefedType();
-  }
+  TypePtr GetDerefedType() const override { return type_->GetDerefedType(); }
   TypePtr GetDeconstedType() const override { return type_; }
-  std::string GetTypeId() const override {
-    return type_->GetTypeId();
-  }
-  TypePtr GetTrivialType() const override {
-    return type_->GetTrivialType();
-  }
+  std::string GetTypeId() const override { return type_->GetTypeId(); }
+  TypePtr GetTrivialType() const override { return type_->GetTrivialType(); }
 
   TypePtr GetElem(std::size_t index) const override;
   TypePtr GetElem(const std::string &name) const override;
   TypePtr GetValueType(bool is_right) const override;
-  Type GetType() const override { return type_->GetType(); }
-  bool IsPrime() const override { return type_->IsPrime(); }
+  Type    GetType() const override { return type_->GetType(); }
+  bool    IsPrime() const override { return type_->IsPrime(); }
 
-
- private:
+private:
   TypePtr type_;
 };
 
 class FuncType : public BaseType {
- public:
+public:
   FuncType(TypePtrList args, TypePtr ret, bool is_right)
-      : args_(std::move(args)), ret_(std::move(ret)),
-        is_right_(is_right) {}
+      : args_(std::move(args)), ret_(std::move(ret)), is_right_(is_right) {}
 
-  bool IsRightValue() const override { return is_right_; }
-  bool IsVoid() const override { return false; }
-  bool IsInteger() const override { return false; }
-  bool IsUnsigned() const override { return false; }
-  bool IsStruct() const override { return false; }
-  bool IsConst() const override { return false; }
-  bool IsFunction() const override { return true; }
-  bool IsArray() const override { return false; }
-  bool IsPointer() const override { return false; }
-  std::size_t GetAlignSize() const override { return GetSize(); }
+  bool                       IsRightValue() const override { return is_right_; }
+  bool                       IsVoid() const override { return false; }
+  bool                       IsInteger() const override { return false; }
+  bool                       IsUnsigned() const override { return false; }
+  bool                       IsStruct() const override { return false; }
+  bool                       IsConst() const override { return false; }
+  bool                       IsFunction() const override { return true; }
+  bool                       IsArray() const override { return false; }
+  bool                       IsPointer() const override { return false; }
+  std::size_t                GetAlignSize() const override { return GetSize(); }
   std::optional<TypePtrList> GetArgsType() const override { return args_; }
-  std::size_t GetLength() const override { return 0; }
+  std::size_t                GetLength() const override { return 0; }
   TypePtr GetElem(std::size_t index) const override { return nullptr; }
-  TypePtr GetElem(const std::string &name) const override {
-    return nullptr;
-  }
-  std::optional<std::size_t> GetElemIndex(
-      const std::string &name) const override {
+  TypePtr GetElem(const std::string &name) const override { return nullptr; }
+  std::optional<std::size_t>
+  GetElemIndex(const std::string &name) const override {
     return {};
   }
   TypePtr GetDerefedType() const override { return nullptr; }
   TypePtr GetDeconstedType() const override { return nullptr; }
 
-  bool CanAccept(const TypePtr &type) const override;
-  bool CanCastTo(const TypePtr &type) const override;
-  bool IsIdentical(const TypePtr &type) const override;
+  bool        CanAccept(const TypePtr &type) const override;
+  bool        CanCastTo(const TypePtr &type) const override;
+  bool        IsIdentical(const TypePtr &type) const override;
   std::size_t GetSize() const override;
-  TypePtr GetReturnType(const TypePtrList &args) const override;
+  TypePtr     GetReturnType(const TypePtrList &args) const override;
   std::string GetTypeId() const override;
-  TypePtr GetValueType(bool is_right) const override;
-  TypePtr GetTrivialType() const override;
-  bool IsPrime() const override { return false; }
+  TypePtr     GetValueType(bool is_right) const override;
+  TypePtr     GetTrivialType() const override;
+  bool        IsPrime() const override { return false; }
 
- private:
+private:
   TypePtrList args_;
-  TypePtr ret_;
-  bool is_right_;
+  TypePtr     ret_;
+  bool        is_right_;
 };
 
 class ArrayType : public BaseType {
- public:
+public:
   ArrayType(TypePtr base, std::size_t len, bool is_right)
       : base_(std::move(base)), len_(len), is_right_(is_right) {}
 
-  bool IsRightValue() const override { return is_right_; }
-  bool IsVoid() const override { return false; }
-  bool IsInteger() const override { return false; }
-  bool IsUnsigned() const override { return false; }
-  bool IsStruct() const override { return false; }
-  bool IsConst() const override { return false; }
-  bool IsFunction() const override { return false; }
-  bool IsArray() const override { return true; }
-  bool IsPointer() const override { return false; }
-  std::size_t GetSize() const override {
-    return base_->GetSize() * len_;
-  }
-  std::size_t GetAlignSize() const override {
-    return base_->GetAlignSize();
-  }
+  bool        IsRightValue() const override { return is_right_; }
+  bool        IsVoid() const override { return false; }
+  bool        IsInteger() const override { return false; }
+  bool        IsUnsigned() const override { return false; }
+  bool        IsStruct() const override { return false; }
+  bool        IsConst() const override { return false; }
+  bool        IsFunction() const override { return false; }
+  bool        IsArray() const override { return true; }
+  bool        IsPointer() const override { return false; }
+  std::size_t GetSize() const override { return base_->GetSize() * len_; }
+  std::size_t GetAlignSize() const override { return base_->GetAlignSize(); }
   std::optional<TypePtrList> GetArgsType() const override { return {}; }
   TypePtr GetReturnType(const TypePtrList &args) const override {
     return nullptr;
   }
   std::size_t GetLength() const override { return len_; }
-  TypePtr GetElem(std::size_t index) const override { return base_; }
-  TypePtr GetElem(const std::string &name) const override {
-    return nullptr;
-  }
-  std::optional<std::size_t> GetElemIndex(
-      const std::string &name) const override {
+  TypePtr     GetElem(std::size_t index) const override { return base_; }
+  TypePtr GetElem(const std::string &name) const override { return nullptr; }
+  std::optional<std::size_t>
+  GetElemIndex(const std::string &name) const override {
     return {};
   }
   TypePtr GetDerefedType() const override { return base_; }
   TypePtr GetDeconstedType() const override { return nullptr; }
 
-  bool CanAccept(const TypePtr &type) const override;
-  bool CanCastTo(const TypePtr &type) const override;
-  bool IsIdentical(const TypePtr &type) const override;
+  bool        CanAccept(const TypePtr &type) const override;
+  bool        CanCastTo(const TypePtr &type) const override;
+  bool        IsIdentical(const TypePtr &type) const override;
   std::string GetTypeId() const override;
-  TypePtr GetValueType(bool is_right) const override;
-  TypePtr GetTrivialType() const override;
-  bool IsPrime() const override { return true; }
+  TypePtr     GetValueType(bool is_right) const override;
+  TypePtr     GetTrivialType() const override;
+  bool        IsPrime() const override { return true; }
 
- private:
-  TypePtr base_;
+private:
+  TypePtr     base_;
   std::size_t len_;
-  bool is_right_;
+  bool        is_right_;
 };
 
 class PointerType : public BaseType {
- public:
+public:
   PointerType(TypePtr base, bool is_right)
       : base_(std::move(base)), is_right_(is_right) {}
 
-  bool IsRightValue() const override { return is_right_; }
-  bool IsVoid() const override { return false; }
-  bool IsInteger() const override { return false; }
-  bool IsUnsigned() const override { return false; }
-  bool IsStruct() const override { return false; }
-  bool IsConst() const override { return false; }
-  bool IsFunction() const override { return false; }
-  bool IsArray() const override { return false; }
-  bool IsPointer() const override { return true; }
-  std::size_t GetAlignSize() const override { return GetSize(); }
+  bool                       IsRightValue() const override { return is_right_; }
+  bool                       IsVoid() const override { return false; }
+  bool                       IsInteger() const override { return false; }
+  bool                       IsUnsigned() const override { return false; }
+  bool                       IsStruct() const override { return false; }
+  bool                       IsConst() const override { return false; }
+  bool                       IsFunction() const override { return false; }
+  bool                       IsArray() const override { return false; }
+  bool                       IsPointer() const override { return true; }
+  std::size_t                GetAlignSize() const override { return GetSize(); }
   std::optional<TypePtrList> GetArgsType() const override { return {}; }
   TypePtr GetReturnType(const TypePtrList &args) const override {
     return nullptr;
   }
   std::size_t GetLength() const override { return 0; }
-  TypePtr GetElem(std::size_t index) const override { return nullptr; }
-  TypePtr GetElem(const std::string &name) const override {
-    return nullptr;
-  }
-  std::optional<std::size_t> GetElemIndex(
-      const std::string &name) const override {
+  TypePtr     GetElem(std::size_t index) const override { return nullptr; }
+  TypePtr GetElem(const std::string &name) const override { return nullptr; }
+  std::optional<std::size_t>
+  GetElemIndex(const std::string &name) const override {
     return {};
   }
   TypePtr GetDerefedType() const override { return base_; }
   TypePtr GetDeconstedType() const override { return nullptr; }
 
-  bool CanAccept(const TypePtr &type) const override;
-  bool CanCastTo(const TypePtr &type) const override;
-  bool IsIdentical(const TypePtr &type) const override;
+  bool        CanAccept(const TypePtr &type) const override;
+  bool        CanCastTo(const TypePtr &type) const override;
+  bool        IsIdentical(const TypePtr &type) const override;
   std::size_t GetSize() const override;
   std::string GetTypeId() const override;
-  TypePtr GetValueType(bool is_right) const override;
-  TypePtr GetTrivialType() const override;
+  TypePtr     GetValueType(bool is_right) const override;
+  TypePtr     GetTrivialType() const override;
 
- private:
+private:
   TypePtr base_;
-  bool is_right_;
+  bool    is_right_;
 };
 
 // create a new primitive type
@@ -440,7 +419,6 @@ inline TypePtr MakePointer(const TypePtr &type) {
   return std::make_shared<PointerType>(type, true);
 }
 
-
 // create a new primitive type
 inline TypePtr MakeConst(Type type, bool is_right = true) {
   return std::make_shared<ConstType>(MakePrimType(type, is_right));
@@ -452,12 +430,11 @@ inline const TypePtr &GetCommonType(const TypePtr &t1, const TypePtr &t2) {
   assert(t1->IsInteger() && t2->IsInteger());
   if (t1->GetSize() != t2->GetSize()) {
     return t1->GetSize() > t2->GetSize() ? t1 : t2;
-  }
-  else {
+  } else {
     return t1->IsUnsigned() ? t1 : t2;
   }
 }
 
-}  // namespace lava::define
+} // namespace lava::define
 
-#endif  // LAVA_DEFINE_TYPE_H_
+#endif // LAVA_DEFINE_TYPE_H_

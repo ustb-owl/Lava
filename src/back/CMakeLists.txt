@@ -14,5 +14,5 @@ add_library(back
         passes/tailrecursion.cpp
 )
 
-target_compile_features(back PUBLIC cxx_std_17)
+target_compile_features(back PUBLIC cxx_std_23)
 add_library(lava::back ALIAS back)

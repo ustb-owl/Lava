@@ -3,28 +3,29 @@
 
 #include <optional>
 #include <unordered_map>
-#include "mid/ir/usedef/value.h"
+
 #include "back/arch/arm/instdef.h"
+#include "mid/ir/usedef/value.h"
 
 using namespace lava::mid;
 
 namespace lava {
 enum class IdType {
   // IR
-  _ID_VAR           = 0,
-  _ID_BLOCK         = 1,
-  _ID_IF_COND       = 2,
-  _ID_THEN          = 3,
-  _ID_ELSE          = 4,
-  _ID_IF_END        = 5,
-  _ID_WHILE_COND    = 6,
-  _ID_LOOP_BODY     = 7,
-  _ID_WHILE_END     = 8,
-  _ID_LHS_TRUE      = 9,
-  _ID_LHS_FALSE     = 10,
-  _ID_LAND_END      = 11,
-  _ID_LOR_END       = 12,
-  _ID_PHI           = 13,
+  _ID_VAR        = 0,
+  _ID_BLOCK      = 1,
+  _ID_IF_COND    = 2,
+  _ID_THEN       = 3,
+  _ID_ELSE       = 4,
+  _ID_IF_END     = 5,
+  _ID_WHILE_COND = 6,
+  _ID_LOOP_BODY  = 7,
+  _ID_WHILE_END  = 8,
+  _ID_LHS_TRUE   = 9,
+  _ID_LHS_FALSE  = 10,
+  _ID_LAND_END   = 11,
+  _ID_LOR_END    = 12,
+  _ID_PHI        = 13,
 
   // LLIR
   _ID_LL_VIRTUAL    = 14,
@@ -46,55 +47,57 @@ enum class IdType {
 class IdManager {
 private:
   // IR
-  std::size_t                                         _cur_id;        // current id
-  std::size_t                                         _block_id;      // current block id
-  std::size_t                                         _if_cond_id;    // current cond id
-  std::size_t                                         _then_id;       // current then block id
-  std::size_t                                         _else_id;       // current else block id
-  std::size_t                                         _if_end_id;     // current else block id
-  std::size_t                                         _while_cond_id; // current cond id
-  std::size_t                                         _loop_body_id;  // current loop block id
-  std::size_t                                         _while_end_id;  // current while end id
-  std::size_t                                         _lhs_true_id;   // current lhs true id
-  std::size_t                                         _lhs_false_id;  // current lhs false id
-  std::size_t                                         _land_end;      // current land id
-  std::size_t                                         _lor_end;       // current lor id
-  std::size_t                                         _phi_id;        // current phi node id
+  std::size_t _cur_id;        // current id
+  std::size_t _block_id;      // current block id
+  std::size_t _if_cond_id;    // current cond id
+  std::size_t _then_id;       // current then block id
+  std::size_t _else_id;       // current else block id
+  std::size_t _if_end_id;     // current else block id
+  std::size_t _while_cond_id; // current cond id
+  std::size_t _loop_body_id;  // current loop block id
+  std::size_t _while_end_id;  // current while end id
+  std::size_t _lhs_true_id;   // current lhs true id
+  std::size_t _lhs_false_id;  // current lhs false id
+  std::size_t _land_end;      // current land id
+  std::size_t _lor_end;       // current lor id
+  std::size_t _phi_id;        // current phi node id
 
   // LLIR
-  std::size_t                                         _ll_block_id;      // current block id
-  std::size_t                                         _ll_if_cond_id;    // current cond id
-  std::size_t                                         _ll_then_id;       // current then block id
-  std::size_t                                         _ll_else_id;       // current else block id
-  std::size_t                                         _ll_if_end_id;     // current else block id
-  std::size_t                                         _ll_while_cond_id; // current cond id
-  std::size_t                                         _ll_loop_body_id;  // current loop block id
-  std::size_t                                         _ll_while_end_id;  // current while end id
-  std::size_t                                         _ll_lhs_true_id;   // current lhs true id
-  std::size_t                                         _ll_lhs_false_id;  // current lhs false id
-  std::size_t                                         _ll_land_end;      // current land id
-  std::size_t                                         _ll_lor_end;       // current lor id
+  std::size_t _ll_block_id;      // current block id
+  std::size_t _ll_if_cond_id;    // current cond id
+  std::size_t _ll_then_id;       // current then block id
+  std::size_t _ll_else_id;       // current else block id
+  std::size_t _ll_if_end_id;     // current else block id
+  std::size_t _ll_while_cond_id; // current cond id
+  std::size_t _ll_loop_body_id;  // current loop block id
+  std::size_t _ll_while_end_id;  // current while end id
+  std::size_t _ll_lhs_true_id;   // current lhs true id
+  std::size_t _ll_lhs_false_id;  // current lhs false id
+  std::size_t _ll_land_end;      // current land id
+  std::size_t _ll_lor_end;       // current lor id
 
   // IR
-  std::unordered_map<const Value *, std::size_t>      _ids;           // local values id
-  std::unordered_map<const Value *, std::size_t>      _blocks;        // store blocks name
-  std::unordered_map<const Value *, std::string_view> _names;         // store global variables name
+  std::unordered_map<const Value *, std::size_t> _ids;    // local values id
+  std::unordered_map<const Value *, std::size_t> _blocks; // store blocks name
+  std::unordered_map<const Value *, std::string_view>
+      _names; // store global variables name
 
   // LLIR
-  std::unordered_map<const lava::back::LLBasicBlock*, std::size_t> _ll_blocks; // store blocks name
-
+  std::unordered_map<const lava::back::LLBasicBlock *, std::size_t>
+      _ll_blocks; // store blocks name
 
   std::optional<std::size_t> findValue(const Value *value, IdType type);
   std::optional<std::size_t> findBlock(const lava::back::LLBasicBlock *block);
-public:
 
+public:
   IdManager()
-    : _cur_id(0), _block_id(0), _if_cond_id(0), _then_id(0), _else_id(0),
-      _if_end_id(0), _while_cond_id(0), _loop_body_id(0), _while_end_id(0),
-      _lhs_true_id(0), _lhs_false_id(0), _land_end(0), _lor_end(0),
-      _phi_id(0), _ll_block_id(0), _ll_if_cond_id(0), _ll_then_id(0), _ll_else_id(0),
-      _ll_if_end_id(0), _ll_while_cond_id(0), _ll_loop_body_id(0), _ll_while_end_id(0),
-      _ll_lhs_true_id(0), _ll_lhs_false_id(0), _ll_land_end(0), _ll_lor_end(0) {}
+      : _cur_id(0), _block_id(0), _if_cond_id(0), _then_id(0), _else_id(0),
+        _if_end_id(0), _while_cond_id(0), _loop_body_id(0), _while_end_id(0),
+        _lhs_true_id(0), _lhs_false_id(0), _land_end(0), _lor_end(0),
+        _phi_id(0), _ll_block_id(0), _ll_if_cond_id(0), _ll_then_id(0),
+        _ll_else_id(0), _ll_if_end_id(0), _ll_while_cond_id(0),
+        _ll_loop_body_id(0), _ll_while_end_id(0), _ll_lhs_true_id(0),
+        _ll_lhs_false_id(0), _ll_land_end(0), _ll_lor_end(0) {}
 
   void Reset();
 
@@ -113,8 +116,10 @@ public:
 
   // get name of global values
   std::optional<std::string_view> GetName(const Value *value);
-  std::optional<std::string_view> GetName(const SSAPtr &value) { return GetName(value.get()); }
+  std::optional<std::string_view> GetName(const SSAPtr &value) {
+    return GetName(value.get());
+  }
 };
 
-}
-#endif //LAVA_IDMANAGER_H
+} // namespace lava
+#endif // LAVA_IDMANAGER_H

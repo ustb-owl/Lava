@@ -1,6 +1,7 @@
-#include "opt/pass.h"
 #include "common/casting.h"
+#include "opt/pass.h"
 #include "opt/pass_manager.h"
+#include "opt/register.h"
 
 int LocalMemoryProp;
 
@@ -22,19 +23,27 @@ public:
   void initialize() final {}
 
   void finalize() final {}
-
 };
 
 class LocalMemoryPropagationFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
-    auto pass = std::make_shared<LocalMemoryPropagation>();
-    auto passinfo = std::make_shared<PassInfo>(pass, "LocalMemoryPropagation", false, 2, LOCAL_MEM_PROP);
+    auto pass     = std::make_shared<LocalMemoryPropagation>();
+    auto passinfo = std::make_shared<PassInfo>(pass, "LocalMemoryPropagation",
+                                               false, 2, LOCAL_MEM_PROP);
 
     return passinfo;
   }
 };
 
-static PassRegisterFactory<LocalMemoryPropagationFactory> registry;
-
+void RegisterLocalMemoryPropagationPass() {
+  RegisterPassCliMetadata({
+      "LocalMemoryPropagation",
+      "local-mem-prop",
+      {"local-memory-propagation"},
+      "propagate local memory values",
+  });
+  static PassRegisterFactory<LocalMemoryPropagationFactory> registry;
 }
+
+} // namespace lava::opt

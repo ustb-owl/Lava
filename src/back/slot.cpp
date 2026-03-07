@@ -2,8 +2,10 @@
 
 namespace lava::back {
 
-LLOperandPtr SlotAllocator::AllocSlot(const LLFunctionPtr &func, const LLOperandPtr &operand) {
-  DBG_ASSERT(operand->state() == LLOperand::State::Virtual, "only virtual register can be spill to stack");
+LLOperandPtr SlotAllocator::AllocSlot(const LLFunctionPtr &func,
+                                      const LLOperandPtr  &operand) {
+  DBG_ASSERT(operand->state() == LLOperand::State::Virtual,
+             "only virtual register can be spill to stack");
 
   auto res = func->stack_size();
   func->SetStackSize(res + 4);
@@ -22,4 +24,4 @@ LLOperandPtr SlotAllocator::AllocSlot(const LLFunctionPtr &func, const LLOperand
   return offset;
 }
 
-}
+} // namespace lava::back

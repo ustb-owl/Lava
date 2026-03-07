@@ -4,8 +4,8 @@
 #include <list>
 #include <unordered_set>
 
-#include "mid/ir/ssa.h"
 #include "common/casting.h"
+#include "mid/ir/ssa.h"
 
 using namespace lava::mid;
 
@@ -22,6 +22,7 @@ private:
 
   // post order
   void TraversePO(BasicBlock *BB);
+
 public:
   BlockWalker() = default;
 
@@ -31,7 +32,7 @@ public:
     _visited.clear();
   }
 
-  BasicBlock *GetExitBlock(const std::list<BasicBlock *>& bb_list);
+  BasicBlock *GetExitBlock(const std::list<BasicBlock *> &bb_list);
 
   std::list<BasicBlock *> RPOTraverse(BasicBlock *entry) {
     init();
@@ -44,10 +45,8 @@ public:
     TraversePO(entry);
     return _po;
   }
-
-
 };
 
-}
+} // namespace lava::opt
 
-#endif //LAVA_BLKWALKER_H
+#endif // LAVA_BLKWALKER_H

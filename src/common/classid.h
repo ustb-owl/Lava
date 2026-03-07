@@ -8,6 +8,6 @@ enum class ClassId {
 #include "classId.inc"
 };
 
-}
+} // namespace lava
 
-#endif //LAVA_CLASSID_H
+#endif // LAVA_CLASSID_H

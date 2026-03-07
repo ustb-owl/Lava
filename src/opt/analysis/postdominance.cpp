@@ -1,15 +1,17 @@
 #include "postdominance.h"
 
+#include "opt/register.h"
+
 int PostDominance;
 
 namespace lava::opt {
 
 void PostDominanceInfo::SolveDominance(const FuncPtr &F) {
-  _cur_func = F.get();
-  auto &info = _dom_info[_cur_func];
-  auto entry = dyn_cast<BasicBlock>(F->entry());
-  auto po = _blkWalker.POTraverse(entry.get());
-  BasicBlock *exit = _blkWalker.GetExitBlock(po);
+  _cur_func         = F.get();
+  auto       &info  = _dom_info[_cur_func];
+  auto        entry = F->entry();
+  auto        po    = _blkWalker.POTraverse(entry.get());
+  BasicBlock *exit  = _blkWalker.GetExitBlock(po);
 
   // init the dom set
   // set exit -> { exit }
@@ -23,8 +25,8 @@ void PostDominanceInfo::SolveDominance(const FuncPtr &F) {
   }
 
   // set Dom(i) <- all
-  for (auto & it : po) {
-    if (it != exit){
+  for (auto &it : po) {
+    if (it != exit) {
       info.domBy[it] = all;
     }
   }
@@ -35,17 +37,21 @@ void PostDominanceInfo::SolveDominance(const FuncPtr &F) {
 
     // traverse all blocks except exit
     for (auto BB = po.begin(); BB != po.end(); BB++) {
-      if (*BB == exit) continue;
+      if (*BB == exit)
+        continue;
 
       auto block = *BB;
       // validate if the post-dominators exist in all of its successors
-      for (auto post_dominator = info.domBy[block].begin(); post_dominator != info.domBy[block].end();) {
+      for (auto post_dominator = info.domBy[block].begin();
+           post_dominator != info.domBy[block].end();) {
         auto successors = block->successors();
         if (*post_dominator != block &&
-            std::any_of(successors.begin(), successors.end(), [&post_dominator, &info](BasicBlock *successor) {
-              return info.domBy[successor].find(*post_dominator) == info.domBy[successor].end();
-            })) {
-          changed = true;
+            std::any_of(successors.begin(), successors.end(),
+                        [&post_dominator, &info](BasicBlock *successor) {
+                          return info.domBy[successor].find(*post_dominator) ==
+                                 info.domBy[successor].end();
+                        })) {
+          changed        = true;
           post_dominator = info.domBy[block].erase(post_dominator);
         } else {
           post_dominator++;
@@ -53,11 +59,13 @@ void PostDominanceInfo::SolveDominance(const FuncPtr &F) {
       }
     }
 
-    if (!changed) break;
+    if (!changed)
+      break;
   }
 
   // check result
-  DBG_ASSERT(info.domBy.size() == po.size(), "domBy size not equals to basic block numbers");
+  DBG_ASSERT(info.domBy.size() == po.size(),
+             "domBy size not equals to basic block numbers");
 
   // solve idom
   SolveImmediateDom();
@@ -68,21 +76,22 @@ void PostDominanceInfo::SolveDominance(const FuncPtr &F) {
 
 /*
  * The immediate dominator or idom of a node n is the unique node that strictly
- * dominates n but does not strictly dominate any other node that strictly dominates n.
- * Every node, except the entry node, has an immediate dominator.
+ * dominates n but does not strictly dominate any other node that strictly
+ * dominates n. Every node, except the entry node, has an immediate dominator.
  */
 void PostDominanceInfo::SolveImmediateDom() {
-  auto &info = _dom_info[_cur_func];
-  auto entry = dyn_cast<BasicBlock>(_cur_func->entry()).get();
-  auto po = _blkWalker.POTraverse(entry);
-  BasicBlock *exit = _blkWalker.GetExitBlock(po);
+  auto       &info  = _dom_info[_cur_func];
+  auto        entry = _cur_func->entry().get();
+  auto        po    = _blkWalker.POTraverse(entry);
+  BasicBlock *exit  = _blkWalker.GetExitBlock(po);
 
   // insert exit itself into its post-dominatee set
   info.doms[exit].insert(exit);
 
   for (auto it = po.begin(); it != po.end(); it++) {
     // except for exit
-    if (*it == exit) continue;
+    if (*it == exit)
+      continue;
 
     BasicBlock *BB = *it;
 
@@ -95,31 +104,38 @@ void PostDominanceInfo::SolveImmediateDom() {
       info.doms[post_dominator].insert(BB);
 
       // 1. check if post-dominator is strictly dominate BB
-      if (post_dominator == BB) continue;
+      if (post_dominator == BB)
+        continue;
 
       // 2. check if post-dominator does not strictly dominate any other node
       // that strictly dominates BB
       auto sdoms = GetSDoms(BB);
-      if (std::any_of(sdoms.begin(), sdoms.end(), [post_dominator, this](BasicBlock *sdominator) {
-        return IsStrictlyDom(post_dominator, sdominator);
-      })) { continue; }
+      if (std::any_of(sdoms.begin(), sdoms.end(),
+                      [post_dominator, this](BasicBlock *sdominator) {
+                        return IsStrictlyDom(post_dominator, sdominator);
+                      })) {
+        continue;
+      }
 
       // set dominator as BB's  immediate dominator
-      DBG_ASSERT(info.idom.find(BB) == info.idom.end(), "block already has a idom");
+      DBG_ASSERT(info.idom.find(BB) == info.idom.end(),
+                 "block already has a idom");
       info.idom[BB] = post_dominator;
     }
   }
 
   // check the result
-  DBG_ASSERT(info.doms.size() == po.size(), "doms size not equals to basic block numbers");
+  DBG_ASSERT(info.doms.size() == po.size(),
+             "doms size not equals to basic block numbers");
   DBG_ASSERT(info.idom.size() == po.size() - 1, "idom set number is wrong");
-  DBG_ASSERT(info.idom.find(exit) == info.idom.end(), "entry should not have idom");
+  DBG_ASSERT(info.idom.find(exit) == info.idom.end(),
+             "entry should not have idom");
 }
 
 void PostDominanceInfo::SolveDominanceFrontier() {
-  auto &info = _dom_info[_cur_func];
-  auto entry = dyn_cast<BasicBlock>(_cur_func->entry()).get();
-  auto po = _blkWalker.POTraverse(entry);
+  auto &info  = _dom_info[_cur_func];
+  auto  entry = _cur_func->entry().get();
+  auto  po    = _blkWalker.POTraverse(entry);
 
   // set DF of all nodes as phi
   for (const auto &it : po) {
@@ -131,7 +147,7 @@ void PostDominanceInfo::SolveDominanceFrontier() {
     if (successors.size() > 1) {
       for (const auto &succ : successors) {
         auto succ_block = static_cast<BasicBlock *>(succ);
-        auto runner = succ_block;
+        auto runner     = succ_block;
         while (runner != info.idom[BB]) {
           info.DF[runner].insert(BB);
           runner = info.idom[runner];
@@ -140,9 +156,18 @@ void PostDominanceInfo::SolveDominanceFrontier() {
     }
   }
 
-  DBG_ASSERT(info.DF.size() == po.size(), "PDF size not equals to basic blocks");
+  DBG_ASSERT(info.DF.size() == po.size(),
+             "PDF size not equals to basic blocks");
 }
 
-static PassRegisterFactory<PostDominanceInfoPassFactory> registry;
-
+void RegisterPostDominanceInfoPass() {
+  RegisterPassCliMetadata({
+      "PostDominanceInfo",
+      "post-dominance-info",
+      {},
+      "compute post-dominator information",
+  });
+  static PassRegisterFactory<PostDominanceInfoPassFactory> registry;
 }
+
+} // namespace lava::opt

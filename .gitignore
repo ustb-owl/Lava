@@ -1,10 +1,14 @@
-#debug
+# debug
 build
+build_rel*
 cmake-build-debug
 test
 .idea
 .vscode
 
-#rubbish
+#  rubbish
 .DS_Store
+
+# docs
+*.pdf
 

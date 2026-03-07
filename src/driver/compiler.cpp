@@ -1,7 +1,6 @@
-#include <sstream>
 #include "compiler.h"
 
-using namespace lava::opt;
+#include <sstream>
 
 namespace lava::driver {
 
@@ -21,9 +20,9 @@ void Compiler::Open(std::istream *in) {
 
 void Compiler::Parse() {
   // pre-build builtin functions
-  auto pre_ast = PreBuild();
-  BaseAST *raw = pre_ast.get();
-  auto *trans = static_cast<TranslationUnitDecl *>(raw);
+  auto     pre_ast = PreBuild();
+  BaseAST *raw     = pre_ast.get();
+  auto    *trans   = static_cast<TranslationUnitDecl *>(raw);
 
   // merge two ast node
   _parser.Parse();
@@ -37,28 +36,19 @@ void Compiler::Parse() {
   }
 }
 
-void Compiler::RunPasses() {
-  if (_opt_flag) PassManager::set_opt_level(2);
-  PassManager::Initialize();
-  PassManager::SetModule(_irbuilder->module());
-  PassManager::RunPasses();
-}
-
 ASTPtr Compiler::PreBuild() {
   std::istringstream iss;
-  iss.str(
-      "void memset(int *dst, int value, int size);\n"
-      "int getint();\n"
-      "int getch();\n"
-      "int getarray(int a[]);\n"
-      "void putint(int a);\n"
-      "void putch(int a);\n"
-      "void putarray(int n, int a[]);\n"
-      "void putaddress(int a[]);\n"
-      "void starttime();\n"
-      "void stoptime();\n"
-      "void memcpy(int *a, int *b, int size);\n"
-  );
+  iss.str("void memset(int *dst, int value, int size);\n"
+          "int getint();\n"
+          "int getch();\n"
+          "int getarray(int a[]);\n"
+          "void putint(int a);\n"
+          "void putch(int a);\n"
+          "void putarray(int n, int a[]);\n"
+          "void putaddress(int a[]);\n"
+          "void starttime();\n"
+          "void stoptime();\n"
+          "void memcpy(int *a, int *b, int size);\n");
   front::Lexer  tmp_lex(&iss);
   front::Parser tmp_paser(tmp_lex);
 
@@ -66,8 +56,8 @@ ASTPtr Compiler::PreBuild() {
   return std::move(tmp_paser.ast());
 }
 
-void Compiler::CodeGeneAction() {
-  _codegen.no_ra(_no_ra);
+void Compiler::CodeGeneAction(bool no_ra) {
+  _codegen.no_ra(no_ra);
   _codegen.SetModule(&_irbuilder->module());
   _codegen.RegisterPasses();
   _codegen.CodeGene();
@@ -78,4 +68,4 @@ void Compiler::DumpCFG(const std::string &output_name) const {
   this->_irbuilder->module().DumpCFG(output_name);
 }
 
-}
+} // namespace lava::driver

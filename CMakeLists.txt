@@ -1,9 +1,11 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 project(Lava)
+
+find_package(Git QUIET)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -40,6 +42,13 @@ endif()
 set(LAVA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(LAVA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
+find_program(LAVA_CLANG_FORMAT
+    NAMES clang-format
+    PATHS /opt/homebrew/opt/llvm/bin
+    DOC "Path to clang-format executable")
+set(LAVA_CLANG_FORMAT "${LAVA_CLANG_FORMAT}" CACHE FILEPATH
+    "Path to clang-format executable")
+
 add_compile_options(-Wall -Werror)
 
 #set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
@@ -53,6 +62,17 @@ add_subdirectory("${LAVA_SOURCE_DIR}/mid")
 add_subdirectory("${LAVA_SOURCE_DIR}/opt")
 add_subdirectory("${LAVA_SOURCE_DIR}/back")
 add_subdirectory("${LAVA_SOURCE_DIR}/driver")
+
+add_custom_target(format
+    COMMAND ${CMAKE_COMMAND}
+        -DPROJECT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+        -DCLANG_FORMAT_BIN=${LAVA_CLANG_FORMAT}
+        -DGIT_EXECUTABLE=${GIT_EXECUTABLE}
+        -P ${CMAKE_SOURCE_DIR}/cmake/RunClangFormat.cmake
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Formatting Lava sources with clang-format"
+    VERBATIM
+    USES_TERMINAL)
 
 
 # executable

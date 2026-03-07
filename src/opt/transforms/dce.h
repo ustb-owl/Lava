@@ -1,10 +1,10 @@
 #ifndef LAVA_DCE_H
 #define LAVA_DCE_H
 
-#include "opt/pass.h"
 #include "common/casting.h"
-#include "opt/pass_manager.h"
 #include "opt/analysis/funcanalysis.h"
+#include "opt/pass.h"
+#include "opt/pass_manager.h"
 
 /*
  aggressive dead code elimination
@@ -15,20 +15,19 @@
 namespace lava::opt {
 class DeadCodeElimination : public FunctionPass {
 private:
-  bool _changed;
+  bool                        _changed;
   FuncInfoMap                 _func_infos;
   std::vector<User *>         _work_list;
   std::unordered_set<Value *> _critical_list;
 
   inline bool IsPureCall(const SSAPtr &value) {
     if (auto call_inst = dyn_cast<CallInst>(value)) {
-      if (auto func = dyn_cast<Function>(call_inst->Callee())) {
-        if (_func_infos[func.get()].IsPure()) {
-          auto none_array_arg = std::none_of(call_inst->begin(), call_inst->end(),[](const Use &use) {
-            return IsSSA<AccessInst>(use.value());
-          });
-          return none_array_arg;
-        }
+      auto func = call_inst->Callee();
+      if (_func_infos[func.get()].IsPure()) {
+        auto none_array_arg = std::none_of(
+            call_inst->begin(), call_inst->end(),
+            [](const Use &use) { return IsSSA<AccessInst>(use.value()); });
+        return none_array_arg;
       }
     }
     return false;
@@ -38,7 +37,8 @@ public:
   bool runOnFunction(const FuncPtr &F) final;
 
   void initialize() final {
-    auto func_info = PassManager::GetAnalysis<FunctionInfoPass>("FunctionInfoPass");
+    auto func_info =
+        PassManager::GetAnalysis<FunctionInfoPass>("FunctionInfoPass");
     _func_infos = func_info->GetFunctionInfo();
   }
 
@@ -52,7 +52,8 @@ private:
    An operation is critical if:
    1. It sets return values for the function
    2. It is an input/output statement
-   3. It affects the value which may be accessible from outside the current function
+   3. It affects the value which may be accessible from outside the current
+   function
    */
   bool IsCriticalInstruction(const SSAPtr &ptr);
 
@@ -62,18 +63,17 @@ private:
   void Sweep(const FuncPtr &F);
 };
 
-
 class DeadCodeEliminationFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
-    auto pass = std::make_shared<DeadCodeElimination>();
-    auto passinfo =
-        std::make_shared<PassInfo>(pass, "DeadCodeElimination", false, 0, DEAD_CODE_ELIMINATION);
+    auto pass     = std::make_shared<DeadCodeElimination>();
+    auto passinfo = std::make_shared<PassInfo>(pass, "DeadCodeElimination",
+                                               false, 0, DEAD_CODE_ELIMINATION);
     passinfo->Requires("FunctionInfoPass");
     return passinfo;
   }
 };
 
-}
+} // namespace lava::opt
 
-#endif //LAVA_DCE_H
+#endif // LAVA_DCE_H

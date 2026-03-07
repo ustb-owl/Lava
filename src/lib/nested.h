@@ -1,18 +1,17 @@
 #ifndef XSTL_NESTED_H_
 #define XSTL_NESTED_H_
 
-#include <unordered_map>
 #include <map>
 #include <memory>
-#include <type_traits>
-#include <utility>
 #include <optional>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
 
 namespace xstl {
 
 // declaration of nested map
-template <typename K, typename V>
-class NestedMap;
+template <typename K, typename V> class NestedMap;
 
 // pointer to nested map
 template <typename K, typename V>
@@ -25,28 +24,26 @@ template <typename T, typename = std::void_t<>>
 struct IsHashable : std::false_type {};
 
 template <typename T>
-struct IsHashable<T, std::void_t<decltype(std::declval<std::hash<T>>()(
-                         std::declval<T>()))>> : std::true_type {};
+struct IsHashable<
+    T, std::void_t<decltype(std::declval<std::hash<T>>()(std::declval<T>()))>>
+    : std::true_type {};
 
 // type of internal map
 // use 'std::unordered_map' if type 'K' is hashable,
 // otherwise use 'std::map'
 template <typename K, typename V>
-using Map = typename std::conditional<IsHashable<K>::value,
-                                      std::unordered_map<K, V>,
-                                      std::map<K, V>>::type;
+using Map =
+    typename std::conditional<IsHashable<K>::value, std::unordered_map<K, V>,
+                              std::map<K, V>>::type;
 
 // base implementation of nested map
-template <typename T, typename K, typename V>
-class NestedMapBase {
- public:
+template <typename T, typename K, typename V> class NestedMapBase {
+public:
   NestedMapBase() : outer_(nullptr) {}
   NestedMapBase(const NestedMapPtr<K, V> &outer) : outer_(outer) {}
 
   // add item to current map
-  void AddItem(const K &key, const V &value) {
-    map_.insert({key, value});
-  }
+  void AddItem(const K &key, const V &value) { map_.insert({key, value}); }
 
   // get item
   V GetItem(const K &key, bool recursive) const {
@@ -61,11 +58,9 @@ class NestedMapBase {
     auto num = map_.erase(key);
     if (num) {
       return true;
-    }
-    else if (outer_ && recursive) {
+    } else if (outer_ && recursive) {
       return outer_->RemoveItem(key);
-    }
-    else {
+    } else {
       return false;
     }
   }
@@ -85,19 +80,18 @@ class NestedMapBase {
   // check if current map is root map
   bool is_root() const { return outer_ == nullptr; }
 
- private:
+private:
   friend T;
 
   NestedMapPtr<K, V> outer_;
-  Map<K, V> map_;
+  Map<K, V>          map_;
 };
 
-}  // namespace _nested_helper
+} // namespace _nested_helper
 
 template <typename K, typename V>
-class NestedMap
-    : public _nested_helper::NestedMapBase<NestedMap<K, V>, K, V> {
- public:
+class NestedMap : public _nested_helper::NestedMapBase<NestedMap<K, V>, K, V> {
+public:
   // check if value type is suitable
   static_assert(std::is_pointer<V>::value ||
                     std::is_constructible<V, std::nullptr_t>::value,
@@ -105,21 +99,18 @@ class NestedMap
                 "with nullptr_t");
 
   // constructors
-  using _nested_helper::NestedMapBase<NestedMap<K, V>, K,
-                                      V>::NestedMapBase;
+  using _nested_helper::NestedMapBase<NestedMap<K, V>, K, V>::NestedMapBase;
 
- private:
+private:
   friend _nested_helper::NestedMapBase<NestedMap<K, V>, K, V>;
 
   V GetItemImpl(const K &key, bool recursive) const {
     auto it = this->map_.find(key);
     if (it != this->map_.end()) {
       return it->second;
-    }
-    else if (this->outer_ && recursive) {
+    } else if (this->outer_ && recursive) {
       return this->outer_->GetItem(key);
-    }
-    else {
+    } else {
       return nullptr;
     }
   }
@@ -127,36 +118,32 @@ class NestedMap
 
 template <typename K, typename V>
 class NestedMap<K, std::optional<V>>
-    : public _nested_helper::NestedMapBase<NestedMap<K, std::optional<V>>,
-                                           K, std::optional<V>> {
- public:
+    : public _nested_helper::NestedMapBase<NestedMap<K, std::optional<V>>, K,
+                                           std::optional<V>> {
+public:
   // actual value type
   using Vl = std::optional<V>;
 
   // constructors
-  using _nested_helper::NestedMapBase<NestedMap<K, Vl>, K,
-                                      Vl>::NestedMapBase;
+  using _nested_helper::NestedMapBase<NestedMap<K, Vl>, K, Vl>::NestedMapBase;
 
- private:
+private:
   friend _nested_helper::NestedMapBase<NestedMap<K, Vl>, K, Vl>;
 
   Vl GetItemImpl(const K &key, bool recursive) const {
     auto it = this->map_.find(key);
     if (it != this->map_.end()) {
       return it->second;
-    }
-    else if (this->outer_ && recursive) {
+    } else if (this->outer_ && recursive) {
       return this->outer_->GetItem(key);
-    }
-    else {
+    } else {
       return {};
     }
   }
 };
 
 // create a new nested map
-template <typename K, typename V>
-inline NestedMapPtr<K, V> MakeNestedMap() {
+template <typename K, typename V> inline NestedMapPtr<K, V> MakeNestedMap() {
   return std::make_shared<NestedMap<K, V>>();
 }
 
@@ -166,6 +153,6 @@ inline NestedMapPtr<K, V> MakeNestedMap(const NestedMapPtr<K, V> &outer) {
   return std::make_shared<NestedMap<K, V>>(outer);
 }
 
-}  // namespace xstl
+} // namespace xstl
 
-#endif  // XSTL_NESTED_H_
+#endif // XSTL_NESTED_H_

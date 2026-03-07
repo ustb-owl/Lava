@@ -1,8 +1,9 @@
 #include "module.h"
-#include "lib/hashing.h"
-#include "lib/guard.h"
+
 #include "common/casting.h"
 #include "common/idmanager.h"
+#include "lib/guard.h"
+#include "lib/hashing.h"
 
 #define TAB          "\t"
 #define SPACE        " "
@@ -30,8 +31,8 @@ void LLModule::reset() {
 LLOperandPtr LLModule::CreateNoImmOperand(const mid::SSAPtr &value) {
   if (auto constValue = dyn_cast<mid::ConstantInt>(value)) {
     // store the immediate to a register
-    auto dst = LLOperand::Virtual(_virtual_max);
-    auto imm = LLOperand::Immediate(constValue->value());
+    auto dst     = LLOperand::Virtual(_virtual_max);
+    auto imm     = LLOperand::Immediate(constValue->value());
     auto mv_inst = AddInst<LLMove>(dst, imm);
     return dst;
   } else {
@@ -45,8 +46,8 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
     if (it != _param_map.end()) {
       return it->second;
     }
-    const auto &args = _insert_function->function()->args();
-    LLOperandPtr arg = nullptr;
+    const auto  &args = _insert_function->function()->args();
+    LLOperandPtr arg  = nullptr;
     for (std::size_t i = 0; i < args.size(); i++) {
       if (args[i] == value) {
         // copy from register
@@ -54,14 +55,14 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
           // r0-r3
           // mov v1, r0
           auto dst = LLOperand::Virtual(_virtual_max);
-          auto src = LLOperand::Register((ArmReg) i);
+          auto src = LLOperand::Register((ArmReg)i);
 
           // insert this instruction at entry
           auto mv_inst = std::make_shared<LLMove>(dst, src);
-          auto entry = _insert_function->entry();
+          auto entry   = _insert_function->entry();
           entry->insts().insert(entry->insts().begin(), mv_inst);
 
-          arg = dst;
+          arg               = dst;
           _param_map[value] = arg;
         } else {
           AddInst<LLComment>("load param from stack");
@@ -69,16 +70,15 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
 
           // mov rm, (i - 4) * 4
 
-          auto offset = LLOperand::Virtual(_virtual_max);
-          auto src = LLOperand::Immediate((i - 4) * 4);
+          auto offset   = LLOperand::Virtual(_virtual_max);
+          auto src      = LLOperand::Immediate((i - 4) * 4);
           auto moveInst = AddInst<LLMove>(offset, src);
           moveInst->SetIsArg(true);
           offset->set_not_allowed_to_tmp(false);
 
-
           // load rn, [sp, rm]
-          auto vreg = LLOperand::Virtual(_virtual_max);
-          auto addr = LLOperand::Register(ArmReg::sp);
+          auto vreg     = LLOperand::Virtual(_virtual_max);
+          auto addr     = LLOperand::Register(ArmReg::sp);
           auto load_arg = AddInst<LLLoad>(vreg, addr, offset);
           vreg->set_not_allowed_to_tmp(false);
 
@@ -92,7 +92,7 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
     }
 
     DBG_ASSERT(arg != nullptr, "create argument failed");
-//    _param_map[value] = arg;
+    //    _param_map[value] = arg;
     return arg;
   } else if (auto constValue = dyn_cast<mid::ConstantInt>(value)) {
     return CreateImmediate(constValue->value());
@@ -103,13 +103,15 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
       auto insert_point = _insert_point;
 
       // allocate virtual reg
-      auto res = LLOperand::Virtual(_virtual_max);
+      auto res               = LLOperand::Virtual(_virtual_max);
       _glob_map[globalValue] = res;
 
       // insert at entry
-      SetInsertPoint(_insert_function->entry(), _insert_function->entry()->insts().begin());
+      SetInsertPoint(_insert_function->entry(),
+                     _insert_function->entry()->insts().begin());
       auto load_global_addr = AddInst<LLGlobal>(res, globalValue.get());
-      DBG_ASSERT(load_global_addr != nullptr, "load global variable address failed");
+      DBG_ASSERT(load_global_addr != nullptr,
+                 "load global variable address failed");
 
       SetInsertPoint(insert_point);
       return res;
@@ -124,7 +126,7 @@ LLOperandPtr LLModule::CreateOperand(const mid::SSAPtr &value) {
     auto it = _value_map.find(value);
     if (it == _value_map.end()) {
       // allocate virtual reg
-      auto res = LLOperand::Virtual(_virtual_max);
+      auto res          = LLOperand::Virtual(_virtual_max);
       _value_map[value] = res;
       return res;
     } else {
@@ -148,7 +150,10 @@ LLOperandPtr LLModule::CreateImmediate(int value) {
 
 void LLModule::DFS(const mid::BlockPtr &BB) {
   // return if visited
-  if (!_visited.insert(BB).second) return;
+  if (!BB || BB->insts().empty())
+    return;
+  if (!_visited.insert(BB).second)
+    return;
 
   if (BB->insts().back()->classId() == ClassId::ReturnInstId) {
     _exit = BB;
@@ -160,11 +165,17 @@ void LLModule::DFS(const mid::BlockPtr &BB) {
   auto termInst = BB->insts().back();
   if (auto jump_inst = dyn_cast<mid::JumpInst>(termInst)) {
     // visit its successor
-    DFS(dyn_cast<mid::BasicBlock>(jump_inst->target()));
+    auto target = dyn_cast<mid::BasicBlock>(jump_inst->target());
+    if (target)
+      DFS(target);
   } else if (auto branch_inst = dyn_cast<mid::BranchInst>(termInst)) {
     // visit false block firstly
-    DFS(dyn_cast<mid::BasicBlock>(branch_inst->false_block()));
-    DFS(dyn_cast<mid::BasicBlock>(branch_inst->true_block()));
+    auto false_block = dyn_cast<mid::BasicBlock>(branch_inst->false_block());
+    if (false_block)
+      DFS(false_block);
+    auto true_block = dyn_cast<mid::BasicBlock>(branch_inst->true_block());
+    if (true_block)
+      DFS(true_block);
   } else if (auto ret_inst = dyn_cast<mid::ReturnInst>(termInst)) {
     // do nothing
   } else {
@@ -184,11 +195,13 @@ LLFunctionPtr LLModule::CreateFunction(const mid::FuncPtr &function) {
   _insert_function = ll_function;
 
   // create block map
-  if (function->is_decl()) return ll_function;
-  DFS(dyn_cast<mid::BasicBlock>(function->entry()));
-  DBG_ASSERT(_blocks.size() + 1 == function->size(), "block size error");
-  for (const auto &block : _blocks) {
-    auto ll_block = std::make_shared<LLBasicBlock>(block->name(), block, ll_function);
+  if (function->is_decl())
+    return ll_function;
+  for (const auto &block : *function) {
+    if (!block)
+      continue;
+    auto ll_block =
+        std::make_shared<LLBasicBlock>(block->name(), block, ll_function);
 
     // insert blocks into function
     ll_function->AddBlock(ll_block);
@@ -196,30 +209,15 @@ LLFunctionPtr LLModule::CreateFunction(const mid::FuncPtr &function) {
     // insert block into _block_map
     _block_map[block] = ll_block;
   }
-  auto ll_exit = std::make_shared<LLBasicBlock>(_exit->name(), _exit, ll_function);
-  ll_function->AddBlock(ll_exit);
-  _block_map[_exit] = ll_exit;
-  ClearBlocks();
 
-#if 0
-  for (const auto &it : *function) {
-    auto block = dyn_cast<mid::BasicBlock>(it.value());
-    auto ll_block = std::make_shared<LLBasicBlock>(block->name(), block, ll_function);
-
-    // insert blocks into function
-    ll_function->AddBlock(ll_block);
-
-    // insert block into _block_map
-    _block_map[block] = ll_block;
-  }
-#endif
-
-  if (function->GetFunctionName() == "median") ll_function->SetNeedHash();
+  if (function->GetFunctionName() == "median")
+    ll_function->SetNeedHash();
 
   return ll_function;
 }
 
-LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFunctionPtr &parent) {
+LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block,
+                                      const LLFunctionPtr &parent) {
   auto ll_block = _block_map[block];
   SetInsertPoint(ll_block);
   const auto &insts = block->insts();
@@ -239,7 +237,7 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       // solve operand
       auto src = CreateOperand(loadInst->Pointer());
 
-      auto dst = CreateOperand(loadInst);
+      auto dst         = CreateOperand(loadInst);
       auto ll_loadInst = AddInst<LLLoad>(dst, src, nullptr);
       DBG_ASSERT(ll_loadInst != nullptr, "create LLLoad failed");
     } else if (auto storeInst = dyn_cast<mid::StoreInst>(inst)) {
@@ -257,18 +255,22 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       /* GETELEMENTPTR */
       // getelementptr ptr, index, multiplier
       auto dst = CreateOperand(gepInst);
-      DBG_ASSERT(dst != nullptr, "create dst in getelementptr instruction failed");
+      DBG_ASSERT(dst != nullptr,
+                 "create dst in getelementptr instruction failed");
 
       auto ptr = CreateOperand(gepInst->ptr());
-      DBG_ASSERT(ptr != nullptr, "create pointer in getelementptr instruction failed");
+      DBG_ASSERT(ptr != nullptr,
+                 "create pointer in getelementptr instruction failed");
 
       std::shared_ptr<ConstantInt> multiplier = nullptr;
-      if (gepInst->has_multiplier()){
+      if (gepInst->has_multiplier()) {
         multiplier = dyn_cast<mid::ConstantInt>(gepInst->multiplier());
       } else {
         multiplier = std::make_shared<mid::ConstantInt>(1);
       }
-      DBG_ASSERT(multiplier, "create multiplier failed in getelementptr instruction failed");
+      DBG_ASSERT(
+          multiplier,
+          "create multiplier failed in getelementptr instruction failed");
 
       // try to get const index
       auto constIdx = dyn_cast<mid::ConstantInt>(gepInst->index());
@@ -278,39 +280,53 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       // dst <- ptr
       if (multiplier->IsZero() || (constIdx && constIdx->IsZero())) {
         auto move_inst = AddInst<LLMove>(dst, ptr);
-        DBG_ASSERT(move_inst != nullptr, "create LLMove failed in getelementptr instruction");
+        DBG_ASSERT(move_inst != nullptr,
+                   "create LLMove failed in getelementptr instruction");
       } else if (constIdx) {
         // dst <- ptr + (index * multiplier * size)
-        auto offset = constIdx->value() * multiplier->value() * 4;
+        auto offset      = constIdx->value() * multiplier->value() * 4;
         auto imm_operand = CreateImmediate(offset);
 
-        auto add_inst = AddInst<LLBinaryInst>(LLInst::Opcode::Add, dst, ptr, imm_operand);
-        DBG_ASSERT(add_inst != nullptr, "create add instruction failed in getelementptr instruction");
+        auto add_inst =
+            AddInst<LLBinaryInst>(LLInst::Opcode::Add, dst, ptr, imm_operand);
+        DBG_ASSERT(
+            add_inst != nullptr,
+            "create add instruction failed in getelementptr instruction");
       } else if ((multiplier->value() & (multiplier->value() - 1)) == 0) {
         /* multiplier is 2^n */
         // dst <- ptr + (index << log(multiplier))
         auto index = CreateOperand(gepInst->index());
-        auto add_inst = AddInst<LLBinaryInst>(LLInst::Opcode::Add, dst, ptr, index);
-        DBG_ASSERT(add_inst != nullptr, "create add instruction failed in getelementptr instruction");
-        ArmShift shift(__builtin_ctz(multiplier->value() * 4), ArmShift::ShiftType::Lsl);
-        if (shift.shift() != 0) add_inst->setShift(shift);
+        auto add_inst =
+            AddInst<LLBinaryInst>(LLInst::Opcode::Add, dst, ptr, index);
+        DBG_ASSERT(
+            add_inst != nullptr,
+            "create add instruction failed in getelementptr instruction");
+        ArmShift shift(__builtin_ctz(multiplier->value() * 4),
+                       ArmShift::ShiftType::Lsl);
+        if (shift.shift() != 0)
+          add_inst->setShift(shift);
       } else {
         // dst <- ptr
         auto move_inst = AddInst<LLMove>(dst, ptr);
 
         // offset <- index << 2
         auto index = CreateOperand(gepInst->index());
-        auto size = CreateImmediate(2);
+        auto size  = CreateImmediate(2);
 
         auto offset = LLOperand::Virtual(_virtual_max);
-        auto lsl_inst = AddInst<LLBinaryInst>(LLInst::Opcode::LShr, offset, index, size);
+        auto lsl_inst =
+            AddInst<LLBinaryInst>(LLInst::Opcode::LShr, offset, index, size);
 
         // multiplier <- multiplier (imm)
-        auto move_mult = AddInst<LLMove>(LLOperand::Virtual(_virtual_max), LLOperand::Immediate(multiplier->value()));
+        auto move_mult =
+            AddInst<LLMove>(LLOperand::Virtual(_virtual_max),
+                            LLOperand::Immediate(multiplier->value()));
 
         // dst <- index * multiplier + dst
         auto mla = AddInst<LLMLA>(dst, offset, move_mult->dst(), dst);
-        DBG_ASSERT(mla != nullptr, "create mla instruction failed in getelementptr instruction");
+        DBG_ASSERT(
+            mla != nullptr,
+            "create mla instruction failed in getelementptr instruction");
       }
       AddInst<LLComment>("create getelementptr end");
     } else if (auto returnInst = dyn_cast<mid::ReturnInst>(inst)) {
@@ -318,9 +334,10 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
         auto ret_value = CreateOperand(returnInst->RetVal());
 
         // move return value to R0
-        auto r0 = LLOperand::Register(ArmReg::r0);
+        auto r0        = LLOperand::Register(ArmReg::r0);
         auto move_inst = AddInst<LLMove>(r0, ret_value);
-        DBG_ASSERT(move_inst != nullptr, "create move instruction failed in return instruction");
+        DBG_ASSERT(move_inst != nullptr,
+                   "create move instruction failed in return instruction");
 
         // create return instruction
         AddInst<LLReturn>();
@@ -330,16 +347,15 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
     } else if (auto binaryInst = dyn_cast<mid::BinaryOperator>(inst)) {
       AddInst<LLComment>("--- binary here ---");
 
-
       // TODO: generate binary instruction
       using LLOpcode  = LLInst::Opcode;
       using BinaryOps = BinaryOperator::BinaryOps;
 
       BinaryOps opcode = binaryInst->opcode();
-      auto lhs = CreateNoImmOperand(binaryInst->LHS());
+      auto      lhs    = CreateNoImmOperand(binaryInst->LHS());
       DBG_ASSERT(lhs != nullptr, "create lhs failed in binary instruction");
       LLOperandPtr rhs = nullptr;
-      if (binaryInst->opcode() == BinaryOps::Mul  ||
+      if (binaryInst->opcode() == BinaryOps::Mul ||
           binaryInst->opcode() == BinaryOps::SDiv ||
           binaryInst->opcode() == BinaryOps::SRem) {
         rhs = CreateNoImmOperand(binaryInst->RHS());
@@ -350,20 +366,42 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
 
       LLOpcode bin_op;
       switch (opcode) {
-        case BinaryOps::Add:  bin_op = LLOpcode::Add;  break;
-        case BinaryOps::Sub:  bin_op = LLOpcode::Sub;  break;
-        case BinaryOps::Mul:  bin_op = LLOpcode::Mul;  break;
-        case BinaryOps::SDiv: bin_op = LLOpcode::SDiv; break;
-        case BinaryOps::And:  bin_op = LLOpcode::And;  break;
-        case BinaryOps::Or:   bin_op = LLOpcode::Or;   break;
-        case BinaryOps::Xor:  bin_op = LLOpcode::Xor;  break;
-        case BinaryOps::Shl:  bin_op = LLOpcode::Shl;  break;
-        case BinaryOps::AShr: bin_op = LLOpcode::AShr; break;
-        case BinaryOps::LShr: bin_op = LLOpcode::LShr; break;
-        case BinaryOps::SRem: bin_op = LLOpcode::SRem; break;
-        default: ERROR("should not reach here");
+      case BinaryOps::Add:
+        bin_op = LLOpcode::Add;
+        break;
+      case BinaryOps::Sub:
+        bin_op = LLOpcode::Sub;
+        break;
+      case BinaryOps::Mul:
+        bin_op = LLOpcode::Mul;
+        break;
+      case BinaryOps::SDiv:
+        bin_op = LLOpcode::SDiv;
+        break;
+      case BinaryOps::And:
+        bin_op = LLOpcode::And;
+        break;
+      case BinaryOps::Or:
+        bin_op = LLOpcode::Or;
+        break;
+      case BinaryOps::Xor:
+        bin_op = LLOpcode::Xor;
+        break;
+      case BinaryOps::Shl:
+        bin_op = LLOpcode::Shl;
+        break;
+      case BinaryOps::AShr:
+        bin_op = LLOpcode::AShr;
+        break;
+      case BinaryOps::LShr:
+        bin_op = LLOpcode::LShr;
+        break;
+      case BinaryOps::SRem:
+        bin_op = LLOpcode::SRem;
+        break;
+      default:
+        ERROR("should not reach here");
       }
-
 
       // convert mod to sdiv and sub
       // c = b % a
@@ -371,16 +409,16 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       // mls r0, r0, r2, r1
       // r1 - ((r1 / r2) * r2)
       if (bin_op == LLOpcode::SRem) {
-        auto dst = CreateOperand(inst);
+        auto dst  = CreateOperand(inst);
         auto sdiv = AddInst<LLBinaryInst>(LLOpcode::SDiv, dst, lhs, rhs);
 
-//        auto mul_res = LLOperand::Virtual(_virtual_max);
+        //        auto mul_res = LLOperand::Virtual(_virtual_max);
         auto mul = AddInst<LLBinaryInst>(LLOpcode::Mul, dst, dst, rhs);
         auto sub = AddInst<LLBinaryInst>(LLOpcode::Sub, dst, lhs, dst);
-//        auto mls = AddInst<LLMLS>(dst, dst, rhs, lhs);
+        //        auto mls = AddInst<LLMLS>(dst, dst, rhs, lhs);
         DBG_ASSERT(sub != nullptr, "create mod instruction failed");
       } else {
-        auto dst = CreateOperand(inst);
+        auto dst      = CreateOperand(inst);
         auto bin_inst = AddInst<LLBinaryInst>(bin_op, dst, lhs, rhs);
         DBG_ASSERT(bin_inst != nullptr, "create binary instruction failed");
       }
@@ -388,22 +426,27 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
     } else if (auto branchInst = dyn_cast<mid::BranchInst>(inst)) {
       // FIXME: need to add a "mov[cond] vreg, icmp" here!!!
       ArmCond armCond = ArmCond::Ne;
-      auto cond = CreateNoImmOperand(branchInst->cond());
+      auto    cond    = CreateNoImmOperand(branchInst->cond());
       if (auto it = _cond_map.find(branchInst->cond()); it != _cond_map.end()) {
         armCond = it->second.second;
       } else {
-        auto cmp_inst = AddInst<LLCompare>(ArmCond::Ne, cond, CreateImmediate(0));
+        auto cmp_inst =
+            AddInst<LLCompare>(ArmCond::Ne, cond, CreateImmediate(0));
       }
 
-
-      DBG_ASSERT(_block_map.find(dyn_cast<mid::BasicBlock>(branchInst->true_block())) != _block_map.end(),
+      DBG_ASSERT(_block_map.find(dyn_cast<mid::BasicBlock>(
+                     branchInst->true_block())) != _block_map.end(),
                  "can't find true block");
-      auto true_block = _block_map[dyn_cast<mid::BasicBlock>(branchInst->true_block())];
-      DBG_ASSERT(_block_map.find(dyn_cast<mid::BasicBlock>(branchInst->false_block())) != _block_map.end(),
+      auto true_block =
+          _block_map[dyn_cast<mid::BasicBlock>(branchInst->true_block())];
+      DBG_ASSERT(_block_map.find(dyn_cast<mid::BasicBlock>(
+                     branchInst->false_block())) != _block_map.end(),
                  "can't find false block");
-      auto false_block = _block_map[dyn_cast<mid::BasicBlock>(branchInst->false_block())];
+      auto false_block =
+          _block_map[dyn_cast<mid::BasicBlock>(branchInst->false_block())];
 
-      auto ll_branch = AddInst<LLBranch>(armCond, cond, true_block, false_block);
+      auto ll_branch =
+          AddInst<LLBranch>(armCond, cond, true_block, false_block);
 
     } else if (auto callInst = dyn_cast<mid::CallInst>(inst)) {
       // add lr into callee's saved registers
@@ -416,8 +459,8 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       for (std::size_t i = 0; i < param_size; i++) {
         if (i < 4) {
           // move args to r0-r3
-          auto rhs = CreateOperand(callInst->Param(i));
-          auto dst = LLOperand::Register((ArmReg) i);
+          auto rhs     = CreateOperand(callInst->Param(i));
+          auto dst     = LLOperand::Register((ArmReg)i);
           auto mv_inst = AddInst<LLMove>(dst, rhs);
           DBG_ASSERT(mv_inst != nullptr, "move param to register failed");
         } else {
@@ -434,8 +477,9 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
           auto offset = CreateImmediate(-((param_size - i) * 4));
           offset->set_not_allowed_to_tmp(false);
           auto st_inst = AddInst<LLStore>(data, addr, offset);
-          DBG_ASSERT(st_inst != nullptr, "store parameter(%lu) failed in calling %s",
-                     i, dyn_cast<mid::Function>(callInst->Callee())->GetFunctionName().c_str());
+          DBG_ASSERT(st_inst != nullptr,
+                     "store parameter(%lu) failed in calling %s", i,
+                     callInst->Callee()->GetFunctionName().c_str());
         }
       }
 
@@ -445,12 +489,13 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
         auto dst = LLOperand::Register(ArmReg::sp);
         auto lhs = LLOperand::Register(ArmReg::sp);
         auto rhs = CreateImmediate(4 * (param_size - 4));
-        auto sub_inst = AddInst<LLBinaryInst>(LLInst::Opcode::Sub, dst, lhs, rhs);
+        auto sub_inst =
+            AddInst<LLBinaryInst>(LLInst::Opcode::Sub, dst, lhs, rhs);
         rhs->set_not_allowed_to_tmp(false);
       }
 
       // create call instruction
-      auto callee = dyn_cast<mid::Function>(callInst->Callee());
+      auto callee  = callInst->Callee();
       auto ll_call = AddInst<LLCall>(callee);
       ll_call->SetIsTailCall(callInst->IsTailCall());
       DBG_ASSERT(ll_call != nullptr, "create call instruction failed");
@@ -461,15 +506,18 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
         auto dst = LLOperand::Register(ArmReg::sp);
         auto lhs = LLOperand::Register(ArmReg::sp);
         auto rhs = CreateImmediate(4 * (param_size - 4));
-        auto sub_inst = AddInst<LLBinaryInst>(LLInst::Opcode::Add, dst, lhs, rhs);
+        auto sub_inst =
+            AddInst<LLBinaryInst>(LLInst::Opcode::Add, dst, lhs, rhs);
         rhs->set_not_allowed_to_tmp(false);
       }
 
       // set return value
-      if (!callee->type()->GetReturnType(callee->type()->GetArgsType().value())->IsVoid()) {
+      if (!callee->type()
+               ->GetReturnType(callee->type()->GetArgsType().value())
+               ->IsVoid()) {
         // move r0 to dst
-        auto dst = CreateOperand(inst);
-        auto r0 = LLOperand::Register(ArmReg::r0);
+        auto dst     = CreateOperand(inst);
+        auto r0      = LLOperand::Register(ArmReg::r0);
         auto mv_inst = AddInst<LLMove>(dst, r0);
       }
     } else if (auto allocaInst = dyn_cast<mid::AllocaInst>(inst)) {
@@ -480,49 +528,61 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
       }
 
       // get address on stack
-      auto dst = CreateOperand(inst);
+      auto dst    = CreateOperand(inst);
       auto offset = CreateImmediate(_insert_function->stack_size());
-      auto sp = LLOperand::Register(ArmReg::sp);
-      auto add_inst = AddInst<LLBinaryInst>(LLInst::Opcode::Add, dst, sp, offset);
+      auto sp     = LLOperand::Register(ArmReg::sp);
+      auto add_inst =
+          AddInst<LLBinaryInst>(LLInst::Opcode::Add, dst, sp, offset);
 
       // allocate size on sp
       _insert_function->SetStackSize(_insert_function->stack_size() + size);
 
     } else if (auto icmp_inst = dyn_cast<mid::ICmpInst>(inst)) {
       ArmCond cond = ArmCond::Any, opposite = ArmCond::Any;
-      auto lhs = CreateNoImmOperand(icmp_inst->LHS());
-      auto rhs = CreateOperand(icmp_inst->RHS());
+      auto    lhs = CreateNoImmOperand(icmp_inst->LHS());
+      auto    rhs = CreateOperand(icmp_inst->RHS());
 
       switch (icmp_inst->op()) {
-        case front::Operator::Equal:    cond = ArmCond::Eq; break;
-        case front::Operator::SLess:
-        case front::Operator::ULess:    cond = ArmCond::Lt; break;
-        case front::Operator::SGreat:
-        case front::Operator::UGreat:   cond = ArmCond::Gt; break;
-        case front::Operator::SLessEq:
-        case front::Operator::ULessEq:  cond = ArmCond::Le; break;
-        case front::Operator::SGreatEq:
-        case front::Operator::UGreatEq: cond = ArmCond::Ge; break;
-        case front::Operator::NotEqual: cond = ArmCond::Ne; break;
-        default:
-          ERROR("should not reach here");
+      case front::Operator::Equal:
+        cond = ArmCond::Eq;
+        break;
+      case front::Operator::SLess:
+      case front::Operator::ULess:
+        cond = ArmCond::Lt;
+        break;
+      case front::Operator::SGreat:
+      case front::Operator::UGreat:
+        cond = ArmCond::Gt;
+        break;
+      case front::Operator::SLessEq:
+      case front::Operator::ULessEq:
+        cond = ArmCond::Le;
+        break;
+      case front::Operator::SGreatEq:
+      case front::Operator::UGreatEq:
+        cond = ArmCond::Ge;
+        break;
+      case front::Operator::NotEqual:
+        cond = ArmCond::Ne;
+        break;
+      default:
+        ERROR("should not reach here");
       }
       opposite = opposite_cond(cond);
 
       auto ll_cmp = AddInst<LLCompare>(cond, lhs, rhs);
-      auto user = (*icmp_inst->uses().begin())->getUser();
-      if ((icmp_inst->uses().size() == 1) && 
-          (user == std::next(it)->get())  &&
+      auto user   = (*icmp_inst->uses().begin())->getUser();
+      if ((icmp_inst->uses().size() == 1) && (user == std::next(it)->get()) &&
           (user->classId() == ClassId::BranchInstId)) {
         auto pair = std::make_pair(ll_cmp, cond);
         _cond_map.insert({inst, pair});
       } else {
         // TODO: load compare value
-        auto dst = CreateOperand(inst);
-        auto src1 = CreateImmediate(1);
+        auto dst      = CreateOperand(inst);
+        auto src1     = CreateImmediate(1);
         auto mv1_inst = AddInst<LLMove>(dst, src1, cond);
 
-        auto src2 = CreateImmediate(0);
+        auto src2     = CreateImmediate(0);
         auto mv2_inst = AddInst<LLMove>(dst, src2, opposite);
       }
     } else if (auto cast_inst = dyn_cast<mid::CastInst>(inst)) {
@@ -545,30 +605,32 @@ LLBlockPtr LLModule::CreateBasicBlock(const mid::BlockPtr &block, const LLFuncti
 }
 
 void LLModule::HandlePhiNode(const mid::FuncPtr &function) {
-  using PhiAssign = std::vector<std::pair<LLOperandPtr , LLOperandPtr>>;
+  using PhiAssign = std::vector<std::pair<LLOperandPtr, LLOperandPtr>>;
   for (const auto &BB : *function) {
-    auto block = dyn_cast<BasicBlock>(BB.value());
-    DBG_ASSERT(_block_map.find(block) != _block_map.end(), "can't find the block in current _block_map");
-    auto ll_block = _block_map[block];
+    DBG_ASSERT(_block_map.find(BB) != _block_map.end(),
+               "can't find the block in current _block_map");
+    auto ll_block = _block_map[BB];
 
     PhiAssign phi_dst;
 
     std::unordered_map<BlockPtr, PhiAssign> move;
-    for (const auto &inst : block->insts()) {
+    for (const auto &inst : BB->insts()) {
       if (auto phi_inst = dyn_cast<PhiNode>(inst)) {
         // for each phi:
         // 1. create a virtual register for each instruction
         // 2. add mov for each node
         // 2. add mov in each predecessor
         auto vreg = LLOperand::Virtual(_virtual_max);
-        auto dst = CreateOperand(inst);
+        auto dst  = CreateOperand(inst);
         phi_dst.emplace_back(dst, vreg);
         for (std::size_t i = 0; i < phi_inst->size(); i++) {
-          auto pred = dyn_cast<BasicBlock>(block->GetOperand(i));
-          DBG_ASSERT(pred != nullptr, "get predecessor of current block failed");
+          auto pred = phi_inst->getIncomingBlock(static_cast<unsigned>(i));
+          DBG_ASSERT(pred != nullptr,
+                     "get predecessor of current block failed");
 
           // set insert point
-          DBG_ASSERT(_block_map.find(pred) != _block_map.end(), "find predecessor of phi-node failed");
+          DBG_ASSERT(_block_map.find(pred) != _block_map.end(),
+                     "find predecessor of phi-node failed");
           auto ll_pred = _block_map[pred];
 
           auto it = ll_pred->inst_begin();
@@ -595,7 +657,8 @@ void LLModule::HandlePhiNode(const mid::FuncPtr &function) {
     SetInsertPoint(ll_block, begin);
     for (auto &[lhs, rhs] : phi_dst) {
       auto mov_inst = AddInst<LLMove>(lhs, rhs);
-      DBG_ASSERT(mov_inst != nullptr, "create move instruction for phi-node failed");
+      DBG_ASSERT(mov_inst != nullptr,
+                 "create move instruction for phi-node failed");
     }
 
     // insert move instructions in each predecessor
@@ -617,13 +680,12 @@ void LLModule::HandlePhiNode(const mid::FuncPtr &function) {
       SetInsertPoint(ll_bb, pos);
       for (auto &[lhs, rhs] : movs) {
         auto mov_inst = AddInst<LLMove>(lhs, rhs);
-        DBG_ASSERT(mov_inst != nullptr, "create move instruction for phi-node failed");
+        DBG_ASSERT(mov_inst != nullptr,
+                   "create move instruction for phi-node failed");
       }
     }
-
   }
 }
-
 
 /*----  Dump ASM  ----*/
 
@@ -643,18 +705,21 @@ void LLModule::DumpASM(std::ostream &os) const {
 
   // dump function
   for (const auto &function : _functions) {
-    if (function->is_decl()) continue;
+    if (function->is_decl())
+      continue;
     os << function << std::endl;
-//    id_mgr.Reset();
+    //    id_mgr.Reset();
   }
 
-  if (_glob_decl.empty()) return;
+  if (_glob_decl.empty())
+    return;
   // dump global variables
   os << ".section" << SPACE << ".data" << std::endl;
   os << ".align 4" << std::endl;
   for (const auto &it : _glob_decl) {
     os << ".global" << SPACE << it->name() << std::endl;
-    os << INDENT << ".type" << TAB << it->name() << "," << SPACE << "%object" << std::endl;
+    os << INDENT << ".type" << TAB << it->name() << "," << SPACE << "%object"
+       << std::endl;
 
     os << it->name() << ":" << std::endl;
 
@@ -671,10 +736,12 @@ void LLModule::DumpASM(std::ostream &os) const {
       if (type->IsArray()) {
         auto array = dyn_cast<mid::ConstantArray>(it->init());
         for (auto &init : *array) {
-          os << INDENT << ".long" << TAB << dyn_cast<mid::ConstantInt>(init.value())->value() << std::endl;
+          os << INDENT << ".long" << TAB
+             << dyn_cast<mid::ConstantInt>(init.value())->value() << std::endl;
         }
       } else {
-        os << INDENT << ".long" << TAB << dyn_cast<mid::ConstantInt>(it->init())->value() << std::endl;
+        os << INDENT << ".long" << TAB
+           << dyn_cast<mid::ConstantInt>(it->init())->value() << std::endl;
       }
     }
     os << std::endl;
@@ -687,7 +754,8 @@ std::ostream &operator<<(std::ostream &os, const LLFunctionPtr &function) {
   os << GLOBAL_LABEL << SPACE << func_name << std::endl;
 
   // 2. dump type
-  os << INDENT << TYPE_LABEL << TWO_SPACE << func_name << "," << SPACE << FUNC_TYPE << std::endl;
+  os << INDENT << TYPE_LABEL << TWO_SPACE << func_name << "," << SPACE
+     << FUNC_TYPE << std::endl;
 
   // 3. print label
   os << func_name << ":" << std::endl;
@@ -695,13 +763,12 @@ std::ostream &operator<<(std::ostream &os, const LLFunctionPtr &function) {
     os << block << std::endl;
   }
 
-
   return os;
 }
 
 std::ostream &operator<<(std::ostream &os, const LLBlockPtr &block) {
   auto &npos = std::string::npos;
-  auto name = block->name();
+  auto  name = block->name();
 
   if (name != "entry") {
     os << ".";
@@ -736,7 +803,8 @@ std::ostream &operator<<(std::ostream &os, const LLBlockPtr &block) {
       os << name;
     }
 
-    if (in_instruction) return os;
+    if (in_instruction)
+      return os;
     os << ":" << std::endl;
   }
 
@@ -756,28 +824,26 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
         !LLModule::can_encode_imm(mv_inst->src()->imm_num())) {
       auto imm = mv_inst->src()->imm_num();
       if ((uint32_t)imm >> 16u == 0) {
-        os << INDENT << "movw" << TAB
-           << mv_inst->dst() << ","<< SPACE <<"#" << (uint16_t)imm;
+        os << INDENT << "movw" << TAB << mv_inst->dst() << "," << SPACE << "#"
+           << (uint16_t)imm;
       } else {
         // wider than 16 bits
 #if 0
         os << INDENT << "ldr" << TAB
            << mv_inst->dst() << "," << SPACE <<"=" << imm;
 #endif
-        os << INDENT << "mov" << TAB
-           << mv_inst->dst() << "," << SPACE << "#" << (imm & 0xffff) << std::endl;
-        os << INDENT << "movt" << TAB
-           << mv_inst->dst() << "," << SPACE << "#" << (uint16_t (imm >> 16));
+        os << INDENT << "mov" << TAB << mv_inst->dst() << "," << SPACE << "#"
+           << (imm & 0xffff) << std::endl;
+        os << INDENT << "movt" << TAB << mv_inst->dst() << "," << SPACE << "#"
+           << (uint16_t(imm >> 16));
       }
     } else {
-      os << INDENT << "mov" << mv_inst->cond() << TAB
-         << mv_inst->dst() << "," << SPACE << mv_inst->src()
-         << mv_inst->shift();
+      os << INDENT << "mov" << mv_inst->cond() << TAB << mv_inst->dst() << ","
+         << SPACE << mv_inst->src() << mv_inst->shift();
     }
   } else if (auto load_inst = dyn_cast<LLLoad>(inst)) {
-    os << INDENT << "ldr" << TAB
-       << load_inst->dst() << "," << SPACE
-       << "[" << load_inst->addr();
+    os << INDENT << "ldr" << TAB << load_inst->dst() << "," << SPACE << "["
+       << load_inst->addr();
 
     if (load_inst->offset() != nullptr) {
       os << "," << SPACE << load_inst->offset();
@@ -790,9 +856,8 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
     os << INDENT << "bx" << ret_inst->cond() << TAB << ArmReg::lr;
     // TODO:
   } else if (auto store_inst = dyn_cast<LLStore>(inst)) {
-    os << INDENT << "str" << TAB
-       << store_inst->data() << "," << SPACE
-       << "[" << store_inst->addr();
+    os << INDENT << "str" << TAB << store_inst->data() << "," << SPACE << "["
+       << store_inst->addr();
 
     if (store_inst->offset() != nullptr) {
       os << "," << SPACE << store_inst->offset();
@@ -800,37 +865,61 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
 
     os << "]";
   } else if (auto branch_inst = dyn_cast<LLBranch>(inst)) {
-    os << INDENT << "b" << branch_inst->arm_cond() << TAB << branch_inst->true_block() << std::endl;
+    os << INDENT << "b" << branch_inst->arm_cond() << TAB
+       << branch_inst->true_block() << std::endl;
     if (branch_inst->need_out_false()) {
       os << INDENT << "b" << TAB << branch_inst->false_block() << std::endl;
     }
 
   } else if (auto call_inst = dyn_cast<LLCall>(inst)) {
     os << INDENT << "b";
-    if (!call_inst->NeedChangeMode()) { os << "l"; }
+    if (!call_inst->NeedChangeMode()) {
+      os << "l";
+    }
     os << TAB << call_inst->function()->GetFunctionName();
   } else if (auto binary_inst = dyn_cast<LLBinaryInst>(inst)) {
-    std::string op = "unknown";
-    auto opcode = binary_inst->opcode();
+    std::string op     = "unknown";
+    auto        opcode = binary_inst->opcode();
     switch (opcode) {
-      case LLInst::Opcode::Add:  op = "add";  break;
-      case LLInst::Opcode::Sub:  op = "sub";  break;
-      case LLInst::Opcode::Mul:  op = "mul";  break;
-      case LLInst::Opcode::SDiv: op = "sdiv"; break;
-      case LLInst::Opcode::And:  op = "and";  break;
-      case LLInst::Opcode::Or:   op = "orr";  break;
-      case LLInst::Opcode::AShr: op = "asr";  break;
-      case LLInst::Opcode::LShr: op = "lsr";  break;
-      case LLInst::Opcode::Shl:  op = "lsl";  break;
-      case LLInst::Opcode::Xor:  op = "eor";  break;
-      case LLInst::Opcode::Bic:  op = "bic";  break;
-      default:
-        ERROR("should not reach here");
+    case LLInst::Opcode::Add:
+      op = "add";
+      break;
+    case LLInst::Opcode::Sub:
+      op = "sub";
+      break;
+    case LLInst::Opcode::Mul:
+      op = "mul";
+      break;
+    case LLInst::Opcode::SDiv:
+      op = "sdiv";
+      break;
+    case LLInst::Opcode::And:
+      op = "and";
+      break;
+    case LLInst::Opcode::Or:
+      op = "orr";
+      break;
+    case LLInst::Opcode::AShr:
+      op = "asr";
+      break;
+    case LLInst::Opcode::LShr:
+      op = "lsr";
+      break;
+    case LLInst::Opcode::Shl:
+      op = "lsl";
+      break;
+    case LLInst::Opcode::Xor:
+      op = "eor";
+      break;
+    case LLInst::Opcode::Bic:
+      op = "bic";
+      break;
+    default:
+      ERROR("should not reach here");
     }
 
-    os << INDENT << op << binary_inst->psr() << TAB << binary_inst->dst()
-       << "," << SPACE << binary_inst->lhs()
-       << "," << SPACE << binary_inst->rhs();
+    os << INDENT << op << binary_inst->psr() << TAB << binary_inst->dst() << ","
+       << SPACE << binary_inst->lhs() << "," << SPACE << binary_inst->rhs();
 
     if (!binary_inst->shift().is_none()) {
       os << "," << SPACE << binary_inst->shift();
@@ -839,21 +928,20 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
     os << INDENT << "cmp" << TAB;
     os << cmp_inst->lhs() << "," << SPACE << cmp_inst->rhs();
   } else if (auto mla_inst = dyn_cast<LLMLA>(inst)) {
-    os << INDENT << "mla" << TAB << mla_inst->dst()
-       << "," << SPACE << mla_inst->lhs()
-       << "," << SPACE << mla_inst->rhs()
-       << "," << SPACE << mla_inst->acc();
+    os << INDENT << "mla" << TAB << mla_inst->dst() << "," << SPACE
+       << mla_inst->lhs() << "," << SPACE << mla_inst->rhs() << "," << SPACE
+       << mla_inst->acc();
   } else if (auto mls_inst = dyn_cast<LLMLS>(inst)) {
-    os << INDENT << "mls" << TAB << mls_inst->dst()
-       << "," << SPACE << mls_inst->lhs()
-       << "," << SPACE << mls_inst->rhs()
-       << "," << SPACE << mls_inst->acc();
+    os << INDENT << "mls" << TAB << mls_inst->dst() << "," << SPACE
+       << mls_inst->lhs() << "," << SPACE << mls_inst->rhs() << "," << SPACE
+       << mls_inst->acc();
   } else if (auto push_inst = dyn_cast<LLPush>(inst)) {
     os << INDENT << "push" << TAB << "{ ";
     auto regs = push_inst->reg_list();
     for (std::size_t i = 0; i < regs.size(); i++) {
       os << regs[i];
-      if (i != regs.size() - 1) os << SPACE << ",";
+      if (i != regs.size() - 1)
+        os << SPACE << ",";
     }
     os << " }";
   } else if (auto pop_inst = dyn_cast<LLPop>(inst)) {
@@ -861,42 +949,37 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
     auto regs = pop_inst->reg_list();
     for (std::size_t i = 0; i < regs.size(); i++) {
       os << regs[i];
-      if (i != regs.size() - 1) os << SPACE << ",";
+      if (i != regs.size() - 1)
+        os << SPACE << ",";
     }
     os << " }";
   } else if (auto global_inst = dyn_cast<LLGlobal>(inst)) {
-    os << INDENT << "movw" << TAB
-       << global_inst->dst() << ","
-       << SPACE << "#:lower16:" << global_inst->global_variable()->name();
+    os << INDENT << "movw" << TAB << global_inst->dst() << "," << SPACE
+       << "#:lower16:" << global_inst->global_variable()->name();
     os << std::endl;
-    os << INDENT << "movt" << TAB
-       << global_inst->dst() << ","
-       << SPACE << "#:upper16:" << global_inst->global_variable()->name();
+    os << INDENT << "movt" << TAB << global_inst->dst() << "," << SPACE
+       << "#:upper16:" << global_inst->global_variable()->name();
   } else if (auto load_pseudo = dyn_cast<LLLoadPseudo>(inst)) {
-
     auto imm = load_pseudo->imm();
     if ((uint32_t)imm >> 16u == 0) {
-      os << INDENT << "movw" << TAB
-         << load_pseudo->dst() << ","<< SPACE <<"#" << (uint16_t)imm;
+      os << INDENT << "movw" << TAB << load_pseudo->dst() << "," << SPACE << "#"
+         << (uint16_t)imm;
     } else {
       // wider than 16 bits
-      os << INDENT << "mov" << TAB
-         << load_pseudo->dst() << "," << SPACE << "#" << (imm & 0xffff) << std::endl;
-      os << INDENT << "movt" << TAB
-         << load_pseudo->dst() << "," << SPACE << "#" << (uint16_t (imm >> 16));
+      os << INDENT << "mov" << TAB << load_pseudo->dst() << "," << SPACE << "#"
+         << (imm & 0xffff) << std::endl;
+      os << INDENT << "movt" << TAB << load_pseudo->dst() << "," << SPACE << "#"
+         << (uint16_t(imm >> 16));
     }
   } else if (auto load_change_base = dyn_cast<LLLoadChangeBase>(inst)) {
-    os << INDENT << "ldr" << TAB
-       << load_change_base->dst() << "," << SPACE << "["
-       << load_change_base->addr() << "]," << SPACE
+    os << INDENT << "ldr" << TAB << load_change_base->dst() << "," << SPACE
+       << "[" << load_change_base->addr() << "]," << SPACE
        << load_change_base->offset();
   } else if (auto store_change_base = dyn_cast<LLStoreChangeBase>(inst)) {
-    os << INDENT << "str" << TAB
-       << store_change_base->data() << "," << SPACE << "["
-       << store_change_base->addr() << "]," << SPACE
+    os << INDENT << "str" << TAB << store_change_base->data() << "," << SPACE
+       << "[" << store_change_base->addr() << "]," << SPACE
        << store_change_base->offset();
-  }
-  else if (auto comment = dyn_cast<LLComment>(inst)) {
+  } else if (auto comment = dyn_cast<LLComment>(inst)) {
     os << '@' << SPACE << comment->comment();
   }
 
@@ -905,52 +988,96 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst) {
 
 std::ostream &operator<<(std::ostream &os, const LLOperandPtr &operand) {
   switch (operand->state()) {
-    case LLOperand::State::RealReg: {
-      os << operand->reg();
-      break;
-    }
-    case LLOperand::State::Virtual: {
-      os << "v" << operand->virtual_num();
-      break;
-    }
-    case LLOperand::State::Immediate:
-      os << "#" << operand->imm_num();
-      break;
-    default: break;
+  case LLOperand::State::RealReg: {
+    os << operand->reg();
+    break;
+  }
+  case LLOperand::State::Virtual: {
+    os << "v" << operand->virtual_num();
+    break;
+  }
+  case LLOperand::State::Immediate:
+    os << "#" << operand->imm_num();
+    break;
+  default:
+    break;
   }
   return os;
 }
 
 std::ostream &operator<<(std::ostream &os, const ArmReg armReg) {
   switch (armReg) {
-    case ArmReg::r0:  os << "r0";  break;
-    case ArmReg::r1:  os << "r1";  break;
-    case ArmReg::r2:  os << "r2";  break;
-    case ArmReg::r3:  os << "r3";  break;
-    case ArmReg::r4:  os << "r4";  break;
-    case ArmReg::r5:  os << "r5";  break;
-    case ArmReg::r6:  os << "r6";  break;
-    case ArmReg::r7:  os << "r7";  break;
-    case ArmReg::r8:  os << "r8";  break;
-    case ArmReg::r9:  os << "r9";  break;
-    case ArmReg::r10: os << "r10"; break;
-    case ArmReg::r11: os << "r11"; break;
-    case ArmReg::r12: os << "r12"; break;
-    case ArmReg::r13: os << "sp";  break;
-    case ArmReg::r14: os << "lr";  break;
-    case ArmReg::r15: os << "pc";  break;
+  case ArmReg::r0:
+    os << "r0";
+    break;
+  case ArmReg::r1:
+    os << "r1";
+    break;
+  case ArmReg::r2:
+    os << "r2";
+    break;
+  case ArmReg::r3:
+    os << "r3";
+    break;
+  case ArmReg::r4:
+    os << "r4";
+    break;
+  case ArmReg::r5:
+    os << "r5";
+    break;
+  case ArmReg::r6:
+    os << "r6";
+    break;
+  case ArmReg::r7:
+    os << "r7";
+    break;
+  case ArmReg::r8:
+    os << "r8";
+    break;
+  case ArmReg::r9:
+    os << "r9";
+    break;
+  case ArmReg::r10:
+    os << "r10";
+    break;
+  case ArmReg::r11:
+    os << "r11";
+    break;
+  case ArmReg::r12:
+    os << "r12";
+    break;
+  case ArmReg::r13:
+    os << "sp";
+    break;
+  case ArmReg::r14:
+    os << "lr";
+    break;
+  case ArmReg::r15:
+    os << "pc";
+    break;
   }
   return os;
 }
 
 std::ostream &operator<<(std::ostream &os, const ArmShift &shift) {
   switch (shift.type()) {
-    case ArmShift::ShiftType::None: /* nil */ return os;
-    case ArmShift::ShiftType::Asr: os << "asr"; break;
-    case ArmShift::ShiftType::Lsl: os << "lsl"; break;
-    case ArmShift::ShiftType::Lsr: os << "lsr"; break;
-    case ArmShift::ShiftType::Ror: os << "ror"; break;
-    case ArmShift::ShiftType::Rrx: os << "rrx"; break;
+  case ArmShift::ShiftType::None: /* nil */
+    return os;
+  case ArmShift::ShiftType::Asr:
+    os << "asr";
+    break;
+  case ArmShift::ShiftType::Lsl:
+    os << "lsl";
+    break;
+  case ArmShift::ShiftType::Lsr:
+    os << "lsr";
+    break;
+  case ArmShift::ShiftType::Ror:
+    os << "ror";
+    break;
+  case ArmShift::ShiftType::Rrx:
+    os << "rrx";
+    break;
   }
   os << SPACE << "#" << shift.shift();
   return os;
@@ -958,27 +1085,48 @@ std::ostream &operator<<(std::ostream &os, const ArmShift &shift) {
 
 std::ostream &operator<<(std::ostream &os, const ArmCond &cond) {
   switch (cond) {
-    case ArmCond::Any: /* nil */  break;
-    case ArmCond::Eq: os << "eq"; break;
-    case ArmCond::Ne: os << "ne"; break;
-    case ArmCond::Ge: os << "ge"; break;
-    case ArmCond::Gt: os << "gt"; break;
-    case ArmCond::Le: os << "le"; break;
-    case ArmCond::Lt: os << "lt"; break;
+  case ArmCond::Any: /* nil */
+    break;
+  case ArmCond::Eq:
+    os << "eq";
+    break;
+  case ArmCond::Ne:
+    os << "ne";
+    break;
+  case ArmCond::Ge:
+    os << "ge";
+    break;
+  case ArmCond::Gt:
+    os << "gt";
+    break;
+  case ArmCond::Le:
+    os << "le";
+    break;
+  case ArmCond::Lt:
+    os << "lt";
+    break;
   }
   return os;
 }
 
 std::ostream &operator<<(std::ostream &os, const ArmPSR &psr) {
   switch (psr) {
-    case ArmPSR::C: os << "c"; break;
-    case ArmPSR::F: os << "f"; break;
-    case ArmPSR::S: os << "s"; break;
-    case ArmPSR::X: os << "x"; break;
-    case ArmPSR::N: /* nil */  break;
+  case ArmPSR::C:
+    os << "c";
+    break;
+  case ArmPSR::F:
+    os << "f";
+    break;
+  case ArmPSR::S:
+    os << "s";
+    break;
+  case ArmPSR::X:
+    os << "x";
+    break;
+  case ArmPSR::N: /* nil */
+    break;
   }
   return os;
 }
 
-
-}
+} // namespace lava::back

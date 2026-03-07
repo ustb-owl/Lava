@@ -21,7 +21,8 @@ void LinearScanRegisterAllocation::runOn(const LLFunctionPtr &func) {
   _liveness->Initialize();
   _liveness->runOn(func);
 
-  if (func->has_call_inst()) _free_tmp_regs.push_back(LLOperand::Register(ArmReg::lr));
+  if (func->has_call_inst())
+    _free_tmp_regs.push_back(LLOperand::Register(ArmReg::lr));
 
   auto &live_intervals = _liveness->GetLiveInterval();
   // build live intervals which ordered by start position
@@ -31,7 +32,8 @@ void LinearScanRegisterAllocation::runOn(const LLFunctionPtr &func) {
     DBG_ASSERT(_live_intervals.size() - 1 == i, "insert live interval failed");
     static_cast<void>(i);
   }
-  DBG_ASSERT(_live_intervals.size() == live_intervals.size(), "size of _live_intervals is wrong");
+  DBG_ASSERT(_live_intervals.size() == live_intervals.size(),
+             "size of _live_intervals is wrong");
 
   SolveLinearScanRegisterAllocation(func);
 
@@ -40,7 +42,8 @@ void LinearScanRegisterAllocation::runOn(const LLFunctionPtr &func) {
     for (const auto &inst : BB->insts()) {
       for (const auto &opr : inst->operands()) {
         if (opr && opr->IsVirtual()) {
-          DBG_ASSERT(_alloc_map.find(opr) != _alloc_map.end(), "can't find the vreg's allocated result");
+          DBG_ASSERT(_alloc_map.find(opr) != _alloc_map.end(),
+                     "can't find the vreg's allocated result");
           auto alloc_result = _alloc_map[opr];
 
           // add to function saved set
@@ -54,7 +57,8 @@ void LinearScanRegisterAllocation::runOn(const LLFunctionPtr &func) {
 
       auto dst = inst->dest();
       if (dst && dst->IsVirtual()) {
-        DBG_ASSERT(_alloc_map.find(dst) != _alloc_map.end(), "can't find the vreg's allocated result");
+        DBG_ASSERT(_alloc_map.find(dst) != _alloc_map.end(),
+                   "can't find the vreg's allocated result");
         auto alloc_result = _alloc_map[dst];
 
         // add to function saved set
@@ -70,7 +74,8 @@ void LinearScanRegisterAllocation::runOn(const LLFunctionPtr &func) {
   _liveness->Reset();
 }
 
-void LinearScanRegisterAllocation::SolveLinearScanRegisterAllocation(const LLFunctionPtr &func) {
+void LinearScanRegisterAllocation::SolveLinearScanRegisterAllocation(
+    const LLFunctionPtr &func) {
   DBG_ASSERT(_active.empty(), "active set is not empty");
   for (const auto &it : _live_intervals) {
     ExpireOldIntervals(it.first);
@@ -99,9 +104,11 @@ void LinearScanRegisterAllocation::SolveLinearScanRegisterAllocation(const LLFun
   }
 }
 
-void LinearScanRegisterAllocation::ExpireOldIntervals(const LiveInterval &live_interval) {
+void LinearScanRegisterAllocation::ExpireOldIntervals(
+    const LiveInterval &live_interval) {
   for (auto it = _active.begin(); it != _active.end();) {
-    if ((*it).first.end_pos() >= live_interval.start_pos()) return;
+    if ((*it).first.end_pos() >= live_interval.start_pos())
+      return;
     auto opr = it->second;
     if (IsTempReg(opr)) {
       _free_tmp_regs.push_back(opr);
@@ -115,8 +122,9 @@ void LinearScanRegisterAllocation::ExpireOldIntervals(const LiveInterval &live_i
   }
 }
 
-void LinearScanRegisterAllocation::SpillAtInterval(const LiveInterval &live_interval, const LLFunctionPtr &func) {
-  auto end = std::prev(_active.end());
+void LinearScanRegisterAllocation::SpillAtInterval(
+    const LiveInterval &live_interval, const LLFunctionPtr &func) {
+  auto end   = std::prev(_active.end());
   auto spill = *end;
 
   // _alloc_map[live_interval] = _alloc_map[spill]
@@ -128,36 +136,38 @@ void LinearScanRegisterAllocation::SpillAtInterval(const LiveInterval &live_inte
     } else {
       // has multi-matched
       auto begin = _live_intervals.lower_bound(spill.first);
-      auto stop = _live_intervals.upper_bound(spill.first);
+      auto stop  = _live_intervals.upper_bound(spill.first);
       while (begin != stop) {
-        if (begin->first.id() == spill.first.id()) break;
+        if (begin->first.id() == spill.first.id())
+          break;
         begin++;
       }
       it = begin;
     }
 
-//    auto it = _live_intervals.find(spill.first);
+    //    auto it = _live_intervals.find(spill.first);
 
     DBG_ASSERT(it != _live_intervals.end(), "can't find spill vreg");
     auto vreg = it->second;
-    auto opr = _alloc_map[vreg];
+    auto opr  = _alloc_map[vreg];
 
     if (_live_intervals.count(live_interval) == 1) {
       it = _live_intervals.find(live_interval);
     } else {
       // has multi-matched
       auto begin = _live_intervals.lower_bound(live_interval);
-      auto stop = _live_intervals.upper_bound(live_interval);
+      auto stop  = _live_intervals.upper_bound(live_interval);
       while (begin != stop) {
-        if (begin->first.id() == live_interval.id()) break;
+        if (begin->first.id() == live_interval.id())
+          break;
         begin++;
       }
       it = begin;
     }
     DBG_ASSERT(it != _live_intervals.end(), "can't find live_interval vreg");
-    auto vreg_new = it->second;
+    auto vreg_new        = it->second;
     _alloc_map[vreg_new] = opr;
-    _alloc_map[vreg] = _slot.AllocSlot(func, vreg);
+    _alloc_map[vreg]     = _slot.AllocSlot(func, vreg);
 
     // remove spill from active
     _active.erase(end);
@@ -172,19 +182,20 @@ void LinearScanRegisterAllocation::SpillAtInterval(const LiveInterval &live_inte
     } else {
       // has multi-matched
       auto begin = _live_intervals.lower_bound(live_interval);
-      auto stop = _live_intervals.upper_bound(live_interval);
+      auto stop  = _live_intervals.upper_bound(live_interval);
       while (begin != stop) {
-        if (begin->first.id() == live_interval.id()) break;
+        if (begin->first.id() == live_interval.id())
+          break;
         begin++;
       }
       it = begin;
     }
 
     DBG_ASSERT(it != _live_intervals.end(), "can't find live_interval vreg");
-    auto vreg = it->second;
-    auto slot = _slot.AllocSlot(func, vreg);
+    auto vreg        = it->second;
+    auto slot        = _slot.AllocSlot(func, vreg);
     _alloc_map[vreg] = slot;
   }
 }
 
-}
+} // namespace lava::back

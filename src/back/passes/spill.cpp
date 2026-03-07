@@ -1,18 +1,19 @@
 #include "spill.h"
+
 #include "common/casting.h"
 
 namespace lava::back {
 
-
 void Spill::runOn(const LLFunctionPtr &func) {
-  if (func->is_decl()) return;
+  if (func->is_decl())
+    return;
 
   _cur_func = func;
   for (const auto &block : func->blocks()) {
     _cur_block = block;
     for (auto it = block->inst_begin(); it != block->inst_end(); it++) {
       auto inst = *it;
-      _mask = GetTmpMask(inst);
+      _mask     = GetTmpMask(inst);
       auto mask = _mask;
       static_cast<void>(mask);
       if (auto mv_inst = dyn_cast<LLMove>(inst)) {
@@ -23,13 +24,12 @@ void Spill::runOn(const LLFunctionPtr &func) {
           } else {
             // insert load to dest and remove current move
             InsertLoadInst(it, allocated, mv_inst->dst());
-            it = --(block->insts().erase(it));
+            it   = --(block->insts().erase(it));
             inst = *it;
           }
         }
 
       } else if (inst->classId() != ClassId::LLMoveId) {
-
         /* ------ spill operands ------*/
         // used for replace operand
         std::size_t index = 0;
@@ -54,7 +54,6 @@ void Spill::runOn(const LLFunctionPtr &func) {
           // update index
           index++;
         }
-
       }
 
       /* ------ spill dst ------ */
@@ -84,20 +83,21 @@ LLOperandPtr Spill::GetTmpReg(std::uint32_t &reg_mask) {
     reg_mask |= 1 << static_cast<int>(ArmReg::r10);
     temp = LLOperand::Register(ArmReg::r10);
   }
-//  else if (!(reg_mask & (1 << static_cast<int>(ArmReg::r3)))) {
-//    reg_mask |= 1 << static_cast<int>(ArmReg::r3);
-//    temp = LLOperand::Register(ArmReg::r3);
-//  }
+  //  else if (!(reg_mask & (1 << static_cast<int>(ArmReg::r3)))) {
+  //    reg_mask |= 1 << static_cast<int>(ArmReg::r3);
+  //    temp = LLOperand::Register(ArmReg::r3);
+  //  }
   DBG_ASSERT(temp != nullptr, "get tmp register(r12/r10) failed");
   return temp;
 }
 
 std::uint32_t Spill::GetTmpMask(const LLInstPtr &inst) {
   std::uint32_t mask = 0;
-  auto ptr = dyn_cast<LLInst>(inst);
+  auto          ptr  = dyn_cast<LLInst>(inst);
   DBG_ASSERT(ptr != nullptr, "get LLInst failed");
   for (const auto &opr : ptr->operands()) {
-    if (opr == nullptr) continue;
+    if (opr == nullptr)
+      continue;
     if (opr->IsRealReg() && !opr->IsVirtual()) {
       auto name = static_cast<ArmReg>(opr->reg());
       mask |= 1 << static_cast<int>(name);
@@ -106,12 +106,11 @@ std::uint32_t Spill::GetTmpMask(const LLInstPtr &inst) {
   return mask;
 }
 
-void Spill::InsertLoadInst(LLInstList::iterator &it,
-                           const LLOperandPtr &slot, const LLOperandPtr &dst) {
-
+void Spill::InsertLoadInst(LLInstList::iterator &it, const LLOperandPtr &slot,
+                           const LLOperandPtr &dst) {
   // set insert point
   _module.SetInsertPoint(_cur_block, it);
-//  _module.AddInst<LLComment>("load virtual register from memory");
+  //  _module.AddInst<LLComment>("load virtual register from memory");
 
   // create operand
   DBG_ASSERT(slot->IsImmediate(), "slot offset is not immediate number");
@@ -121,7 +120,7 @@ void Spill::InsertLoadInst(LLInstList::iterator &it,
   if (slot->imm_num() >= 4096) {
     _cur_func->AddSavedRegister(ArmReg::fp);
     auto tmp = LLOperand::Register(ArmReg::fp);
-//    auto tmp = GetTmpReg(_mask);
+    //    auto tmp = GetTmpReg(_mask);
     _module.AddInst<LLMove>(tmp, slot);
     offset = tmp;
   }
@@ -130,15 +129,14 @@ void Spill::InsertLoadInst(LLInstList::iterator &it,
   auto load_inst = _module.AddInst<LLLoad>(dst, sp, offset);
   DBG_ASSERT(load_inst, "create load instruction failed");
 
-//  it = _module.InsertPos();
+  //  it = _module.InsertPos();
 }
 
-void Spill::InsertStoreInst(LLInstList::iterator &it,
-                            const LLOperandPtr &slot, const LLOperandPtr &tmp) {
-
+void Spill::InsertStoreInst(LLInstList::iterator &it, const LLOperandPtr &slot,
+                            const LLOperandPtr &tmp) {
   // set insert point
   _module.SetInsertPoint(_cur_block, ++it);
-//  _module.AddInst<LLComment>("store virtual register into memory");
+  //  _module.AddInst<LLComment>("store virtual register into memory");
 
   // create operand
   DBG_ASSERT(slot->IsImmediate(), "slot offset is not immediate number");
@@ -158,4 +156,4 @@ void Spill::InsertStoreInst(LLInstList::iterator &it,
   it = --_module.InsertPos();
 }
 
-}
+} // namespace lava::back

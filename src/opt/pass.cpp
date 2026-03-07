@@ -10,5 +10,4 @@ void Pass::print(std::ostream &OS, const Module *) const {
   OS << "Pass::print not implemented for pass: '" << name() << "'!\n";
 }
 
-
-}
+} // namespace lava::opt

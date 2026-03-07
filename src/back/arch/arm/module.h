@@ -9,30 +9,30 @@ using LLFunctionList = std::vector<LLFunctionPtr>;
 
 class LLModule {
 private:
-  LLFunctionList                                 _functions;
-  std::vector<mid::GlobalVariable *>             _glob_decl;
+  LLFunctionList                     _functions;
+  std::vector<mid::GlobalVariable *> _glob_decl;
 
-  std::size_t                                    _virtual_max;
-  LLFunctionPtr                                  _insert_function;
-  LLBlockPtr                                     _insert_point;
-  LLInstList::iterator                           _insert_pos;
-  std::unordered_map<mid::BlockPtr, LLBlockPtr>  _block_map;
-  std::unordered_map<mid::SSAPtr, LLOperandPtr>  _value_map;
+  std::size_t                                   _virtual_max;
+  LLFunctionPtr                                 _insert_function;
+  LLBlockPtr                                    _insert_point;
+  LLInstList::iterator                          _insert_pos;
+  std::unordered_map<mid::BlockPtr, LLBlockPtr> _block_map;
+  std::unordered_map<mid::SSAPtr, LLOperandPtr> _value_map;
 
-  std::unordered_map<mid::SSAPtr, std::pair<LLInstPtr, ArmCond>>  _cond_map;
-  std::unordered_map<std::shared_ptr<mid::GlobalVariable>, LLOperandPtr> _glob_map;
+  std::unordered_map<mid::SSAPtr, std::pair<LLInstPtr, ArmCond>> _cond_map;
+  std::unordered_map<std::shared_ptr<mid::GlobalVariable>, LLOperandPtr>
+                                                _glob_map;
   std::unordered_map<mid::SSAPtr, LLOperandPtr> _param_map;
 
   mid::BlockPtr                     _exit;
   std::vector<mid::BlockPtr>        _blocks;
   std::unordered_set<mid::BlockPtr> _visited;
 
-  std::string                       _file;
-public:
+  std::string _file;
 
+public:
   // create a new LLIR
-  template <typename T, typename... Args>
-  auto MakeLLIR(Args &&... args) {
+  template <typename T, typename... Args> auto MakeLLIR(Args &&...args) {
     static_assert(std::is_base_of_v<LLInst, T>);
     auto llir = std::make_shared<T>(std::forward<Args>(args)...);
     llir->SetParent(_insert_point);
@@ -40,9 +40,8 @@ public:
   }
 
   // create a new instruction LLIR, and push into current block
-  template <typename T, typename... Args>
-  auto AddInst(Args &&... args) {
-    auto inst = MakeLLIR<T>(std::forward<Args>(args)...);
+  template <typename T, typename... Args> auto AddInst(Args &&...args) {
+    auto inst   = MakeLLIR<T>(std::forward<Args>(args)...);
     _insert_pos = ++_insert_point->insts().insert(_insert_pos, inst);
     return inst;
   }
@@ -50,20 +49,18 @@ public:
   void reset();
 
   LLModule() { reset(); }
-  ~LLModule() {
-    reset();
-  }
+  ~LLModule() { reset(); }
 
   void SetInsertPoint(const LLBlockPtr &BB, LLInstList::iterator it) {
     _insert_point = BB;
-    _insert_pos = it;
+    _insert_pos   = it;
   }
 
   void SetInsertPoint(const LLBlockPtr &BB) {
     SetInsertPoint(BB, BB->inst_end());
   }
 
-  void SetGlobalVariables(std:: vector<mid::GlobalVariable *> glob_decl) {
+  void SetGlobalVariables(std::vector<mid::GlobalVariable *> glob_decl) {
     _glob_decl = glob_decl;
   }
 
@@ -79,10 +76,10 @@ public:
     return false;
   }
 
-  void ClearGlobalMap()  { _glob_map.clear(); }
-  void ClearVirtualMax() { _virtual_max = 0;  }
+  void ClearGlobalMap() { _glob_map.clear(); }
+  void ClearVirtualMax() { _virtual_max = 0; }
 
-  void SetFile(const std::string &file) { _file = file; }
+  void               SetFile(const std::string &file) { _file = file; }
   const std::string &GetFile() const { return _file; }
   bool IsFile(const std::string &file) const { return _file == file; }
 
@@ -96,25 +93,24 @@ public:
   LLOperandPtr  CreateNoImmOperand(const mid::SSAPtr &value);
   LLOperandPtr  CreateImmediate(int value);
   LLFunctionPtr CreateFunction(const mid::FuncPtr &function);
-  LLBlockPtr    CreateBasicBlock(const mid::BlockPtr &block, const LLFunctionPtr& parent);
+  LLBlockPtr    CreateBasicBlock(const mid::BlockPtr &block,
+                                 const LLFunctionPtr &parent);
 
-  void          HandlePhiNode(const mid::FuncPtr &function);
-
+  void HandlePhiNode(const mid::FuncPtr &function);
 
   // getter/setter
   typedef LLFunctionList::iterator       iterator;
   typedef LLFunctionList::const_iterator const_iterator;
 
-  LLFunctionList       &Functions()    { return _functions;         }
-  LLBlockPtr           &InsertPoint()  { return _insert_point;      }
-  LLInstList::iterator  InsertPos()    { return _insert_pos;        }
-  std::size_t           VirtualMax()   { return _virtual_max;       }
+  LLFunctionList      &Functions() { return _functions; }
+  LLBlockPtr          &InsertPoint() { return _insert_point; }
+  LLInstList::iterator InsertPos() { return _insert_pos; }
+  std::size_t          VirtualMax() { return _virtual_max; }
 
-  iterator              begin()        { return _functions.begin(); }
-  iterator              end()          { return _functions.end();   }
-  const_iterator        begin() const  { return _functions.begin(); }
-  const_iterator        end()   const  { return _functions.end();   }
-
+  iterator       begin() { return _functions.begin(); }
+  iterator       end() { return _functions.end(); }
+  const_iterator begin() const { return _functions.begin(); }
+  const_iterator end() const { return _functions.end(); }
 };
 
 /* Methods of dumping ASM codes */
@@ -124,6 +120,6 @@ std::ostream &operator<<(std::ostream &os, const LLInstPtr &inst);
 std::ostream &operator<<(std::ostream &os, const LLOperandPtr &operand);
 std::ostream &operator<<(std::ostream &os, ArmReg armReg);
 
-}
+} // namespace lava::back
 
-#endif //LAVA_BACK_MODULE_H
+#endif // LAVA_BACK_MODULE_H

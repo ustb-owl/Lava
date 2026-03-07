@@ -4,12 +4,11 @@
 #include <map>
 #include <utility>
 
-#include "pass.h"
-#include "liveness.h"
 #include "back/slot.h"
+#include "liveness.h"
+#include "pass.h"
 
 namespace lava::back {
-
 
 class LinearScanRegisterAllocation : public PassBase {
 private:
@@ -25,7 +24,8 @@ private:
   std::multimap<LiveInterval, LLOperandPtr, CmpStart> _live_intervals;
 
 public:
-  explicit LinearScanRegisterAllocation(LLModule &module, std::shared_ptr<LivenessAnalysis> liveness)
+  explicit LinearScanRegisterAllocation(
+      LLModule &module, std::shared_ptr<LivenessAnalysis> liveness)
       : PassBase(module), _liveness(std::move(liveness)) {}
 
   void Initialize() final;
@@ -43,10 +43,11 @@ public:
 
   void ExpireOldIntervals(const LiveInterval &live_interval);
 
-  void SpillAtInterval(const LiveInterval &live_interval, const LLFunctionPtr &func);
+  void SpillAtInterval(const LiveInterval  &live_interval,
+                       const LLFunctionPtr &func);
 
   void runOn(const LLFunctionPtr &func) final;
 };
-}
+} // namespace lava::back
 
-#endif //LAVA_LINEARSCAN_H
+#endif // LAVA_LINEARSCAN_H

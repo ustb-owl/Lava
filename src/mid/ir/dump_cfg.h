@@ -6,20 +6,18 @@
 #ifdef ENABLE_CFG
 
 #include <gvc.h>
+
 #include <iostream>
 #include <sstream>
+
 #include "common/casting.h"
 #include "common/classid.h"
-#include "opt/pass_manager.h"
 #include "opt/analysis/dominance.h"
-
+#include "opt/pass_manager.h"
 
 namespace lava::mid {
 
-
-enum Edge_Type {
-  TRUE_TARGET, FALSE_TARGET, NO_COND
-};
+enum Edge_Type { TRUE_TARGET, FALSE_TARGET, NO_COND };
 
 std::string GenerateInstructions(const std::vector<std::string> &insts) {
   std::string res = "<tr><td colspan='2'>";
@@ -51,29 +49,29 @@ std::string GenerateInstructions(const std::vector<std::string> &insts) {
   return res + "</td></tr>";
 }
 
-Agnode_t *
-MakeGraphNode(graph_t *g, const BlockPtr &block,
-              IdManager &id_mgr,
-              const std::vector<std::string> &insts,
-              bool has_branch = false) {
+Agnode_t *MakeGraphNode(graph_t *g, const BlockPtr &block, IdManager &id_mgr,
+                        const std::vector<std::string> &insts,
+                        bool                            has_branch = false) {
   Agnode_t *n = agnode(g, nullptr, 1);
 
-  std::string table = "<table border='0' cellborder='1' cellspacing='0'>", head = "<tr>";
+  std::string table = "<table border='0' cellborder='1' cellspacing='0'>",
+              head  = "<tr>";
 
   // add function in entry block
   if (block->name() == "entry") {
-    head = "<tr><td colspan='2'>" + block->getParent()->GetFunctionName() + "</td></tr><tr colspan='2'>";
+    head = "<tr><td colspan='2'>" + block->getParent()->GetFunctionName() +
+           "</td></tr><tr colspan='2'>";
   }
 
   std::stringstream ss;
   DumpBlockName(ss, id_mgr, block.get());
 
-  //generate block head
+  // generate block head
   if (!block->empty()) {
     head += "<td>" + ss.str() + "</td><td>";
-    for (const auto &pred : (*block)) {
+    for (const auto &pred : block->predecessors()) {
       std::stringstream pred_ss;
-      DumpBlockName(pred_ss, id_mgr, dyn_cast<BasicBlock>(pred.value()).get());
+      DumpBlockName(pred_ss, id_mgr, pred.get());
       head += pred_ss.str() + " ";
     }
     head += "</td> ";
@@ -83,8 +81,10 @@ MakeGraphNode(graph_t *g, const BlockPtr &block,
   head += "</tr>";
 
   // generate dominance frontier
-  auto dom = lava::opt::PassManager::GetAnalysis<lava::opt::DominanceInfo>("DominanceInfo")->GetDomInfo();
-  auto DF = dom[block->getParent().get()].DF[block.get()];
+  auto dom = lava::opt::PassManager::GetAnalysis<lava::opt::DominanceInfo>(
+                 "DominanceInfo")
+                 ->GetDomInfo();
+  auto DF  = dom[block->getParent()].DF[block.get()];
   std::string df;
   if (!DF.empty()) {
     df = "<tr><td>Dominance Frontier</td><td>";
@@ -110,14 +110,13 @@ MakeGraphNode(graph_t *g, const BlockPtr &block,
 
   table += head + df + instructions + tail + "</table>";
 
-
-//  printf("%s\n\n", table.c_str());
+  //  printf("%s\n\n", table.c_str());
   char *content = agstrdup_html(agroot(n), table.c_str());
-  agsafeset((void *) n, (char *) "label", content, "");
-  agsafeset((void *) n, (char *) "shape", "none", "");
-  agsafeset((void *) n, (char *) "fontname", "Cambria Math", "");
+  agsafeset((void *)n, (char *)"label", content, "");
+  agsafeset((void *)n, (char *)"shape", "none", "");
+  agsafeset((void *)n, (char *)"fontname", "Cambria Math", "");
   agstrfree(g, content);
-  //agsafeset((void *)n, "fontname", "Comic Sans", "");
+  // agsafeset((void *)n, "fontname", "Comic Sans", "");
 
   return n;
 }
@@ -126,17 +125,17 @@ void AddEdge(graph_t *g, Agnode_t *from, Agnode_t *to, Edge_Type type) {
   Agedge_t *e = agedge(g, from, to, nullptr, 1);
 
   if (type != NO_COND) {
-    agsafeset((void *) e, (char *) "tailport", (type == TRUE_TARGET) ? "f0" : "f1", "");
-    agsafeset((void *) e, (char *) "color", (type == TRUE_TARGET) ? "green" : "red", "");
+    agsafeset((void *)e, (char *)"tailport",
+              (type == TRUE_TARGET) ? "f0" : "f1", "");
+    agsafeset((void *)e, (char *)"color",
+              (type == TRUE_TARGET) ? "green" : "red", "");
   } else {
-    agsafeset((void *) e, (char *) "tailport", "s", "");
-
+    agsafeset((void *)e, (char *)"tailport", "s", "");
   }
 }
 
-
 void MakeGlobalVariables(graph_t *g, Module *module, IdManager &id_mgr) {
-  Agnode_t *n = agnode(g, nullptr, 1);
+  Agnode_t   *n     = agnode(g, nullptr, 1);
   std::string table = "<table border='0' cellborder='1' cellspacing='0'>";
 
   std::string head = "<tr>"
@@ -154,7 +153,7 @@ void MakeGlobalVariables(graph_t *g, Module *module, IdManager &id_mgr) {
 
     // variable name
     auto var = dyn_cast<GlobalVariable>(it);
-    value = "<tr><td>" + var->name() + "</td>";
+    value    = "<tr><td>" + var->name() + "</td>";
 
     // variable type
     value += "<td>" + var->type()->GetTypeId() + "</td>";
@@ -176,32 +175,30 @@ void MakeGlobalVariables(graph_t *g, Module *module, IdManager &id_mgr) {
 
   table += head + values + "</table>";
   char *content = agstrdup_html(agroot(n), table.c_str());
-  agsafeset((void *) n, (char *) "label", content, "");
-  agsafeset((void *) n, (char *) "shape", "none", "");
-  agsafeset((void *) n, (char *) "fontname", "Cambria Math", "");
+  agsafeset((void *)n, (char *)"label", content, "");
+  agsafeset((void *)n, (char *)"shape", "none", "");
+  agsafeset((void *)n, (char *)"fontname", "Cambria Math", "");
   agstrfree(g, content);
-
 }
-
 
 void MakeCFG(graph_t *g, const FuncPtr &func, IdManager &id_mgr) {
   // make CFG nodes
   std::unordered_map<SSAPtr, Agnode_t *> nodes;
-  for (const auto &it : (*func)) {
-    std::string content;
+  for (const auto &block : (*func)) {
+    std::string       content;
     std::stringstream ss;
-    auto block = dyn_cast<BasicBlock>(it.value());
 
     block->Dump(ss, id_mgr, "\\");
     content = ss.str();
 
     std::vector<std::string> insts;
-    std::string inst;
+    std::string              inst;
     for (const auto &ch : content) {
       if (ch == '\\') {
         insts.push_back(inst);
         inst = "";
-      } else inst += ch;
+      } else
+        inst += ch;
     }
 
     bool has_branch = IsSSA<BranchInst>(block->insts().back());
@@ -209,31 +206,30 @@ void MakeCFG(graph_t *g, const FuncPtr &func, IdManager &id_mgr) {
   }
 
   // connect the nodes
-  for (const auto &it : (*func)) {
-    auto block = dyn_cast<BasicBlock>(it.value());
-    for (const auto &pred : (*block)) {
-      auto parent_bb = dyn_cast<BasicBlock>(pred.value());
-      auto parent_node = nodes[parent_bb];
-      auto child_node = nodes[block];
-      Edge_Type type = NO_COND;
+  for (const auto &block : (*func)) {
+    for (const auto &pred : block->predecessors()) {
+      auto      parent_bb   = pred;
+      auto      parent_node = nodes[parent_bb];
+      auto      child_node  = nodes[block];
+      Edge_Type type        = NO_COND;
 
       if (!parent_bb->insts().empty()) {
-        auto last_inst = parent_bb->insts().back();
+        auto last_inst  = parent_bb->insts().back();
         bool has_branch = IsSSA<BranchInst>(last_inst);
         if (has_branch) {
-          type = (dyn_cast<BranchInst>(last_inst)->true_block() == block) ? TRUE_TARGET : FALSE_TARGET;
+          type = (dyn_cast<BranchInst>(last_inst)->true_block() == block)
+                     ? TRUE_TARGET
+                     : FALSE_TARGET;
         }
       }
 
       AddEdge(g, parent_node, child_node, type);
     }
   }
-
 }
 
-}
+} // namespace lava::mid
 
 #endif
 
-#endif //LAVA_DUMP_CFG_H
-
+#endif // LAVA_DUMP_CFG_H

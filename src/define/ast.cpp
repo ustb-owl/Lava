@@ -1,46 +1,47 @@
 #include "define/ast.h"
 
 #include <iomanip>
+#include <sstream>
 #include <tuple>
 #include <utility>
-#include <sstream>
 
 #include "lib/guard.h"
 #include "lib/strprint.h"
-#include "mid/walker/analyzer/eval.h"
 #include "mid/walker/analyzer/analyzer.h"
+#include "mid/walker/analyzer/eval.h"
 #include "mid/walker/irbuilder/irbuilder.h"
 
 using namespace lava::mid;
 using namespace lava::define;
 
 // some magic
-#define AST(name, ...) auto ast = DumpAST(os, #name, ##__VA_ARGS__)
+#define AST(name, ...)  auto ast = DumpAST(os, #name, ##__VA_ARGS__)
 #define ATOM(name, ...) DumpSimpleAST(os, #name, ##__VA_ARGS__)
-#define AST_ATTR(name) std::make_tuple(#name, name##_)
-#define AST_ENUM_ATTR(name, arr) \
+#define AST_ATTR(name)  std::make_tuple(#name, name##_)
+#define AST_ENUM_ATTR(name, arr)                                               \
   std::make_tuple(#name, arr[static_cast<int>(name##_)])
-#define ATTR(name)                   \
-  do {                               \
-    auto attr = DumpAttr(os, #name); \
-    name##_->Dump(os);               \
+#define ATTR(name)                                                             \
+  do {                                                                         \
+    auto attr = DumpAttr(os, #name);                                           \
+    name##_->Dump(os);                                                         \
   } while (0)
-#define ATTR_NULL(name)              \
-  do {                               \
-    auto attr = DumpAttr(os, #name); \
-    DumpNullable(os, name##_);       \
+#define ATTR_NULL(name)                                                        \
+  do {                                                                         \
+    auto attr = DumpAttr(os, #name);                                           \
+    DumpNullable(os, name##_);                                                 \
   } while (0)
-#define LIST_ATTR(name)                        \
-  do {                                         \
-    auto attr = DumpAttr(os, #name);           \
-    for (const auto &i : name##_) i->Dump(os); \
+#define LIST_ATTR(name)                                                        \
+  do {                                                                         \
+    auto attr = DumpAttr(os, #name);                                           \
+    for (const auto &i : name##_)                                              \
+      i->Dump(os);                                                             \
   } while (0)
-#define LIST_ATTR_NULL(name)                           \
-  do {                                                 \
-    auto attr = DumpAttr(os, #name);                   \
-    for (const auto &i : name##_) DumpNullable(os, i); \
+#define LIST_ATTR_NULL(name)                                                   \
+  do {                                                                         \
+    auto attr = DumpAttr(os, #name);                                           \
+    for (const auto &i : name##_)                                              \
+      DumpNullable(os, i);                                                     \
   } while (0)
-
 
 namespace {
 
@@ -58,18 +59,17 @@ std::ostream &operator<<(std::ostream &os, decltype(indent) func) {
 }
 
 template <typename... Attrs>
-void UnfoldAttrs(std::ostream &os, Attrs &&... attrs) {}
+void UnfoldAttrs(std::ostream &os, Attrs &&...attrs) {}
 
 template <typename T, typename... Attrs>
-void UnfoldAttrs(std::ostream &os, T &&attr, Attrs &&... attrs) {
+void UnfoldAttrs(std::ostream &os, T &&attr, Attrs &&...attrs) {
   auto &&[n, v] = attr;
   os << ' ' << n << "=\"" << v << "\"";
   UnfoldAttrs(os, std::forward<Attrs>(attrs)...);
 }
 
 template <typename... Attrs>
-xstl::Guard DumpAST(std::ostream &os, std::string_view name,
-                    Attrs &&... attrs) {
+xstl::Guard DumpAST(std::ostream &os, std::string_view name, Attrs &&...attrs) {
   // dump starting tag and name
   os << indent << "<ast name=\"" << name << "\"";
   // dump inline attributes
@@ -86,8 +86,7 @@ xstl::Guard DumpAST(std::ostream &os, std::string_view name,
 }
 
 template <typename... Attrs>
-void DumpSimpleAST(std::ostream &os, std::string_view name,
-                   Attrs &&... attrs) {
+void DumpSimpleAST(std::ostream &os, std::string_view name, Attrs &&...attrs) {
   // dump starting tag and name
   os << indent << "<ast name=\"" << name << "\"";
   // dump inline attributes
@@ -111,15 +110,14 @@ xstl::Guard DumpAttr(std::ostream &os, std::string_view name) {
 void DumpNullable(std::ostream &os, const ASTPtr &ast) {
   if (!ast) {
     os << indent << "<null />" << std::endl;
-  }
-  else {
+  } else {
     ast->Dump(os);
   }
 }
 
-}  // namespace
+} // namespace
 
-/*--------------                        Dump AST                        --------------*/
+/*--------------                        Dump AST --------------*/
 namespace lava::define {
 
 void TranslationUnitDecl::Dump(std::ostream &os) const {
@@ -219,13 +217,11 @@ void ControlAST::Dump(std::ostream &os) const {
 
 void BinaryStmt::Dump(std::ostream &os) const {
   const char *kOp[] = {
-      "Add", "Sub", "Mul", "Div", "Rem",
-      "And", "Or", "Xor", "Shl", "LShr",
-      "LAnd", "LOr",
-      "Equal", "NotEqual", "Less", "LessEq", "Great", "GreatEq",
-      "Assign",
-      "AssAdd", "AssSub", "AssMul", "AssDiv", "AssRem",
-      "AssAnd", "AssOr", "AssXor", "AssShl", "AssAShr",
+      "Add",    "Sub",      "Mul",    "Div",    "Rem",     "And",
+      "Or",     "Xor",      "Shl",    "LShr",   "LAnd",    "LOr",
+      "Equal",  "NotEqual", "Less",   "LessEq", "Great",   "GreatEq",
+      "Assign", "AssAdd",   "AssSub", "AssMul", "AssDiv",  "AssRem",
+      "AssAnd", "AssOr",    "AssXor", "AssShl", "AssAShr",
   };
   AST(Binary, AST_ENUM_ATTR(op, kOp));
   ATTR(lhs);
@@ -261,9 +257,7 @@ void AccessAST::Dump(std::ostream &os) const {
   ATTR(expr);
 }
 
-void IntAST::Dump(std::ostream &os) const {
-  ATOM(Int, AST_ATTR(value));
-}
+void IntAST::Dump(std::ostream &os) const { ATOM(Int, AST_ATTR(value)); }
 
 void CharAST::Dump(std::ostream &os) const {
   std::ostringstream oss;
@@ -277,9 +271,7 @@ void StringAST::Dump(std::ostream &os) const {
   ATOM(String, std::make_tuple("str", oss.str()));
 }
 
-void VariableAST::Dump(std::ostream &os) const {
-  ATOM(Id, AST_ATTR(id));
-}
+void VariableAST::Dump(std::ostream &os) const { ATOM(Id, AST_ATTR(id)); }
 
 void PrimTypeAST::Dump(std::ostream &os) const {
   const char *kType[] = {"Void", "Int8", "Int32", "UInt8", "UInt32"};
@@ -290,9 +282,7 @@ void StructTypeAST::Dump(std::ostream &os) const {
   ATOM(StructType, AST_ATTR(id));
 }
 
-void EnumTypeAST::Dump(std::ostream &os) const {
-  ATOM(EnumType, AST_ATTR(id));
-}
+void EnumTypeAST::Dump(std::ostream &os) const { ATOM(EnumType, AST_ATTR(id)); }
 
 void ConstTypeAST::Dump(std::ostream &os) const {
   AST(ConstType);
@@ -304,12 +294,9 @@ void PointerTypeAST::Dump(std::ostream &os) const {
   ATTR(base);
 }
 
-void UserTypeAST::Dump(std::ostream &os) const {
-  ATOM(UserType, AST_ATTR(id));
-}
+void UserTypeAST::Dump(std::ostream &os) const { ATOM(UserType, AST_ATTR(id)); }
 
-
-/*--------------                        Generate IR                        --------------*/
+/*--------------                        Generate IR --------------*/
 
 SSAPtr TranslationUnitDecl::CodeGeneAction(IRBuilder *irbuilder) {
   return irbuilder->visit(this);
@@ -447,134 +434,69 @@ TypePtr TranslationUnitDecl::SemaAnalyze(Analyzer &ana) {
   return ana.visit(this);
 }
 
-TypePtr VariableDecl::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr VariableDecl::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr VariableDefAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr VariableDefAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr InitListAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr InitListAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr ProtoTypeAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr ProtoTypeAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr FunctionDefAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr FunctionDefAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr FuncParamAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr FuncParamAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr StructDefAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr StructDefAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr EnumDefAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr EnumDefAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr TypeAliasAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr TypeAliasAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr StructElemAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr StructElemAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr StructElemDefAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr StructElemDefAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr EnumElemAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr EnumElemAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr CompoundStmt::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr CompoundStmt::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr IfElseStmt::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr IfElseStmt::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr WhileStmt::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr WhileStmt::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr ControlAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr ControlAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr BinaryStmt::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr BinaryStmt::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr CastStmt::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr CastStmt::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr UnaryStmt::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr UnaryStmt::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr IndexAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr IndexAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr CallStmt::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr CallStmt::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr AccessAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr AccessAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr IntAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr IntAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr CharAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr CharAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr StringAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr StringAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr VariableAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr VariableAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr PrimTypeAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr PrimTypeAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr StructTypeAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr StructTypeAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr EnumTypeAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr EnumTypeAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr ConstTypeAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr ConstTypeAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr PointerTypeAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
+TypePtr PointerTypeAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
-TypePtr UserTypeAST::SemaAnalyze(Analyzer &ana) {
-  return ana.visit(this);
-}
-
+TypePtr UserTypeAST::SemaAnalyze(Analyzer &ana) { return ana.visit(this); }
 
 std::optional<std::uint32_t> TranslationUnitDecl::Eval(Evaluator &eval) {
   return eval.visit(this);
@@ -708,5 +630,4 @@ std::optional<std::uint32_t> UserTypeAST::Eval(Evaluator &eval) {
   return eval.visit(this);
 }
 
-
-}
+} // namespace lava::define
