@@ -116,7 +116,11 @@ void DeadMoveElimination::runOn(const LLFunctionPtr &func) {
         }
       }
 
-      // remove unused move
+    }
+
+    // remove unused move after scanning the whole function so SSA-like moves
+    // that cross block boundaries, especially lowered phi copies, are kept.
+    for (const auto &block : func->blocks()) {
       for (auto &it : block->insts()) {
         for (const auto &opr : it->operands()) {
           auto res = _mov_dst_map.find(opr);

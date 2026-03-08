@@ -184,7 +184,8 @@ public:
   //
 #include "opcode.inc"
 
-  static const int AssignSpain = AssAdd - Add;
+  static constexpr int AssignSpain =
+      static_cast<int>(AssAdd) - static_cast<int>(Add);
 
   // methods for dyn_cast
   static inline bool classof(Instruction *) { return true; }

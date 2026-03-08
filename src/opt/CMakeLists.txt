@@ -8,6 +8,7 @@ add_library(opt
         analysis/identiy.cpp
         analysis/loopinfo.cpp
         analysis/dominance.cpp
+        analysis/expression_analysis.cpp
         analysis/funcanalysis.cpp
         analysis/dominancebase.cpp
         analysis/postdominance.cpp

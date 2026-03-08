@@ -13,13 +13,12 @@ bool LocalValueNumbering::runOnFunction(const FuncPtr &F) {
   bool changed_any = false;
   bool changed     = false;
   do {
-    initialize();
-
     _changed = false;
-    RunLocalValueNumbering(F);
-
-    // Clear the leader cache before cleanup passes.
-    _expr_context.Reset();
+    const auto &expressions =
+        PassManager::RequireAnalysisResultOnFunction<ExpressionAnalysisMap>(
+            "ExpressionAnalysis", F)
+            .at(F.get());
+    RunLocalValueNumbering(F, expressions);
 
     // Run cleanup passes after local value numbering/CSE.
     _changed |= PassManager::RunPassOnFunction("DeadCodeElimination", F);
@@ -32,39 +31,27 @@ bool LocalValueNumbering::runOnFunction(const FuncPtr &F) {
   return changed_any;
 }
 
-void LocalValueNumbering::initialize() {
-  const auto &function_infos =
-      PassManager::RequireAnalysisResult<FuncInfoMap>("FunctionInfoPass");
-  _expr_context.Reset();
-  _expr_context.SetFunctionInfos(function_infos);
-}
-
-void LocalValueNumbering::finalize() { _expr_context.Reset(); }
-
 void LocalValueNumbering::Replace(const InstPtr &inst, const SSAPtr &value) {
   if (inst != value) {
     inst->ReplaceBy(value);
     _changed = true;
-    _expr_context.Forget(inst);
   }
 }
 
-void LocalValueNumbering::RunLocalValueNumbering(const FuncPtr &F) {
+void LocalValueNumbering::RunLocalValueNumbering(
+    const FuncPtr &F, const ExpressionAnalysisResult &expressions) {
   constexpr std::size_t kLocalValueNumberingBlockLimit = 256;
-  auto                  entry                          = F->entry();
-  auto                  rpo = _blkWalker.RPOTraverse(entry.get());
 
-  for (const auto &BB : rpo) {
-    // Keep value numbering local to a block until we have dominance-aware
-    // leader selection again. Cross-block reuse is currently too fragile.
-    _expr_context.ResetForBlock(BB);
-    auto enable_value_numbering =
-        BB->insts().size() <= kLocalValueNumberingBlockLimit;
-    for (auto it = BB->insts().begin(); it != BB->inst_end();) {
-      auto next = std::next(it);
-      if (enable_value_numbering && _expr_context.IsEligibleValue(*it))
-        Replace(*it, _expr_context.Canonicalize(*it));
-      it = next;
+  for (const auto &block : *F) {
+    if (block->insts().size() > kLocalValueNumberingBlockLimit)
+      continue;
+
+    std::unordered_map<ExprId, SSAPtr> leaders;
+    for (const auto &occurrence : expressions.Occurrences(block.get())) {
+      auto [it, inserted] =
+          leaders.emplace(occurrence.expr_id, occurrence.instruction);
+      if (!inserted)
+        Replace(occurrence.instruction, it->second);
     }
   }
 }

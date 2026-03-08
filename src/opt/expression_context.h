@@ -18,6 +18,8 @@ class ExpressionContext {
 private:
   const FuncInfoMap                           *_function_infos = nullptr;
   mid::BasicBlock                             *_current_block  = nullptr;
+  bool                                         _restrict_to_current_block =
+      false;
   std::unordered_map<mid::SSAPtr, mid::SSAPtr> _leader_cache;
   ExprTable                                    _expr_table;
   ConstantIntTable                             _constant_ints;
@@ -37,6 +39,8 @@ public:
   bool IsPureScalarCall(const mid::SSAPtr &value) const;
 
   bool IsEligibleValue(const mid::SSAPtr &value) const;
+
+  std::optional<ExprKey> BuildKey(const mid::SSAPtr &value);
 
   mid::SSAPtr Canonicalize(const mid::SSAPtr &value);
 };

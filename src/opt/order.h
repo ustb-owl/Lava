@@ -24,3 +24,4 @@
 #define NEED_GCM            52
 #define FUNCTION_INFO       53
 #define LOOP_INFO           54
+#define EXPRESSION_ANALYSIS 55

@@ -40,11 +40,13 @@ void ExpressionContext::Reset() {
   _expr_table.Clear();
   _constant_ints.clear();
   _current_block = nullptr;
+  _restrict_to_current_block = false;
 }
 
 void ExpressionContext::ResetForBlock(BasicBlock *block) {
   Reset();
   _current_block = block;
+  _restrict_to_current_block = true;
 }
 
 void ExpressionContext::Forget(const SSAPtr &value) {
@@ -63,6 +65,16 @@ bool ExpressionContext::IsEligibleValue(const SSAPtr &value) const {
   return lava::opt::IsPureScalarExpression(value, *_function_infos);
 }
 
+std::optional<ExprKey> ExpressionContext::BuildKey(const SSAPtr &value) {
+  DBG_ASSERT(_function_infos != nullptr, "function info is not set");
+  return BuildExprKey(
+      value,
+      [this](const SSAPtr &operand) { return Canonicalize(operand); },
+      [this](const std::shared_ptr<CallInst> &call) {
+        return lava::opt::IsPureScalarCall(call, *_function_infos);
+      });
+}
+
 SSAPtr ExpressionContext::CanonicalizeConstant(
     const std::shared_ptr<ConstantInt> &constant) {
   ConstantIntKey key{CanonicalTypeId(constant->type()), constant->value()};
@@ -73,7 +85,7 @@ SSAPtr ExpressionContext::CanonicalizeConstant(
 SSAPtr ExpressionContext::Canonicalize(const SSAPtr &value) {
   DBG_ASSERT(_function_infos != nullptr, "function info is not set");
   if (auto inst = dyn_cast<Instruction>(value)) {
-    if (inst->getParent() != _current_block)
+    if (_restrict_to_current_block && inst->getParent() != _current_block)
       return value;
   }
 
@@ -84,14 +96,7 @@ SSAPtr ExpressionContext::Canonicalize(const SSAPtr &value) {
   SSAPtr leader = value;
   if (auto const_value = dyn_cast<ConstantInt>(value)) {
     leader = CanonicalizeConstant(const_value);
-  } else if (auto key = BuildExprKey(
-                 value,
-                 [this](const SSAPtr &operand) {
-                   return Canonicalize(operand);
-                 },
-                 [this](const std::shared_ptr<CallInst> &call) {
-                   return lava::opt::IsPureScalarCall(call, *_function_infos);
-                 })) {
+  } else if (auto key = BuildKey(value)) {
     leader = _expr_table.LookupOrInsert(*key, value);
   }
 

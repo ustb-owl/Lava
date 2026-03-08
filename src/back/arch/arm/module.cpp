@@ -800,7 +800,7 @@ std::ostream &operator<<(std::ostream &os, const LLBlockPtr &block) {
       auto func_name = block->parent()->function()->GetFunctionName();
       os << func_name << "_exit";
     } else {
-      os << name;
+      os << name << id_mgr.GetId(block, IdType::_ID_LL_BLOCK);
     }
 
     if (in_instruction)

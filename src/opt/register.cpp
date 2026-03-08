@@ -39,6 +39,7 @@ const std::vector<PassCliMetadata> &GetPassCliMetadata() {
 void RegisterNeedGcmPass();
 void RegisterLoopInfoPass();
 void RegisterDominanceInfoPass();
+void RegisterExpressionAnalysisPass();
 void RegisterFunctionInfoPass();
 void RegisterPostDominanceInfoPass();
 
@@ -62,6 +63,7 @@ void RegisterAllMiddleEndPasses() {
   RegisterNeedGcmPass();
   RegisterLoopInfoPass();
   RegisterDominanceInfoPass();
+  RegisterExpressionAnalysisPass();
   RegisterFunctionInfoPass();
   RegisterPostDominanceInfoPass();
 

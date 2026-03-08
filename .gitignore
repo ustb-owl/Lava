@@ -1,6 +1,6 @@
 # debug
 build
-build_rel*
+build_*
 cmake-build-debug
 test
 .idea
