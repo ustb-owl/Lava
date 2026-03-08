@@ -28,23 +28,8 @@ const DominanceResult &LoopInvariantHoist::CurrentDominance() const {
   return PassManager::GetAnalysisResult<DomInfo>("DominanceInfo").at(_cur_func);
 }
 
-bool LoopInvariantHoist::IsPureCall(const SSAPtr &value) const {
-  if (auto call_inst = dyn_cast<CallInst>(value)) {
-    auto func = call_inst->Callee();
-    auto it   = FunctionInfos().find(func.get());
-    if (it != FunctionInfos().end() && it->second.IsPure()) {
-      auto none_array_arg = std::none_of(
-          call_inst->begin(), call_inst->end(),
-          [](const Use &use) { return IsSSA<AccessInst>(use.value()); });
-      return none_array_arg;
-    }
-  }
-  return false;
-}
-
 bool LoopInvariantHoist::IsHoistableInstruction(const InstPtr &inst) const {
-  return IsSSA<BinaryOperator>(inst) || IsSSA<AccessInst>(inst) ||
-         IsSSA<ICmpInst>(inst) || IsPureCall(inst);
+  return IsPureScalarExpression(inst, FunctionInfos());
 }
 
 bool LoopInvariantHoist::IsInLoop(BasicBlock *BB, const Loop *loop) const {

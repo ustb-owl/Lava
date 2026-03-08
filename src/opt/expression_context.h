@@ -11,6 +11,9 @@ namespace lava::opt {
 bool IsPureScalarCall(const std::shared_ptr<mid::CallInst> &call_inst,
                       const FuncInfoMap                    &function_infos);
 
+bool IsPureScalarExpression(const mid::SSAPtr &value,
+                            const FuncInfoMap &function_infos);
+
 class ExpressionContext {
 private:
   const FuncInfoMap                           *_function_infos = nullptr;

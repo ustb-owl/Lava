@@ -4,6 +4,7 @@
 #include "opt/analysis/dominance.h"
 #include "opt/analysis/funcanalysis.h"
 #include "opt/analysis/loopinfo.h"
+#include "opt/expression_context.h"
 #include "opt/pass.h"
 #include "opt/pass_manager.h"
 
@@ -17,8 +18,6 @@ private:
   const FuncInfoMap &FunctionInfos() const;
 
   const DominanceResult &CurrentDominance() const;
-
-  bool IsPureCall(const SSAPtr &value) const;
 
   bool IsHoistableInstruction(const InstPtr &inst) const;
 

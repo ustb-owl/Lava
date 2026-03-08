@@ -22,6 +22,15 @@ bool IsPureScalarCall(const std::shared_ptr<CallInst> &call_inst,
   return none_array_arg;
 }
 
+bool IsPureScalarExpression(const SSAPtr      &value,
+                            const FuncInfoMap &function_infos) {
+  return IsSSA<BinaryOperator>(value) || IsSSA<AccessInst>(value) ||
+         IsSSA<ICmpInst>(value) || IsSSA<CastInst>(value) ||
+         (IsSSA<CallInst>(value) &&
+          lava::opt::IsPureScalarCall(dyn_cast<CallInst>(value),
+                                      function_infos));
+}
+
 void ExpressionContext::SetFunctionInfos(const FuncInfoMap &function_infos) {
   _function_infos = &function_infos;
 }
@@ -50,9 +59,8 @@ bool ExpressionContext::IsPureScalarCall(const SSAPtr &value) const {
 }
 
 bool ExpressionContext::IsEligibleValue(const SSAPtr &value) const {
-  return IsSSA<BinaryOperator>(value) || IsSSA<AccessInst>(value) ||
-         IsSSA<ICmpInst>(value) || IsSSA<CastInst>(value) ||
-         IsPureScalarCall(value);
+  DBG_ASSERT(_function_infos != nullptr, "function info is not set");
+  return lava::opt::IsPureScalarExpression(value, *_function_infos);
 }
 
 SSAPtr ExpressionContext::CanonicalizeConstant(

@@ -3,6 +3,7 @@
 
 #include "common/casting.h"
 #include "opt/analysis/funcanalysis.h"
+#include "opt/expression_context.h"
 #include "opt/pass.h"
 #include "opt/pass_manager.h"
 
@@ -21,20 +22,6 @@ private:
 
   const FuncInfoMap &FunctionInfos() const {
     return PassManager::GetAnalysisResult<FuncInfoMap>("FunctionInfoPass");
-  }
-
-  inline bool IsPureCall(const SSAPtr &value) {
-    if (auto call_inst = dyn_cast<CallInst>(value)) {
-      auto func = call_inst->Callee();
-      auto it   = FunctionInfos().find(func.get());
-      if (it != FunctionInfos().end() && it->second.IsPure()) {
-        auto none_array_arg = std::none_of(
-            call_inst->begin(), call_inst->end(),
-            [](const Use &use) { return IsSSA<AccessInst>(use.value()); });
-        return none_array_arg;
-      }
-    }
-    return false;
   }
 
 public:

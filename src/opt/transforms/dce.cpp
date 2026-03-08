@@ -19,12 +19,16 @@ bool DeadCodeElimination::runOnFunction(const FuncPtr &F) {
 bool DeadCodeElimination::IsCriticalInstruction(const SSAPtr &ptr) {
   if (auto inst = dyn_cast<Instruction>(ptr)) {
     // TODO: check if callee has side effect
-    if (IsSSA<ReturnInst>(inst) || IsSSA<CallInst>(inst) ||
-        IsSSA<BranchInst>(inst) || IsSSA<JumpInst>(inst)) {
-      if (IsPureCall(inst))
+    if (IsSSA<ReturnInst>(inst) || IsSSA<BranchInst>(inst) ||
+        IsSSA<JumpInst>(inst)) {
+      return true;
+    }
+    if (auto call_inst = dyn_cast<CallInst>(inst)) {
+      if (IsPureScalarCall(call_inst, FunctionInfos()))
         return false;
       return true;
-    } else if (IsSSA<StoreInst>(inst)) {
+    }
+    if (IsSSA<StoreInst>(inst)) {
       // TODO: check if is global
       // TODO: how to check array
       return true;
