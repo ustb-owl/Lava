@@ -130,7 +130,8 @@ void FunctionInfoPass::CalculateCallGraph(Function *F) {
 }
 
 void FunctionInfoPass::CollectSideEffectInfo(const FuncNodePtr &FN) {
-  if (GetFunctionInfo().at(FN->GetFunction()).has_size_effect)
+  const auto &func_infos = PassManager::GetAnalysisResult<FuncInfoMap>(name());
+  if (func_infos.at(FN->GetFunction()).has_size_effect)
     return;
 }
 
@@ -151,7 +152,8 @@ void FunctionInfoPass::DumpCallGraph() {
 }
 
 void FunctionInfoPass::dump() {
-  for (const auto &[k, v] : GetFunctionInfo()) {
+  const auto &func_infos = PassManager::GetAnalysisResult<FuncInfoMap>(name());
+  for (const auto &[k, v] : func_infos) {
     std::cout << k->GetFunctionName() << ":" << std::endl;
     std::cout << "is leaf: " << v.is_leaf << "\tload global: " << v.load_global
               << "\tstore global: " << v.store_global << "\tload global array"

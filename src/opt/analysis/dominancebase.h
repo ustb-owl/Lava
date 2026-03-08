@@ -54,7 +54,6 @@ protected:
     return PassManager::GetMutableAnalysisResult<DomInfo>(name());
   }
 
-public:
   const DomInfo &GetDomInfo() const {
     return PassManager::GetAnalysisResult<DomInfo>(name());
   }

@@ -175,69 +175,6 @@ public:
     return std::any_cast<const ResultType &>(it->second);
   }
 
-  template <typename AnalysisType>
-  static std::shared_ptr<AnalysisType> GetAnalysis(const std::string &name) {
-    auto manager = GetPassManager();
-    auto pass    = manager->_pass_infos.find(name);
-    // found pass by name
-    if (pass == manager->_pass_infos.end()) {
-      ERROR("analysis pass %s not found", name.c_str());
-    }
-
-    // check if analysis pass
-    if (!pass->second->is_analysis()) {
-      ERROR("pass %s is not analysis pass", name.c_str());
-    }
-
-    return std::static_pointer_cast<AnalysisType>(pass->second->pass());
-  }
-
-  template <typename AnalysisType>
-  static std::shared_ptr<AnalysisType>
-  RequireAnalysis(const std::string &name) {
-    auto manager = GetPassManager();
-    auto pass    = manager->_pass_infos.find(name);
-    if (pass == manager->_pass_infos.end()) {
-      ERROR("analysis pass %s not found", name.c_str());
-    }
-    if (!pass->second->is_analysis()) {
-      ERROR("pass %s is not analysis pass", name.c_str());
-    }
-
-    if (manager->_active_valid != nullptr) {
-      RunPass(*manager->_active_valid, pass->second);
-    } else {
-      PassNameSet local_valid;
-      RunPass(local_valid, pass->second);
-    }
-
-    return std::static_pointer_cast<AnalysisType>(pass->second->pass());
-  }
-
-  template <typename AnalysisType>
-  static std::shared_ptr<AnalysisType>
-  RequireAnalysisOnFunction(const std::string &name, const FuncPtr &F) {
-    auto manager = GetPassManager();
-    auto pass    = manager->_pass_infos.find(name);
-    if (pass == manager->_pass_infos.end()) {
-      ERROR("analysis pass %s not found", name.c_str());
-    }
-    if (!pass->second->is_analysis()) {
-      ERROR("pass %s is not analysis pass", name.c_str());
-    }
-
-    if (pass->second->pass()->IsFunctionPass()) {
-      RunPassOnFunction(name, F);
-    } else if (manager->_active_valid != nullptr) {
-      RunPass(*manager->_active_valid, pass->second);
-    } else {
-      PassNameSet local_valid;
-      RunPass(local_valid, pass->second);
-    }
-
-    return std::static_pointer_cast<AnalysisType>(pass->second->pass());
-  }
-
   template <typename ResultType>
   static const ResultType &RequireAnalysisResult(const std::string &name) {
     auto manager = GetPassManager();

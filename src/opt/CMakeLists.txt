@@ -13,9 +13,10 @@ add_library(opt
         transforms/dce.cpp
         transforms/hello.cpp
         transforms/inline.cpp
+        transforms/inst_simplify.cpp
         transforms/mem2reg.cpp
         transforms/strength_reduction.cpp
-        transforms/gvn_gcm.cpp
+        transforms/local_value_numbering.cpp
         transforms/loop_invariant_hoist.cpp
         transforms/blocksimp.cpp
         transforms/localmemprop.cpp

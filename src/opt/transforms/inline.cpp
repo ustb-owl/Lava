@@ -11,7 +11,8 @@
 #include "opt/pass_manager.h"
 #include "opt/register.h"
 #include "opt/transforms/blocksimp.h"
-#include "opt/transforms/gvn_gcm.h"
+#include "opt/transforms/local_value_numbering.h"
+#include "opt/transforms/inst_simplify.h"
 #include "opt/transforms/loop_invariant_hoist.h"
 #include "opt/transforms/strength_reduction.h"
 
@@ -88,9 +89,9 @@ public:
     }
 
     changed |= PassManager::RunPassOnFunction("BlockSimplification", F);
+    changed |= PassManager::RunPassOnFunction("InstSimplify", F);
     changed |= PassManager::RunPassOnFunction("StrengthReduction", F);
-    changed |= PassManager::RunPassOnFunction(
-        "GlobalValueNumberingGlobalCodeMotion", F);
+    changed |= PassManager::RunPassOnFunction("LocalValueNumbering", F);
     changed |= PassManager::RunPassOnFunction("LoopInvariantHoist", F);
 
     return changed;

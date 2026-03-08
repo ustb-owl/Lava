@@ -53,7 +53,7 @@ Examples:
 ./lacc foo.sy -O2 --emit=ir
 ./lacc --list-passes
 ./lacc --print-pipeline -O2
-./lacc foo.sy -O2 --disable-pass=local-gvn --emit=ir
+./lacc foo.sy -O2 --disable-pass=local-value-numbering --emit=ir
 ./lacc foo.sy -O2 --stop-after=mem2reg --dump-ir-after=mem2reg
 ```
 

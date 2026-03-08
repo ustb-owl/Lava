@@ -1,43 +1,26 @@
-#ifndef LAVA_GVN_GCM_H
-#define LAVA_GVN_GCM_H
+#ifndef LAVA_LOCAL_VALUE_NUMBERING_H
+#define LAVA_LOCAL_VALUE_NUMBERING_H
 
 #include <algorithm>
 
 #include "common/casting.h"
-#include "opt/analysis/dominance.h"
 #include "opt/analysis/funcanalysis.h"
-#include "opt/analysis/identiy.h"
-#include "opt/analysis/loopinfo.h"
 #include "opt/blkwalker.h"
 #include "opt/pass.h"
 #include "opt/pass_manager.h"
-#include "opt/transforms/dce.h"
 
 namespace lava::opt {
 // using ValueNumber = std::vector<std::pair<SSAPtr, SSAPtr>>;
 using ValueNumber = std::unordered_map<SSAPtr, SSAPtr>;
 
-/*
- * Global value numbering and global code motion
- * TODO: swapOperand or FoldBinary would cause int_literal WA
- */
-class GlobalValueNumberingGlobalCodeMotion : public FunctionPass {
+class LocalValueNumbering : public FunctionPass {
 private:
-  //  int                 _cnt = 0;
   bool        _changed;
   BlockWalker _blkWalker;
   ValueNumber _value_number;
-  Function   *_cur_func;
   BasicBlock *_cur_block = nullptr;
 
-  std::unordered_set<Instruction *>          _visited;
-  std::unordered_map<Instruction *, InstPtr> _user_map;
-
   const FuncInfoMap &FunctionInfos() const;
-
-  const DomInfo &DominanceInfos() const;
-
-  const LoopInfo &CurrentLoopInfo() const;
 
   inline bool IsPureCall(const SSAPtr &value) {
     if (auto call_inst = dyn_cast<CallInst>(value)) {
@@ -60,8 +43,7 @@ public:
 
   void finalize() final;
 
-  void Replace(const InstPtr &inst, const SSAPtr &value, BasicBlock *block,
-               InstList::iterator it);
+  void Replace(const InstPtr &inst, const SSAPtr &value);
 
   SSAPtr FindValue(const std::shared_ptr<BinaryOperator> &binary_inst);
 
@@ -73,31 +55,20 @@ public:
 
   SSAPtr ValueOf(const SSAPtr &value);
 
-  int GlobalValueNumbering(const FuncPtr &F);
-
-  void CollectInstBlockMap(const FuncPtr &F);
-
-  void TransferInst(const InstPtr &inst, BasicBlock *new_block);
-
-  void ScheduleOp(BasicBlock *entry, const InstPtr &I, const SSAPtr &operand);
-
-  void ScheduleEarly(BasicBlock *entry, const InstPtr &inst);
-
-  BasicBlock *FindLCA(BasicBlock *a, BasicBlock *b);
-
-  void ScheduleLate(const InstPtr &inst);
+  void RunLocalValueNumbering(const FuncPtr &F);
 };
 
-class GlobalValueNumberingGlobalCodeMotionFactory : public PassFactory {
+class LocalValueNumberingFactory : public PassFactory {
 public:
   PassInfoPtr CreatePass(PassManager *) override {
-    auto pass     = std::make_shared<GlobalValueNumberingGlobalCodeMotion>();
-    auto passinfo = std::make_shared<PassInfo>(
-        pass, "GlobalValueNumberingGlobalCodeMotion", false, 2, GVN_GCM);
+    auto pass     = std::make_shared<LocalValueNumbering>();
+    auto passinfo =
+        std::make_shared<PassInfo>(pass, "LocalValueNumbering", false, 2,
+                                   LOCAL_VALUE_NUMBERING);
     passinfo->Requires("FunctionInfoPass");
     return passinfo;
   }
 };
 } // namespace lava::opt
 
-#endif // LAVA_GVN_GCM_H
+#endif // LAVA_LOCAL_VALUE_NUMBERING_H

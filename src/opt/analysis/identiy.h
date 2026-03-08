@@ -18,10 +18,6 @@ private:
     return PassManager::GetMutableAnalysisResult<NeedGcmInfo>(name());
   }
 
-  const NeedGcmInfo &GetInfo() const {
-    return PassManager::GetAnalysisResult<NeedGcmInfo>(name());
-  }
-
 public:
   bool runOnModule(Module &M) final {
     auto &info     = GetMutableInfo();
@@ -44,10 +40,6 @@ public:
   void IsFFT(Module &M);
 
   void IsCrypto(Module &M);
-
-  bool IsCrypto() const { return GetInfo().is_crypto; }
-
-  bool IsNeedGcm() const { return GetInfo().need_gcm; }
 };
 
 class NeedGcmFactory : public PassFactory {

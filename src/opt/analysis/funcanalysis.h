@@ -101,10 +101,6 @@ public:
 
   void dump();
 
-  const FuncInfoMap &GetFunctionInfo() const {
-    return PassManager::GetAnalysisResult<FuncInfoMap>(name());
-  }
-
   bool runOnModule(Module &M) final;
 };
 

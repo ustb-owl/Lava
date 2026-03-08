@@ -6,16 +6,17 @@
 #define MEMORY_TO_REGISTER           5
 #define GLOBAL_CONST_PROP            6
 #define TAIL_RECURSION               7
-#define STRENGTH_REDUCTION           8
-#define GVN_GCM                      9
-#define LOOP_INVARIANT_HOIST         10
-#define LOCAL_MEM_PROP               11
-#define DEAD_CODE_ELIMINATION        12
-#define FUNCTION_INLINING            13
-#define FUNCTION_CLEANUP             14
-#define DEAD_GLOBAL_CODE_ELIMINATION 15
-#define LOOP_UNROLLING               16
-#define SANITIZE_IR                  17
+#define INST_SIMPLIFY                8
+#define STRENGTH_REDUCTION           9
+#define LOCAL_VALUE_NUMBERING        10
+#define LOOP_INVARIANT_HOIST         11
+#define LOCAL_MEM_PROP               12
+#define DEAD_CODE_ELIMINATION        13
+#define FUNCTION_INLINING            14
+#define FUNCTION_CLEANUP             15
+#define DEAD_GLOBAL_CODE_ELIMINATION 16
+#define LOOP_UNROLLING               17
+#define SANITIZE_IR                  18
 
 // analysis
 #define DOMINANCE_INFO      50

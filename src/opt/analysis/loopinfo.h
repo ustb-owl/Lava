@@ -117,10 +117,6 @@ public:
 
   void Populate(BasicBlock *header);
 
-  const LoopInfo &GetLoopInfo(Function *F) const {
-    return PassManager::GetAnalysisResult<LoopInfoMap>(name()).at(F);
-  }
-
   bool runOnFunction(const FuncPtr &F) final;
 };
 
