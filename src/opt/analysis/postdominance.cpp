@@ -8,7 +8,7 @@ namespace lava::opt {
 
 void PostDominanceInfo::SolveDominance(const FuncPtr &F) {
   _cur_func         = F.get();
-  auto       &info  = _dom_info[_cur_func];
+  auto       &info  = GetMutableDomInfo()[_cur_func];
   auto        entry = F->entry();
   auto        po    = _blkWalker.POTraverse(entry.get());
   BasicBlock *exit  = _blkWalker.GetExitBlock(po);
@@ -80,7 +80,7 @@ void PostDominanceInfo::SolveDominance(const FuncPtr &F) {
  * dominates n. Every node, except the entry node, has an immediate dominator.
  */
 void PostDominanceInfo::SolveImmediateDom() {
-  auto       &info  = _dom_info[_cur_func];
+  auto       &info  = GetMutableDomInfo()[_cur_func];
   auto        entry = _cur_func->entry().get();
   auto        po    = _blkWalker.POTraverse(entry);
   BasicBlock *exit  = _blkWalker.GetExitBlock(po);
@@ -133,7 +133,7 @@ void PostDominanceInfo::SolveImmediateDom() {
 }
 
 void PostDominanceInfo::SolveDominanceFrontier() {
-  auto &info  = _dom_info[_cur_func];
+  auto &info  = GetMutableDomInfo()[_cur_func];
   auto  entry = _cur_func->entry().get();
   auto  po    = _blkWalker.POTraverse(entry);
 

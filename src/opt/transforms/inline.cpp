@@ -32,8 +32,6 @@ public:
 private:
   std::optional<IRBuilderContext>        module;
   FuncPtr                                callee;
-  LoopInfo                               loop_info;
-  FuncInfoMap                            func_infos;
   RetInstPtr                             ret_inst;
   std::unordered_map<SSAPtr, SSAPtr>     ssa_map;
   std::unordered_map<BlockPtr, BlockPtr> blk_map;
@@ -49,17 +47,19 @@ private:
 
 public:
   bool runOnFunction(const FuncPtr &F) final {
-    bool changed = false;
-
-    // just return if this function is a leaf
-    auto &func_info = func_infos[F.get()];
-    if (func_info.is_leaf)
+    bool        changed = false;
+    const auto &func_infos =
+        PassManager::RequireAnalysisResult<FuncInfoMap>("FunctionInfoPass");
+    auto func_it = func_infos.find(F.get());
+    if (func_it == func_infos.end() || func_it->second.is_leaf)
       return changed;
 
+    // just return if this function is a leaf
     module.emplace(*F->getParent());
-    auto loop_analysis =
-        PassManager::RequireAnalysisOnFunction<LoopInfoPass>("LoopInfoPass", F);
-    loop_info = loop_analysis->GetLoopInfo();
+    const auto &loop_info =
+        PassManager::RequireAnalysisResultOnFunction<LoopInfoMap>(
+            "LoopInfoPass", F)
+            .at(F.get());
 
     // collect call instructions
     std::vector<CallInstPtr> call_insts;
@@ -71,9 +71,8 @@ public:
       }
     }
 
-    bool become_leaf = true;
     for (auto &call_inst : call_insts) {
-      if (Inlinable(F, call_inst)) {
+      if (Inlinable(F, call_inst, loop_info)) {
         changed = true;
 
         // perform inlining
@@ -84,22 +83,9 @@ public:
         //        F->dump();
         ConnectUD(call_inst);
         //        F->dump();
-
-        // update function info
-        auto callee_info = func_infos[candidate.get()];
-        func_info.load_global |= callee_info.load_global;
-        func_info.store_global |= callee_info.store_global;
-        func_info.load_global_array |= callee_info.load_global_array;
-        func_info.has_size_effect |= callee_info.has_size_effect;
         Clear();
-      } else {
-        become_leaf = false;
       }
     }
-
-    // update function info
-    if (!func_info.is_leaf)
-      func_info.is_leaf = become_leaf;
 
     changed |= PassManager::RunPassOnFunction("BlockSimplification", F);
     changed |= PassManager::RunPassOnFunction("StrengthReduction", F);
@@ -112,24 +98,25 @@ public:
 
   void initialize() final {
     ret_inst = nullptr;
-    auto func_info =
-        PassManager::RequireAnalysis<FunctionInfoPass>("FunctionInfoPass");
-    func_infos = func_info->GetFunctionInfo();
+    static_cast<void>(
+        PassManager::RequireAnalysisResult<FuncInfoMap>("FunctionInfoPass"));
   }
 
   void finalize() final {
     Clear();
-    func_infos.clear();
+    module.reset();
   }
 
   void Clear() {
+    ret_inst = nullptr;
     ssa_map.clear();
     blk_map.clear();
     phi_list.clear();
   }
 
   // check if this function is inlinable
-  bool Inlinable(const FuncPtr &F, const CallInstPtr &call) const;
+  bool Inlinable(const FuncPtr &F, const CallInstPtr &call,
+                 const LoopInfo &loop_info) const;
 
   // get the total instruction count of this function
   std::size_t GetInstCount(const FuncPtr &F) const;
@@ -184,7 +171,8 @@ void FunctionInlining::Rename() {
 }
 
 bool FunctionInlining::Inlinable(const FuncPtr                   &F,
-                                 const std::shared_ptr<CallInst> &call) const {
+                                 const std::shared_ptr<CallInst> &call,
+                                 const LoopInfo &loop_info) const {
   auto candidate = cast<Function>(call->Callee());
   if (candidate->is_decl())
     return false;

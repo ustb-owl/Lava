@@ -6,15 +6,27 @@
 #include "opt/pass_manager.h"
 
 namespace lava::opt {
+
+struct NeedGcmInfo {
+  bool need_gcm  = false;
+  bool is_crypto = false;
+};
+
 class NeedGcm : public ModulePass {
 private:
-  bool _need_gcm;
+  NeedGcmInfo &GetMutableInfo() {
+    return PassManager::GetMutableAnalysisResult<NeedGcmInfo>(name());
+  }
 
-  bool _is_crypto;
+  const NeedGcmInfo &GetInfo() const {
+    return PassManager::GetAnalysisResult<NeedGcmInfo>(name());
+  }
 
 public:
   bool runOnModule(Module &M) final {
-    _need_gcm = false;
+    auto &info     = GetMutableInfo();
+    info.need_gcm  = false;
+    info.is_crypto = false;
     IsMM(M);
     //    IsMv(M);
     //    IsConv(M);
@@ -33,9 +45,9 @@ public:
 
   void IsCrypto(Module &M);
 
-  bool IsCrypto() { return _is_crypto; }
+  bool IsCrypto() const { return GetInfo().is_crypto; }
 
-  bool IsNeedGcm() const { return _need_gcm; }
+  bool IsNeedGcm() const { return GetInfo().need_gcm; }
 };
 
 class NeedGcmFactory : public PassFactory {

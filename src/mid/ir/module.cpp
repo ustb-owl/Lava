@@ -153,16 +153,13 @@ void Module::DumpCFG(const std::string &output_name) {
   graph_t  *g   = agopen((char *)"g", Agdirected, nullptr);
 
   MakeGlobalVariables(g, this, id_mgr);
-
-  auto dom = lava::opt::PassManager::GetAnalysis<lava::opt::DominanceInfo>(
-      "DominanceInfo");
-  dom->initialize();
+  lava::opt::PassManager::SetModule(*this);
 
   for (const auto &func : _functions) {
-    dom->runOnFunction(func);
+    static_cast<void>(lava::opt::PassManager::RequireAnalysisResultOnFunction<
+                      lava::opt::DomInfo>("DominanceInfo", func));
     MakeCFG(g, func, id_mgr);
   }
-  dom->finalize();
 
   gvLayout(gvc, g, "dot");
   //  gvRender(gvc, g, "dot", stdout);

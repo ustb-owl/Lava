@@ -16,14 +16,18 @@ namespace lava::opt {
 class DeadCodeElimination : public FunctionPass {
 private:
   bool                        _changed;
-  FuncInfoMap                 _func_infos;
   std::vector<User *>         _work_list;
   std::unordered_set<Value *> _critical_list;
+
+  const FuncInfoMap &FunctionInfos() const {
+    return PassManager::GetAnalysisResult<FuncInfoMap>("FunctionInfoPass");
+  }
 
   inline bool IsPureCall(const SSAPtr &value) {
     if (auto call_inst = dyn_cast<CallInst>(value)) {
       auto func = call_inst->Callee();
-      if (_func_infos[func.get()].IsPure()) {
+      auto it   = FunctionInfos().find(func.get());
+      if (it != FunctionInfos().end() && it->second.IsPure()) {
         auto none_array_arg = std::none_of(
             call_inst->begin(), call_inst->end(),
             [](const Use &use) { return IsSSA<AccessInst>(use.value()); });
@@ -37,9 +41,8 @@ public:
   bool runOnFunction(const FuncPtr &F) final;
 
   void initialize() final {
-    auto func_info =
-        PassManager::RequireAnalysis<FunctionInfoPass>("FunctionInfoPass");
-    _func_infos = func_info->GetFunctionInfo();
+    static_cast<void>(
+        PassManager::RequireAnalysisResult<FuncInfoMap>("FunctionInfoPass"));
   }
 
   void finalize() final {

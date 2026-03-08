@@ -57,6 +57,10 @@ bool PassManager::RunPass(PassNameSet &valid, const PassInfoPtr &info) {
   ActiveValidGuard guard(GetPassManager()->_active_valid, valid);
   RunRequiredPasses(valid, info);
 
+  if (info->is_analysis()) {
+    ClearAnalysisResult(info->name());
+  }
+
   auto changed = RunPass(info->pass());
   valid.insert(info->name());
 
@@ -153,6 +157,10 @@ void PassManager::InvalidateAnalyses(PassNameSet &valid) {
       InvalidatePass(valid, name);
     }
   }
+}
+
+void PassManager::ClearAnalysisResult(const std::string &name) {
+  GetPassManager()->_analysis_results.erase(name);
 }
 
 bool PassManager::RunPassOnFunction(const std::string &name, const FuncPtr &F) {

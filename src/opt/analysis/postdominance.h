@@ -24,15 +24,13 @@ public:
     if (F->is_decl())
       return _changed;
 
+    GetMutableDomInfo().erase(F.get());
     SolveDominance(F);
 
     return _changed;
   }
 
-  void initialize() final {
-    _cur_func = nullptr;
-    _dom_info.clear();
-  }
+  void initialize() final { _cur_func = nullptr; }
 };
 
 class PostDominanceInfoPassFactory : public PassFactory {

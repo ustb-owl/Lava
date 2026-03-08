@@ -17,20 +17,11 @@ namespace lava::opt {
  * 2. delete unused internal/inline functions and global variables
  */
 class DeadGlobalCodeElimination : public ModulePass {
-private:
-  FuncInfoMap _func_infos;
-
 public:
-  void initialize() final {
-    auto func_info =
-        PassManager::RequireAnalysis<FunctionInfoPass>("FunctionInfoPass");
-    _func_infos = func_info->GetFunctionInfo();
-  }
-
-  void finalize() final { _func_infos.clear(); }
-
   bool runOnModule(Module &M) final {
-    bool changed = false;
+    bool        changed = false;
+    const auto &func_infos =
+        PassManager::RequireAnalysisResult<FuncInfoMap>("FunctionInfoPass");
 
     // handle global variables
     auto &glb_vars = M.GlobalVars();
@@ -54,7 +45,7 @@ public:
         continue;
       }
 
-      if (!_func_infos.contains(it->get())) {
+      if (!func_infos.contains(it->get())) {
         (*it)->logger()->LogWarning("unused function");
         for (const auto &BB : *it->get()) {
           BB->DeleteSelf();

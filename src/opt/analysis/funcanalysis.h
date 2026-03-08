@@ -77,15 +77,17 @@ public:
 class FunctionInfoPass : public ModulePass {
 private:
   FuncNodePtr                                 _main;
-  FuncInfoMap                                 _func_infos;
   std::unordered_set<Function *>              _visited;
   std::unordered_map<Function *, FuncNodePtr> _func_map;
+
+  FuncInfoMap &GetMutableFunctionInfo() {
+    return PassManager::GetMutableAnalysisResult<FuncInfoMap>(name());
+  }
 
 public:
   void initialize() final {
     _main = nullptr;
     _visited.clear();
-    _func_infos.clear();
     _func_map.clear();
   }
 
@@ -99,7 +101,9 @@ public:
 
   void dump();
 
-  const FuncInfoMap &GetFunctionInfo() { return _func_infos; }
+  const FuncInfoMap &GetFunctionInfo() const {
+    return PassManager::GetAnalysisResult<FuncInfoMap>(name());
+  }
 
   bool runOnModule(Module &M) final;
 };

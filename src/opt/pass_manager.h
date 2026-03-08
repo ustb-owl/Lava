@@ -1,6 +1,7 @@
 #ifndef XY_LANG_PASS_MANAGER_H
 #define XY_LANG_PASS_MANAGER_H
 
+#include <any>
 #include <map>
 #include <string_view>
 #include <unordered_set>
@@ -22,6 +23,7 @@ using PassNameList    = std::vector<std::string>;
 using PassInfoMap     = std::unordered_map<std::string, PassInfoPtr>;
 using PassNameSet     = std::unordered_set<std::string>;
 using RequirementMap  = std::unordered_map<std::string, PassNameSet>;
+using AnalysisStore   = std::unordered_map<std::string, std::any>;
 
 // pass factory
 class PassFactory {
@@ -97,6 +99,7 @@ private:
   RequirementMap  _requirements;
   PassPtrList     _candidates;
   PassFactoryList _factories;
+  AnalysisStore   _analysis_results;
   PassNameSet    *_active_valid;
 
   void AddFactory(const std::shared_ptr<PassFactory> &factory) {
@@ -144,8 +147,34 @@ public:
   static void InvalidatePass(PassNameSet &valid, const std::string &name);
 
   static void InvalidateAnalyses(PassNameSet &valid);
+  static void ClearAnalysisResult(const std::string &name);
 
   /* methods related with analysis result */
+  template <typename ResultType>
+  static ResultType &GetMutableAnalysisResult(const std::string &name) {
+    auto manager    = GetPassManager();
+    auto &[_, slot] = *manager->_analysis_results.try_emplace(name).first;
+    if (!slot.has_value()) {
+      slot.emplace<ResultType>();
+    } else if (slot.type() != typeid(ResultType)) {
+      ERROR("analysis result %s has unexpected type", name.c_str());
+    }
+    return std::any_cast<ResultType &>(slot);
+  }
+
+  template <typename ResultType>
+  static const ResultType &GetAnalysisResult(const std::string &name) {
+    auto manager = GetPassManager();
+    auto it      = manager->_analysis_results.find(name);
+    if (it == manager->_analysis_results.end() || !it->second.has_value()) {
+      ERROR("analysis result %s is not available", name.c_str());
+    }
+    if (it->second.type() != typeid(ResultType)) {
+      ERROR("analysis result %s has unexpected type", name.c_str());
+    }
+    return std::any_cast<const ResultType &>(it->second);
+  }
+
   template <typename AnalysisType>
   static std::shared_ptr<AnalysisType> GetAnalysis(const std::string &name) {
     auto manager = GetPassManager();
@@ -207,6 +236,51 @@ public:
     }
 
     return std::static_pointer_cast<AnalysisType>(pass->second->pass());
+  }
+
+  template <typename ResultType>
+  static const ResultType &RequireAnalysisResult(const std::string &name) {
+    auto manager = GetPassManager();
+    auto pass    = manager->_pass_infos.find(name);
+    if (pass == manager->_pass_infos.end()) {
+      ERROR("analysis pass %s not found", name.c_str());
+    }
+    if (!pass->second->is_analysis()) {
+      ERROR("pass %s is not analysis pass", name.c_str());
+    }
+
+    if (manager->_active_valid != nullptr) {
+      RunPass(*manager->_active_valid, pass->second);
+    } else {
+      PassNameSet local_valid;
+      RunPass(local_valid, pass->second);
+    }
+
+    return GetAnalysisResult<ResultType>(name);
+  }
+
+  template <typename ResultType>
+  static const ResultType &
+  RequireAnalysisResultOnFunction(const std::string &name, const FuncPtr &F) {
+    auto manager = GetPassManager();
+    auto pass    = manager->_pass_infos.find(name);
+    if (pass == manager->_pass_infos.end()) {
+      ERROR("analysis pass %s not found", name.c_str());
+    }
+    if (!pass->second->is_analysis()) {
+      ERROR("pass %s is not analysis pass", name.c_str());
+    }
+
+    if (pass->second->pass()->IsFunctionPass()) {
+      RunPassOnFunction(name, F);
+    } else if (manager->_active_valid != nullptr) {
+      RunPass(*manager->_active_valid, pass->second);
+    } else {
+      PassNameSet local_valid;
+      RunPass(local_valid, pass->second);
+    }
+
+    return GetAnalysisResult<ResultType>(name);
   }
 
   // register pass

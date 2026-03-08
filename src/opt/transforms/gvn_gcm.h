@@ -27,19 +27,23 @@ private:
   bool        _changed;
   BlockWalker _blkWalker;
   ValueNumber _value_number;
-  FuncInfoMap _func_infos;
-  DomInfo     _dom_info;
-  LoopInfo    _loop_info;
   Function   *_cur_func;
   BasicBlock *_cur_block = nullptr;
 
   std::unordered_set<Instruction *>          _visited;
   std::unordered_map<Instruction *, InstPtr> _user_map;
 
+  const FuncInfoMap &FunctionInfos() const;
+
+  const DomInfo &DominanceInfos() const;
+
+  const LoopInfo &CurrentLoopInfo() const;
+
   inline bool IsPureCall(const SSAPtr &value) {
     if (auto call_inst = dyn_cast<CallInst>(value)) {
       auto func = call_inst->Callee();
-      if (_func_infos[func.get()].IsPure()) {
+      auto it   = FunctionInfos().find(func.get());
+      if (it != FunctionInfos().end() && it->second.IsPure()) {
         auto none_array_arg = std::none_of(
             call_inst->begin(), call_inst->end(),
             [](const Use &use) { return IsSSA<AccessInst>(use.value()); });

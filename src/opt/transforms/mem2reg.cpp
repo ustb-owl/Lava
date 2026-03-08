@@ -15,8 +15,7 @@ namespace lava::opt {
  */
 class Mem2Reg : public FunctionPass {
 private:
-  bool    _changed;
-  DomInfo _dom_info;
+  bool _changed;
 
   std::vector<Value *>                   _allocas;
   std::unordered_map<Value *, uint32_t>  _alloca_ids;
@@ -40,11 +39,7 @@ public:
     return _changed;
   }
 
-  void initialize() final {
-    auto dominance =
-        PassManager::RequireAnalysis<DominanceInfo>("DominanceInfo");
-    _dom_info = dominance->GetDomInfo();
-  }
+  void initialize() final {}
 
   void finalize() final {
     //    _dom_info.clear();
@@ -102,9 +97,16 @@ public:
       while (!_worklist.empty()) {
         BasicBlock *back = _worklist.back();
         _worklist.pop_back();
+        const auto &dom_info =
+            PassManager::RequireAnalysisResult<DomInfo>("DominanceInfo");
+        auto func_it = dom_info.find(F.get());
+        DBG_ASSERT(func_it != dom_info.end(), "dominance info is missing");
+        auto frontier_it = func_it->second.DF.find(back);
+        if (frontier_it == func_it->second.DF.end())
+          continue;
 
         // traverse its dominance frontier
-        for (auto dom_frontier : _dom_info[F.get()].DF[back]) {
+        for (auto dom_frontier : frontier_it->second) {
           if (visited.find(dom_frontier) == visited.end()) {
             visited.insert(dom_frontier);
             // create a phi node

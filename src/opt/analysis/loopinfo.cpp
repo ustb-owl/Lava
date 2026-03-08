@@ -9,7 +9,8 @@ namespace lava::opt {
 bool LoopInfoPass::runOnFunction(const FuncPtr &F) {
   if (F->is_decl())
     return false;
-  _cur_func  = F.get();
+  _cur_func = F.get();
+  GetMutableLoopInfoMap().erase(_cur_func);
   auto entry = F->entry();
   CollectLoops(entry.get());
   Populate(entry.get());
@@ -18,17 +19,25 @@ bool LoopInfoPass::runOnFunction(const FuncPtr &F) {
 
 void LoopInfoPass::CollectLoops(BasicBlock *header) {
   DBG_ASSERT(_cur_func != nullptr, "current function is nullptr");
-  for (auto &dominatee : _dom_info[_cur_func].doms[header]) {
-    if (dominatee != header)
-      CollectLoops(dominatee);
+  auto       &loop_info = GetMutableLoopInfoMap()[_cur_func];
+  const auto &dom_info  = CurrentDominance();
+  auto        doms_it   = dom_info.doms.find(header);
+  if (doms_it != dom_info.doms.end()) {
+    for (auto &dominatee : doms_it->second) {
+      if (dominatee != header)
+        CollectLoops(dominatee);
+    }
   }
 
   std::vector<BasicBlock *> worklist;
   // exist edge from this block to header
   for (const auto &pred : header->predecessors()) {
-    auto  BB    = pred.get();
-    auto &domBy = _dom_info[_cur_func].domBy[BB];
-    if (domBy.find(header) != domBy.end()) {
+    auto BB        = pred.get();
+    auto dom_by_it = dom_info.domBy.find(BB);
+    bool has_backedge =
+        dom_by_it != dom_info.domBy.end() &&
+        dom_by_it->second.find(header) != dom_by_it->second.end();
+    if (has_backedge) {
       worklist.push_back(BB);
     }
   }
@@ -38,7 +47,7 @@ void LoopInfoPass::CollectLoops(BasicBlock *header) {
     while (!worklist.empty()) {
       auto pred = worklist.back();
       worklist.pop_back();
-      auto [it, inserted] = _loop_info.loop_of_bb().insert({pred, loop});
+      auto [it, inserted] = loop_info.loop_of_bb().insert({pred, loop});
       if (inserted) {
         if (pred != header) {
           for (const auto &BB : pred->predecessors()) {
@@ -54,8 +63,8 @@ void LoopInfoPass::CollectLoops(BasicBlock *header) {
           sub_loop->setParent(loop);
           for (const auto &BB : sub_loop->header()->predecessors()) {
             auto P   = BB.get();
-            auto res = _loop_info.loop_of_bb().find(P);
-            if (res == _loop_info.loop_of_bb().end() ||
+            auto res = loop_info.loop_of_bb().find(P);
+            if (res == loop_info.loop_of_bb().end() ||
                 res->second != sub_loop) {
               worklist.push_back(P);
             }
@@ -70,16 +79,17 @@ void LoopInfoPass::Populate(BasicBlock *header) {
   if (_visited.find(header) != _visited.end())
     return;
   _visited.insert(header);
+  auto &loop_info = GetMutableLoopInfoMap()[_cur_func];
 
   for (auto &succ : header->successors()) {
     Populate(succ);
   }
 
-  auto it       = _loop_info.loop_of_bb().find(header);
-  auto sub_loop = (it == _loop_info.loop_of_bb().end()) ? nullptr : it->second;
+  auto it       = loop_info.loop_of_bb().find(header);
+  auto sub_loop = (it == loop_info.loop_of_bb().end()) ? nullptr : it->second;
   if (sub_loop && (sub_loop->header() == header)) {
     (sub_loop->getParent() ? sub_loop->getParent()->sub_loops()
-                           : _loop_info.top_level())
+                           : loop_info.top_level())
         .push_back(sub_loop);
     std::reverse(sub_loop->blocks().begin() + 1, sub_loop->blocks().end());
     std::reverse(sub_loop->sub_loops().begin(), sub_loop->sub_loops().end());

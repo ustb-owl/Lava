@@ -11,22 +11,23 @@ namespace lava::opt {
 bool FunctionInfo::IsRecursive() const { return F->Callers().count(F) != 0; }
 
 bool FunctionInfoPass::runOnModule(Module &M) {
+  auto &func_infos = GetMutableFunctionInfo();
   for (const auto &F : M.Functions()) {
     if (F->GetFunctionName() == "main") {
       _main = std::make_shared<FunctionNode>(F.get());
     }
-    _func_infos.insert({F.get(), FunctionInfo()});
+    func_infos.insert({F.get(), FunctionInfo()});
     if (F->is_decl()) {
-      _func_infos[F.get()].has_size_effect = true;
+      func_infos[F.get()].has_size_effect = true;
       //      TRACE("%s %d\n", F->GetFunctionName().c_str(),
-      //      _func_infos[F.get()].IsPure());
+      //      func_infos[F.get()].IsPure());
     }
   }
 
   CalculateCallGraph(_main->GetFunction());
 
   std::vector<Function *> worklist;
-  for (const auto &[k, v] : _func_infos) {
+  for (const auto &[k, v] : func_infos) {
     if (v.has_size_effect)
       worklist.push_back(k);
   }
@@ -37,23 +38,23 @@ bool FunctionInfoPass::runOnModule(Module &M) {
     if (_func_map.find(f) == _func_map.end())
       continue;
     for (auto &caller : _func_map[f]->Callers()) {
-      if (!_func_infos[caller->GetFunction()].has_size_effect) {
-        _func_infos[caller->GetFunction()].has_size_effect = true;
+      if (!func_infos[caller->GetFunction()].has_size_effect) {
+        func_infos[caller->GetFunction()].has_size_effect = true;
         worklist.push_back(caller->GetFunction());
       }
     }
   }
 
-  for (auto &[k, v] : _func_infos) {
+  for (auto &[k, v] : func_infos) {
     if (_func_map.find(k) == _func_map.end())
       continue;
     if (_func_map[k]->Callees().empty())
       v.is_leaf = true;
   }
 
-  for (auto it = _func_infos.begin(); it != _func_infos.end();) {
+  for (auto it = func_infos.begin(); it != func_infos.end();) {
     if (_func_map.find(it->first) == _func_map.end()) {
-      it = _func_infos.erase(it);
+      it = func_infos.erase(it);
     } else {
       it++;
     }
@@ -79,7 +80,7 @@ void FunctionInfoPass::CalculateCallGraph(Function *F) {
     caller = std::make_shared<FunctionNode>(F);
     _func_map.insert({F, caller});
   }
-  auto &info = _func_infos[F];
+  auto &info = GetMutableFunctionInfo()[F];
   info.SetFuncNode(caller);
 
   for (const auto &BB : *F) {
@@ -129,7 +130,7 @@ void FunctionInfoPass::CalculateCallGraph(Function *F) {
 }
 
 void FunctionInfoPass::CollectSideEffectInfo(const FuncNodePtr &FN) {
-  if (_func_infos[FN->GetFunction()].has_size_effect)
+  if (GetFunctionInfo().at(FN->GetFunction()).has_size_effect)
     return;
 }
 
@@ -150,7 +151,7 @@ void FunctionInfoPass::DumpCallGraph() {
 }
 
 void FunctionInfoPass::dump() {
-  for (const auto &[k, v] : _func_infos) {
+  for (const auto &[k, v] : GetFunctionInfo()) {
     std::cout << k->GetFunctionName() << ":" << std::endl;
     std::cout << "is leaf: " << v.is_leaf << "\tload global: " << v.load_global
               << "\tstore global: " << v.store_global << "\tload global array"

@@ -81,10 +81,15 @@ Agnode_t *MakeGraphNode(graph_t *g, const BlockPtr &block, IdManager &id_mgr,
   head += "</tr>";
 
   // generate dominance frontier
-  auto dom = lava::opt::PassManager::GetAnalysis<lava::opt::DominanceInfo>(
-                 "DominanceInfo")
-                 ->GetDomInfo();
-  auto DF  = dom[block->getParent()].DF[block.get()];
+  const auto &dom =
+      lava::opt::PassManager::GetAnalysisResult<lava::opt::DomInfo>(
+          "DominanceInfo");
+  auto func_it = dom.find(block->getParent());
+  DBG_ASSERT(func_it != dom.end(), "dominance info is missing");
+  auto frontier_it = func_it->second.DF.find(block.get());
+  DBG_ASSERT(frontier_it != func_it->second.DF.end(),
+             "dominance frontier is missing");
+  const auto &DF = frontier_it->second;
   std::string df;
   if (!DF.empty()) {
     df = "<tr><td>Dominance Frontier</td><td>";

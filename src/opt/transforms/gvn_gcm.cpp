@@ -7,6 +7,20 @@ int GlobalValueNumbering;
 
 namespace lava::opt {
 
+const FuncInfoMap &GlobalValueNumberingGlobalCodeMotion::FunctionInfos() const {
+  return PassManager::GetAnalysisResult<FuncInfoMap>("FunctionInfoPass");
+}
+
+const DomInfo &GlobalValueNumberingGlobalCodeMotion::DominanceInfos() const {
+  return PassManager::GetAnalysisResult<DomInfo>("DominanceInfo");
+}
+
+const LoopInfo &GlobalValueNumberingGlobalCodeMotion::CurrentLoopInfo() const {
+  DBG_ASSERT(_cur_func != nullptr, "current function is not set");
+  return PassManager::GetAnalysisResult<LoopInfoMap>("LoopInfoPass")
+      .at(_cur_func);
+}
+
 bool GlobalValueNumberingGlobalCodeMotion::runOnFunction(const FuncPtr &F) {
   _changed = false;
   if (F->is_decl())
@@ -41,9 +55,8 @@ GVN:
 void GlobalValueNumberingGlobalCodeMotion::initialize() {
   _cur_func  = nullptr;
   _cur_block = nullptr;
-  auto func_info =
-      PassManager::RequireAnalysis<FunctionInfoPass>("FunctionInfoPass");
-  _func_infos = func_info->GetFunctionInfo();
+  static_cast<void>(
+      PassManager::RequireAnalysisResult<FuncInfoMap>("FunctionInfoPass"));
 }
 
 void GlobalValueNumberingGlobalCodeMotion::finalize() {
@@ -128,7 +141,8 @@ SSAPtr GlobalValueNumberingGlobalCodeMotion::FindValue(
 SSAPtr GlobalValueNumberingGlobalCodeMotion::FindValue(
     const std::shared_ptr<CallInst> &call_inst) {
   auto callee = call_inst->Callee();
-  if (!_func_infos[callee.get()].IsPure())
+  auto it     = FunctionInfos().find(callee.get());
+  if (it == FunctionInfos().end() || !it->second.IsPure())
     return call_inst;
 
   for (auto [k, v] : _value_number) {
@@ -273,7 +287,9 @@ int GlobalValueNumberingGlobalCodeMotion::GlobalValueNumbering(
         }
       } else if (auto call_inst = dyn_cast<CallInst>(*it)) {
         auto callee = call_inst->Callee();
-        if (enable_value_numbering && _func_infos[callee.get()].IsPure()) {
+        auto pure   = FunctionInfos().find(callee.get());
+        if (enable_value_numbering && pure != FunctionInfos().end() &&
+            pure->second.IsPure()) {
           Replace(call_inst, ValueOf(call_inst), BB, it);
         }
       } else if (auto phi_node = dyn_cast<PhiNode>(*it)) {
@@ -352,8 +368,8 @@ void GlobalValueNumberingGlobalCodeMotion::ScheduleOp(BasicBlock    *entry,
     ScheduleEarly(entry, op);
     auto  inst_block = I->getParent();
     auto  op_block   = op->getParent();
-    auto &dom_info   = _dom_info[_cur_func];
-    if (dom_info.depth[inst_block] < dom_info.depth[op_block]) {
+    auto &dom_info   = DominanceInfos().at(_cur_func);
+    if (dom_info.depth.at(inst_block) < dom_info.depth.at(op_block)) {
       TransferInst(I, op_block);
     }
   }
@@ -388,15 +404,15 @@ void GlobalValueNumberingGlobalCodeMotion::ScheduleEarly(BasicBlock    *entry,
 
 BasicBlock *GlobalValueNumberingGlobalCodeMotion::FindLCA(BasicBlock *a,
                                                           BasicBlock *b) {
-  auto       &info  = _dom_info[_cur_func];
+  auto       &info  = DominanceInfos().at(_cur_func);
   BasicBlock *tmp_a = a, *tmp_b = b;
-  while (info.depth[tmp_b] < info.depth[tmp_a])
-    tmp_a = info.idom[tmp_a];
-  while (info.depth[tmp_a] < info.depth[tmp_b])
-    tmp_b = info.idom[tmp_b];
+  while (info.depth.at(tmp_b) < info.depth.at(tmp_a))
+    tmp_a = info.idom.at(tmp_a);
+  while (info.depth.at(tmp_a) < info.depth.at(tmp_b))
+    tmp_b = info.idom.at(tmp_b);
   while (tmp_a != tmp_b) {
-    tmp_a = info.idom[tmp_a];
-    tmp_b = info.idom[tmp_b];
+    tmp_a = info.idom.at(tmp_a);
+    tmp_b = info.idom.at(tmp_b);
   }
   return tmp_a;
 }
@@ -427,17 +443,17 @@ void GlobalValueNumberingGlobalCodeMotion::ScheduleLate(const InstPtr &inst) {
 
       DBG_ASSERT(lca != nullptr, "LCA is nullptr");
       auto best            = lca;
-      auto best_loop_depth = _loop_info.depth_of(best);
+      auto best_loop_depth = CurrentLoopInfo().depth_of(best);
       while (true) {
         //        TRACE("%s\n", _cur_func->GetFunctionName().c_str());
-        auto cur_loop_depth = _loop_info.depth_of(lca);
+        auto cur_loop_depth = CurrentLoopInfo().depth_of(lca);
         if (cur_loop_depth < best_loop_depth) {
           best            = lca;
           best_loop_depth = cur_loop_depth;
         }
         if (lca == inst->getParent())
           break;
-        lca = _dom_info[_cur_func].idom[lca];
+        lca = DominanceInfos().at(_cur_func).idom.at(lca);
       }
 
       TransferInst(inst, best);

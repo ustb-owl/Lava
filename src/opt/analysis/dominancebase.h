@@ -50,11 +50,14 @@ protected:
   // solve the dominance frontier of each block
   virtual void SolveDominanceFrontier() = 0;
 
-  // dominance information for each function
-  DomInfo _dom_info;
+  DomInfo &GetMutableDomInfo() {
+    return PassManager::GetMutableAnalysisResult<DomInfo>(name());
+  }
 
 public:
-  const DomInfo &GetDomInfo() const { return _dom_info; }
+  const DomInfo &GetDomInfo() const {
+    return PassManager::GetAnalysisResult<DomInfo>(name());
+  }
 };
 
 } // namespace lava::opt

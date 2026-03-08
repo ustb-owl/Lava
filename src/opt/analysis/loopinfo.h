@@ -70,7 +70,9 @@ public:
 
   std::vector<LoopPtr> &top_level() { return _top_level; }
 
-  std::vector<Loop *> deepest_loops() {
+  const std::vector<LoopPtr> &top_level() const { return _top_level; }
+
+  std::vector<Loop *> deepest_loops() const {
     std::vector<Loop *> deepest;
     for (const auto &l : _top_level) {
       l->get_deepest_loops(deepest);
@@ -84,32 +86,40 @@ public:
   }
 };
 
+using LoopInfoMap = std::unordered_map<Function *, LoopInfo>;
+
 class LoopInfoPass : public FunctionPass {
 private:
-  DomInfo                          _dom_info;
-  LoopInfo                         _loop_info;
   Function                        *_cur_func;
   std::unordered_set<BasicBlock *> _visited;
+
+  LoopInfoMap &GetMutableLoopInfoMap() {
+    return PassManager::GetMutableAnalysisResult<LoopInfoMap>(name());
+  }
+
+  const DominanceResult &CurrentDominance() const {
+    DBG_ASSERT(_cur_func != nullptr, "current function is nullptr");
+    return PassManager::GetAnalysisResult<DomInfo>("DominanceInfo")
+        .at(_cur_func);
+  }
 
 public:
   void initialize() final {
     _cur_func = nullptr;
-    _loop_info.Clear();
     _visited.clear();
-    auto A    = PassManager::RequireAnalysis<DominanceInfo>("DominanceInfo");
-    _dom_info = A->GetDomInfo();
+    static_cast<void>(
+        PassManager::RequireAnalysisResult<DomInfo>("DominanceInfo"));
   }
 
-  void finalize() final {
-    //    _dom_info.clear();
-    _visited.clear();
-  }
+  void finalize() final { _visited.clear(); }
 
   void CollectLoops(BasicBlock *header);
 
   void Populate(BasicBlock *header);
 
-  LoopInfo &GetLoopInfo() { return _loop_info; }
+  const LoopInfo &GetLoopInfo(Function *F) const {
+    return PassManager::GetAnalysisResult<LoopInfoMap>(name()).at(F);
+  }
 
   bool runOnFunction(const FuncPtr &F) final;
 };

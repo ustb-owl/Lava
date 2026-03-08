@@ -11,11 +11,12 @@ namespace lava::opt {
 
 class LoopInvariantHoist : public FunctionPass {
 private:
-  bool        _changed = false;
-  FuncInfoMap _func_infos;
-  DomInfo     _dom_info;
-  LoopInfo    _loop_info;
-  Function   *_cur_func = nullptr;
+  bool      _changed  = false;
+  Function *_cur_func = nullptr;
+
+  const FuncInfoMap &FunctionInfos() const;
+
+  const DominanceResult &CurrentDominance() const;
 
   bool IsPureCall(const SSAPtr &value) const;
 

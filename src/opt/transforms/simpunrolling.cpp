@@ -18,7 +18,6 @@ class SimpleUnrolling : public FunctionPass {
 private:
   bool                               _changed;
   bool                               _in_last_loop;
-  LoopInfo                           _loop_info;
   std::unordered_set<SSAPtr>         _phi_update;
   std::unordered_map<SSAPtr, SSAPtr> _ssa_map;
   std::unordered_map<SSAPtr, SSAPtr> _phi_map;
@@ -33,8 +32,9 @@ public:
     if (F->is_decl())
       return _changed;
 
-    auto need_gcm = PassManager::RequireAnalysis<NeedGcm>("NeedGcm");
-    if (need_gcm->IsCrypto())
+    const auto &need_gcm =
+        PassManager::RequireAnalysisResult<NeedGcmInfo>("NeedGcm");
+    if (need_gcm.is_crypto)
       return _changed;
     TRACE0();
 
@@ -69,11 +69,11 @@ public:
   }
 
   void UnrollConst(const FuncPtr &F) {
-    auto A =
-        PassManager::RequireAnalysisOnFunction<LoopInfoPass>("LoopInfoPass", F);
-    _loop_info = A->GetLoopInfo();
-
-    auto deepest = _loop_info.deepest_loops();
+    const auto &loop_info =
+        PassManager::RequireAnalysisResultOnFunction<LoopInfoMap>(
+            "LoopInfoPass", F)
+            .at(F.get());
+    auto deepest = loop_info.deepest_loops();
     for (const auto &loop : deepest) {
       int    i_init, end_num;
       SSAPtr induct_var  = nullptr;
@@ -166,8 +166,6 @@ public:
         }
       }
     }
-
-    A->finalize();
   }
 
   bool CheckConstLoop(const Loop *loop, int &i, int &end_num,
@@ -223,11 +221,11 @@ public:
   }
 
   void UnrollLeftConst(const FuncPtr &F) {
-    auto A =
-        PassManager::RequireAnalysisOnFunction<LoopInfoPass>("LoopInfoPass", F);
-    _loop_info = A->GetLoopInfo();
-
-    auto deepest = _loop_info.deepest_loops();
+    const auto &loop_info =
+        PassManager::RequireAnalysisResultOnFunction<LoopInfoMap>(
+            "LoopInfoPass", F)
+            .at(F.get());
+    auto deepest = loop_info.deepest_loops();
     for (const auto &loop : deepest) {
       int    i_init;
       SSAPtr induct_var  = nullptr;
@@ -471,8 +469,6 @@ public:
         }
       }
     }
-
-    A->finalize();
   }
 
   bool CheckLeftConstLoop(const Loop *loop, int &i, SSAPtr &end_var,

@@ -8,7 +8,7 @@ namespace lava::opt {
 
 void DominanceInfo::SolveDominance(const FuncPtr &F) {
   _cur_func   = F.get();
-  auto &info  = _dom_info[_cur_func];
+  auto &info  = GetMutableDomInfo()[_cur_func];
   auto  entry = F->entry();
   auto  rpo   = _blkWalker.RPOTraverse(entry.get());
 
@@ -79,7 +79,7 @@ void DominanceInfo::SolveDominance(const FuncPtr &F) {
  * dominates n. Every node, except the entry node, has an immediate dominator.
  */
 void DominanceInfo::SolveImmediateDom() {
-  auto &info  = _dom_info[_cur_func];
+  auto &info  = GetMutableDomInfo()[_cur_func];
   auto  entry = _cur_func->entry().get();
   auto  rpo   = _blkWalker.RPOTraverse(entry);
 
@@ -132,7 +132,7 @@ void DominanceInfo::SolveImmediateDom() {
 }
 
 void DominanceInfo::SolveDominanceFrontier() {
-  auto &info  = _dom_info[_cur_func];
+  auto &info  = GetMutableDomInfo()[_cur_func];
   auto  entry = _cur_func->entry().get();
   auto  rpo   = _blkWalker.RPOTraverse(entry);
 
@@ -160,7 +160,7 @@ void DominanceInfo::SolveDominanceFrontier() {
 }
 
 void DominanceInfo::SolveDepth(BasicBlock *BB, uint32_t depth) {
-  auto &info = _dom_info[_cur_func];
+  auto &info = GetMutableDomInfo()[_cur_func];
   DBG_ASSERT(info.depth.find(BB) == info.depth.end(),
              "depth of block already existed");
   info.depth.insert({BB, depth});

@@ -19,10 +19,20 @@ void CollectLoopsPostOrder(const lava::opt::LoopPtr       &loop,
 
 namespace lava::opt {
 
+const FuncInfoMap &LoopInvariantHoist::FunctionInfos() const {
+  return PassManager::GetAnalysisResult<FuncInfoMap>("FunctionInfoPass");
+}
+
+const DominanceResult &LoopInvariantHoist::CurrentDominance() const {
+  DBG_ASSERT(_cur_func != nullptr, "current function is not set");
+  return PassManager::GetAnalysisResult<DomInfo>("DominanceInfo").at(_cur_func);
+}
+
 bool LoopInvariantHoist::IsPureCall(const SSAPtr &value) const {
   if (auto call_inst = dyn_cast<CallInst>(value)) {
     auto func = call_inst->Callee();
-    if (_func_infos.at(func.get()).IsPure()) {
+    auto it   = FunctionInfos().find(func.get());
+    if (it != FunctionInfos().end() && it->second.IsPure()) {
       auto none_array_arg = std::none_of(
           call_inst->begin(), call_inst->end(),
           [](const Use &use) { return IsSSA<AccessInst>(use.value()); });
@@ -44,8 +54,9 @@ bool LoopInvariantHoist::IsInLoop(BasicBlock *BB, const Loop *loop) const {
 
 bool LoopInvariantHoist::DominatesPreheader(const InstPtr &inst,
                                             BasicBlock    *preheader) const {
-  auto it = _dom_info.at(_cur_func).domBy.find(preheader);
-  if (it == _dom_info.at(_cur_func).domBy.end())
+  const auto &dom_info = CurrentDominance();
+  auto        it       = dom_info.domBy.find(preheader);
+  if (it == dom_info.domBy.end())
     return false;
   return it->second.find(inst->getParent()) != it->second.end();
 }
@@ -109,11 +120,14 @@ bool LoopInvariantHoist::runOnFunction(const FuncPtr &F) {
   if (F->is_decl())
     return false;
 
-  initialize();
   _cur_func = F.get();
+  const auto &loop_info =
+      PassManager::RequireAnalysisResultOnFunction<LoopInfoMap>("LoopInfoPass",
+                                                                F)
+          .at(F.get());
 
   std::vector<Loop *> loops;
-  for (const auto &loop : _loop_info.top_level()) {
+  for (const auto &loop : loop_info.top_level()) {
     CollectLoopsPostOrder(loop, loops);
   }
 
@@ -146,21 +160,13 @@ bool LoopInvariantHoist::runOnFunction(const FuncPtr &F) {
 
 void LoopInvariantHoist::initialize() {
   _cur_func = nullptr;
-  auto func_info =
-      PassManager::RequireAnalysis<FunctionInfoPass>("FunctionInfoPass");
-  _func_infos    = func_info->GetFunctionInfo();
-  auto dom_info  = PassManager::RequireAnalysis<DominanceInfo>("DominanceInfo");
-  _dom_info      = dom_info->GetDomInfo();
-  auto loop_info = PassManager::RequireAnalysis<LoopInfoPass>("LoopInfoPass");
-  _loop_info     = loop_info->GetLoopInfo();
+  static_cast<void>(
+      PassManager::RequireAnalysisResult<FuncInfoMap>("FunctionInfoPass"));
+  static_cast<void>(
+      PassManager::RequireAnalysisResult<DomInfo>("DominanceInfo"));
 }
 
-void LoopInvariantHoist::finalize() {
-  _cur_func = nullptr;
-  _func_infos.clear();
-  _dom_info.clear();
-  _loop_info.Clear();
-}
+void LoopInvariantHoist::finalize() { _cur_func = nullptr; }
 
 void RegisterLoopInvariantHoistPass() {
   RegisterPassCliMetadata({
