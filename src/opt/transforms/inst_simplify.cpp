@@ -25,7 +25,7 @@ bool IncomingValuesSame(const lava::mid::SSAPtr &lhs,
 namespace lava::opt {
 
 bool InstSimplify::ReplaceAndEraseIfChanged(const InstPtr &inst,
-                                           const SSAPtr &value) {
+                                            const SSAPtr  &value) {
   if (value == nullptr || value == inst)
     return false;
   inst->ReplaceBy(value);

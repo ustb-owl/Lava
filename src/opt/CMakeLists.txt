@@ -2,6 +2,7 @@ add_library(opt
         pass.cpp
         pass_manager.cpp
         register.cpp
+        expression_key.cpp
         blkwalker.cpp
         analysis/identiy.cpp
         analysis/loopinfo.cpp

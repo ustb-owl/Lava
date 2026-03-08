@@ -11,8 +11,8 @@
 #include "opt/pass_manager.h"
 #include "opt/register.h"
 #include "opt/transforms/blocksimp.h"
-#include "opt/transforms/local_value_numbering.h"
 #include "opt/transforms/inst_simplify.h"
+#include "opt/transforms/local_value_numbering.h"
 #include "opt/transforms/loop_invariant_hoist.h"
 #include "opt/transforms/strength_reduction.h"
 
