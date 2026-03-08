@@ -17,9 +17,9 @@ void FunctionFix::runOn(const LLFunctionPtr &func) {
   for (const auto &it : func->saved_regs())
     _saved_regs.push_back(it);
 
-  // save lr if has call instruction
-  if (func->has_call_inst())
-    _saved_regs.push_back(ArmReg::lr);
+  // Save lr so register allocation may use it as a scratch register even in
+  // leaf functions.
+  _saved_regs.push_back(ArmReg::lr);
 
   // TODO: dirty hack, save fp for now
   //  _saved_regs.push_back(ArmReg::fp);

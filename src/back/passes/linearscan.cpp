@@ -10,7 +10,7 @@ void LinearScanRegisterAllocation::Initialize() {
   _free_tmp_regs.push_back(LLOperand::Register(ArmReg::r2));
   _free_tmp_regs.push_back(LLOperand::Register(ArmReg::r3));
 
-  for (auto reg = int(ArmReg::r4); reg <= int(ArmReg::r9); reg++) {
+  for (auto reg = int(ArmReg::r4); reg <= int(ArmReg::r10); reg++) {
     _free_comm_regs.push_back(LLOperand::Register(ArmReg(reg)));
   }
 
@@ -21,8 +21,7 @@ void LinearScanRegisterAllocation::runOn(const LLFunctionPtr &func) {
   _liveness->Initialize();
   _liveness->runOn(func);
 
-  if (func->has_call_inst())
-    _free_tmp_regs.push_back(LLOperand::Register(ArmReg::lr));
+  _free_tmp_regs.push_back(LLOperand::Register(ArmReg::lr));
 
   auto &live_intervals = _liveness->GetLiveInterval();
   // build live intervals which ordered by start position

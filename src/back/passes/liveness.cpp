@@ -134,7 +134,9 @@ std::vector<LLBlockPtr> LivenessAnalysis::GetSuccessors(const LLBlockPtr &BB) {
 // solve live interval
 void LivenessAnalysis::SolveLiveInterval(const LLFunctionPtr &func) {
   std::size_t pos = 0, last_tmp_pos = 0;
-  for (const auto &BB : func->blocks()) {
+  // Number instructions in CFG reverse-postorder so values defined in a
+  // predecessor are seen before their uses at successor joins.
+  for (const auto &BB : _rpo_blocks) {
     for (const auto &inst : BB->insts()) {
       // record operands
       for (const auto &opr : inst->operands()) {
