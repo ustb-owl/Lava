@@ -10,16 +10,15 @@
 
 namespace lava::opt {
 
-using LeaderLookup =
-    std::function<mid::SSAPtr(const mid::SSAPtr &)>;
+using LeaderLookup = std::function<mid::SSAPtr(const mid::SSAPtr &)>;
 using PureCallPredicate =
     std::function<bool(const std::shared_ptr<mid::CallInst> &)>;
 
 std::string CanonicalTypeId(const define::TypePtr &type);
 
-std::optional<ExprKey> BuildExprKey(const mid::SSAPtr        &value,
-                                    const LeaderLookup       &leader_lookup,
-                                    const PureCallPredicate  &is_pure_call);
+std::optional<ExprKey> BuildExprKey(const mid::SSAPtr       &value,
+                                    const LeaderLookup      &leader_lookup,
+                                    const PureCallPredicate &is_pure_call);
 
 } // namespace lava::opt
 

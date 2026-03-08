@@ -44,12 +44,12 @@ enum class ExprKind {
 };
 
 struct ExprKey {
-  ExprKind                           kind = ExprKind::Binary;
-  unsigned                           opcode = 0;
-  int                                extra = 0;
-  std::string                        result_type_id;
-  const void                        *symbol = nullptr;
-  std::vector<const mid::Value *>    operands;
+  ExprKind                        kind   = ExprKind::Binary;
+  unsigned                        opcode = 0;
+  int                             extra  = 0;
+  std::string                     result_type_id;
+  const void                     *symbol = nullptr;
+  std::vector<const mid::Value *> operands;
 
   bool operator==(const ExprKey &) const = default;
 };

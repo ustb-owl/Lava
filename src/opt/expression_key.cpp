@@ -43,9 +43,9 @@ bool ShouldSwapOperands(const SSAPtr &lhs, const SSAPtr &rhs) {
   return std::less<const Value *>{}(rhs.get(), lhs.get());
 }
 
-std::optional<ExprKey> BuildExprKeyForBinary(
-    const std::shared_ptr<BinaryOperator> &binary_inst,
-    const LeaderLookup                    &leader_lookup) {
+std::optional<ExprKey>
+BuildExprKeyForBinary(const std::shared_ptr<BinaryOperator> &binary_inst,
+                      const LeaderLookup                    &leader_lookup) {
   auto lhs = leader_lookup(binary_inst->LHS());
   auto rhs = leader_lookup(binary_inst->RHS());
   if (IsCommutative(binary_inst->opcode()) && ShouldSwapOperands(lhs, rhs))
@@ -59,9 +59,9 @@ std::optional<ExprKey> BuildExprKeyForBinary(
   return key;
 }
 
-std::optional<ExprKey> BuildExprKeyForAccess(
-    const std::shared_ptr<AccessInst> &access_inst,
-    const LeaderLookup                &leader_lookup) {
+std::optional<ExprKey>
+BuildExprKeyForAccess(const std::shared_ptr<AccessInst> &access_inst,
+                      const LeaderLookup                &leader_lookup) {
   ExprKey key;
   key.kind           = ExprKind::Access;
   key.extra          = static_cast<int>(access_inst->acc_type());
@@ -73,10 +73,10 @@ std::optional<ExprKey> BuildExprKeyForAccess(
   return key;
 }
 
-std::optional<ExprKey> BuildExprKeyForCall(
-    const std::shared_ptr<CallInst> &call_inst,
-    const LeaderLookup              &leader_lookup,
-    const PureCallPredicate         &is_pure_call) {
+std::optional<ExprKey>
+BuildExprKeyForCall(const std::shared_ptr<CallInst> &call_inst,
+                    const LeaderLookup              &leader_lookup,
+                    const PureCallPredicate         &is_pure_call) {
   if (!is_pure_call(call_inst))
     return std::nullopt;
 
@@ -91,9 +91,9 @@ std::optional<ExprKey> BuildExprKeyForCall(
   return key;
 }
 
-std::optional<ExprKey> BuildExprKeyForICmp(
-    const std::shared_ptr<ICmpInst> &icmp_inst,
-    const LeaderLookup              &leader_lookup) {
+std::optional<ExprKey>
+BuildExprKeyForICmp(const std::shared_ptr<ICmpInst> &icmp_inst,
+                    const LeaderLookup              &leader_lookup) {
   auto op  = icmp_inst->op();
   auto lhs = leader_lookup(icmp_inst->LHS());
   auto rhs = leader_lookup(icmp_inst->RHS());
@@ -111,9 +111,9 @@ std::optional<ExprKey> BuildExprKeyForICmp(
   return key;
 }
 
-std::optional<ExprKey> BuildExprKeyForCast(
-    const std::shared_ptr<CastInst> &cast_inst,
-    const LeaderLookup              &leader_lookup) {
+std::optional<ExprKey>
+BuildExprKeyForCast(const std::shared_ptr<CastInst> &cast_inst,
+                    const LeaderLookup              &leader_lookup) {
   ExprKey key;
   key.kind           = ExprKind::Cast;
   key.opcode         = cast_inst->opcode();
@@ -128,9 +128,9 @@ std::string CanonicalTypeId(const define::TypePtr &type) {
   return type == nullptr ? "" : type->GetTrivialType()->GetTypeId();
 }
 
-std::optional<ExprKey> BuildExprKey(const SSAPtr               &value,
-                                    const LeaderLookup         &leader_lookup,
-                                    const PureCallPredicate    &is_pure_call) {
+std::optional<ExprKey> BuildExprKey(const SSAPtr            &value,
+                                    const LeaderLookup      &leader_lookup,
+                                    const PureCallPredicate &is_pure_call) {
   if (auto binary_inst = dyn_cast<BinaryOperator>(value))
     return BuildExprKeyForBinary(binary_inst, leader_lookup);
   if (auto access_inst = dyn_cast<AccessInst>(value))

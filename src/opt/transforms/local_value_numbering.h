@@ -6,38 +6,16 @@
 #include "common/casting.h"
 #include "opt/analysis/funcanalysis.h"
 #include "opt/blkwalker.h"
-#include "opt/expression_key.h"
-#include "opt/expression_table.h"
+#include "opt/expression_context.h"
 #include "opt/pass.h"
 #include "opt/pass_manager.h"
 
 namespace lava::opt {
-using LeaderCache = std::unordered_map<SSAPtr, SSAPtr>;
-
 class LocalValueNumbering : public FunctionPass {
 private:
-  bool             _changed;
-  BlockWalker      _blkWalker;
-  LeaderCache      _leader_cache;
-  ExprTable        _expr_table;
-  ConstantIntTable _constant_ints;
-  BasicBlock      *_cur_block = nullptr;
-
-  const FuncInfoMap &FunctionInfos() const;
-
-  inline bool IsPureCall(const SSAPtr &value) {
-    if (auto call_inst = dyn_cast<CallInst>(value)) {
-      auto func = call_inst->Callee();
-      auto it   = FunctionInfos().find(func.get());
-      if (it != FunctionInfos().end() && it->second.IsPure()) {
-        auto none_array_arg = std::none_of(
-            call_inst->begin(), call_inst->end(),
-            [](const Use &use) { return IsSSA<AccessInst>(use.value()); });
-        return none_array_arg;
-      }
-    }
-    return false;
-  }
+  bool              _changed;
+  BlockWalker       _blkWalker;
+  ExpressionContext _expr_context;
 
 public:
   bool runOnFunction(const FuncPtr &F) final;
@@ -48,10 +26,6 @@ public:
 
   void Replace(const InstPtr &inst, const SSAPtr &value);
 
-  SSAPtr CanonicalizeConstant(const std::shared_ptr<ConstantInt> &constant);
-
-  SSAPtr ValueOf(const SSAPtr &value);
-
   void RunLocalValueNumbering(const FuncPtr &F);
 };
 
@@ -60,7 +34,7 @@ public:
   PassInfoPtr CreatePass(PassManager *) override {
     auto pass     = std::make_shared<LocalValueNumbering>();
     auto passinfo = std::make_shared<PassInfo>(pass, "LocalValueNumbering",
-                                               false, 2, LOCAL_VALUE_NUMBERING);
+                                               false, 1, LOCAL_VALUE_NUMBERING);
     passinfo->Requires("FunctionInfoPass");
     return passinfo;
   }
